@@ -1,0 +1,12 @@
+
+*.envapps/agents/.env
+
+.env
+.env.*
+.venv/
+env/
+apps/agents/.env
+.env.*
+.venv/
+env/apps/agents/.env
+apps/agents/.env
