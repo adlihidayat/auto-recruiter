@@ -1,0 +1,92 @@
+"""
+What: Defines the Pydantic schemas and TypedDict state for the Question-Maker Agent.
+Why: Enforces schema contracts, type validation, and structured state passing within LangGraph nodes.
+Boundaries: Does not implement LLM node logic, routing edges, or FastAPI routes.
+"""
+
+from typing import List, Optional, Literal, TypedDict, Dict
+from pydantic import BaseModel, Field
+
+# --- Question Suite Schema Contract ---
+
+class ReferenceSource(BaseModel):
+    """
+    Schema for a verified reference citation.
+    """
+    url: str = Field(description="Verified URL of the retrieved source snippet.")
+    title: str = Field(description="Title of the page or source document.")
+    excerpt: str = Field(description="Specific snippet extracted from the source.")
+    matched_query: str = Field(description="Search query that retrieved this source.")
+    credibility_tier: Literal["A", "B", "C"] = Field(description="Credibility rating based on source domain.")
+    corroborated: bool = Field(description="Whether the fact has been cross-checked/corroborated.")
+
+class PushbackTrigger(BaseModel):
+    """
+    Schema representing specific candidate statements that trigger structured follow-up.
+    """
+    trigger: str = Field(description="Condition or statement by the candidate that triggers follow-up/pushback.")
+    severity: Literal["critical", "mild"] = Field(description="Severity rating of the trigger.")
+    pushback_type: str = Field(description="Type of pushback (e.g., 'concrete', 'conceptual').")
+
+class QuestionItem(BaseModel):
+    """
+    A single, highly practical, scenario-based technical interview question item.
+    """
+    goal_id: str = Field(description="Unique identifier for the evaluation goal.")
+    goal: str = Field(description="Description of what this question is testing/evaluating.")
+    topic: str = Field(description="Subject matter area of the question.")
+    references: List[ReferenceSource] = Field(default_factory=list, description="Verified sources for this question.")
+    interview_time_in_minute: int = Field(default=15, description="Allotted time for this section of the interview.")
+    suggested_opening: str = Field(description="Recommended opening prompt to start the question thread.")
+    passing_criteria: List[str] = Field(default_factory=list, description="List of criteria required to pass.")
+    pushback_triggers: List[PushbackTrigger] = Field(default_factory=list, description="Candidate responses triggering pushback.")
+    wrong_answer_signals: List[str] = Field(default_factory=list, description="Clear signals of incorrect or fabricated answers.")
+
+class QuestionSuite(BaseModel):
+    """
+    A suite of generated technical questions.
+    """
+    questions: List[QuestionItem] = Field(description="List of structured technical interview questions.")
+
+
+# --- Graph State Definitions ---
+
+class InterviewGoal(BaseModel):
+    """
+    Structured output representing an evaluation goal for the interview.
+    """
+    goal_id: str = Field(description="Unique identifier for the evaluation goal, e.g. g_01, g_02.")
+    topic: str = Field(description="High-level topic or technical area, e.g. Database Performance Optimization.")
+    goal: str = Field(description="Description of what this goal evaluates, e.g. Evaluate whether candidate can diagnose PostgreSQL performance issues.")
+    interview_time_in_minute: int = Field(description="Time budget allocated to this goal in minutes.")
+
+class ReferenceSnippet(BaseModel):
+    """
+    Intermediate representation of a retrieved snippet for validation.
+    """
+    subtopic: str
+    snippet: str
+    url: str
+
+class QuestionMakerState(TypedDict):
+    """
+    The state dictionary tracking the question-making agent execution flow.
+    """
+    # Inputs
+    job_name: str
+    job_description: str
+    difficulty: Literal["junior", "mid", "senior", "lead", "infer"]
+    num_goals: int
+    total_duration_minutes: int
+    
+    # Mid-workflow state variables
+    goals: Optional[List[InterviewGoal]]
+    research_brief: Optional[List[str]]
+    context_pack: Optional[List[ReferenceSnippet]]
+    generated_questions: Optional[List[QuestionItem]]
+    consolidated_questions: Optional[List[QuestionItem]]
+    critic_feedback: Optional[Dict[str, any]]  # e.g., {"is_valid": bool, "feedback_per_question": List[Dict]}
+    retry_counts: Optional[Dict[str, int]]  # Track retries per question ID to prevent infinite loops
+    
+    # Final structured output
+    final_suite: Optional[QuestionSuite]
