@@ -29,6 +29,7 @@ class EdgeCaseCompliance(BaseModel):
     vague_input_handled: Optional[Literal[True, False, "partial"]] = Field(default=None, description="Must be exactly True, False, 'partial', or None. DO NOT output string text here.")
     narrow_topic_decomposed_not_padded: Optional[Literal[True, False, "partial"]] = Field(default=None, description="Must be exactly True, False, 'partial', or None. DO NOT output string text here.")
     count_time_matched_or_explained: Optional[Literal[True, False, "partial"]] = Field(default=None, description="Must be exactly True, False, 'partial', or None. DO NOT output string text here.")
+    need_grounding_accurate: Literal[True, False, "partial"] = Field(description="Must be exactly True, False, or 'partial'. Verify if the 'need_grounding' flag set on each goal is accurate.")
 
 class PlannerEvaluationResult(BaseModel):
     relevance_score: int = Field(description="Qualitative relevance score (1-5).")
@@ -36,6 +37,8 @@ class PlannerEvaluationResult(BaseModel):
     coverage_score: int = Field(description="Qualitative coverage and topic quality score (1-5).")
     coverage_justification: str = Field(description="Justification for coverage score listing topic coverage by goal ID.")
     ungrounded_goals: List[str] = Field(default_factory=list, description="List of goal IDs that did not check out against JD requirements.")
+    grounding_flag_justification: str = Field(description="Goal-by-goal statement of each need_grounding value and whether it's correct.")
+    mislabeled_grounding_goals: List[str] = Field(default_factory=list, description="Goal IDs whose need_grounding flag was set incorrectly.")
     edge_case_compliance: EdgeCaseCompliance = Field(description="Qualitative edge case compliance ratings.")
     overall_notes: str = Field(description="Brief critical note on the biggest improvement opportunity.")
 
@@ -54,19 +57,22 @@ MOCK_PLAN_1_GOOD = [
         "goal_id": "g_01",
         "topic": "PostgreSQL Performance Diagnostics",
         "goal": "Evaluate the candidate's ability to analyze EXPLAIN ANALYZE output to identify bottlenecks, resolve deadlocks, and optimize query plans under load.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     },
     {
         "goal_id": "g_02",
         "topic": "FastAPI Connection Pooling & Async",
         "goal": "Assess the candidate's strategy for scaling FastAPI services, managing connection pooling, and optimizing concurrency in distributed architectures.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     },
     {
         "goal_id": "g_03",
         "topic": "Redis Caching Consistency",
         "goal": "Evaluate the candidate's approach to implementing Redis caching layers, including cache invalidation strategies and database synchronization patterns.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     }
 ]
  
@@ -75,19 +81,22 @@ MOCK_PLAN_2_TRIVIA = [
         "goal_id": "g_01",
         "topic": "PostgreSQL Basics",
         "goal": "Ask the candidate to explain what an index is in PostgreSQL and list standard index types.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     },
     {
         "goal_id": "g_02",
         "topic": "FastAPI Syntax",
         "goal": "Evaluate if the candidate knows how to write a basic GET hello world endpoint in FastAPI.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     },
     {
         "goal_id": "g_03",
         "topic": "Caching Definition",
         "goal": "Ask the candidate to explain what Redis is and why we use caching in databases.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     }
 ]
  
@@ -96,25 +105,29 @@ MOCK_PLAN_3_CONSTRAINTS_FAILED = [
         "goal_id": "g_01",
         "topic": "PostgreSQL Performance Diagnostics",
         "goal": "Evaluate the candidate's ability to analyze EXPLAIN ANALYZE output to identify bottlenecks under load.",
-        "interview_time_in_minute": 20
+        "interview_time_in_minute": 20,
+        "need_grounding": True
     },
     {
         "goal_id": "g_02",
         "topic": "FastAPI Scale",
         "goal": "Assess connection pooling optimizations in FastAPI.",
-        "interview_time_in_minute": 20
+        "interview_time_in_minute": 20,
+        "need_grounding": True
     },
     {
         "goal_id": "g_03",
         "topic": "Redis Caching",
         "goal": "Check cache invalidation strategies using Redis.",
-        "interview_time_in_minute": 20
+        "interview_time_in_minute": 20,
+        "need_grounding": True
     },
     {
         "goal_id": "g_04",
         "topic": "Git Workflow",
         "goal": "Evaluate if candidate knows standard git rebase commands.",
-        "interview_time_in_minute": 10
+        "interview_time_in_minute": 10,
+        "need_grounding": False
     }
 ]
  
@@ -123,7 +136,7 @@ EXPECTED_1_GOOD = {
     "relevance_reasoning": "All three goals are directly grounded in explicit JD lines (EXPLAIN ANALYZE/deadlocks, FastAPI scaling, Redis caching), scenario-framed rather than definitional, and calibrated at senior depth throughout.",
     "coverage_score": 4,
     "coverage_reasoning": "IMPORTANT: the JD explicitly says 'configure Celery workers' but none of the 3 goals touch Celery at all. That is a real, named requirement with zero coverage — not a trivial omission. Everything else (Postgres, FastAPI, Redis) is covered well, so this isn't a bad plan, but it should not score a flat 5 despite being labeled 'Expected: Pass' in the original mock. A strict judge should dock coverage for the missing Celery goal.",
-    "edge_case_compliance": {"count_time_matched_or_explained": True}
+    "edge_case_compliance": {"count_time_matched_or_explained": True, "need_grounding_accurate": True}
 }
  
 EXPECTED_2_TRIVIA = {
@@ -131,7 +144,7 @@ EXPECTED_2_TRIVIA = {
     "relevance_reasoning": "Topic labels are nominally on-target (Postgres, FastAPI, Redis) but every goal is a definitional/textbook question ('what is an index', 'hello world endpoint', 'what is Redis'). This is a severe difficulty miscalibration for a senior role — the JD explicitly says it wants someone who can debug a live 99%-CPU incident, not recite definitions.",
     "coverage_score": 2,
     "coverage_reasoning": "Even though the topic names match, none of the goals actually test the underlying capability the JD asks for (diagnosing CPU spikes, resolving deadlocks, caching high-frequency reads at scale). Naming the right topic without testing the right skill should not count as real coverage. Celery is also still missing entirely.",
-    "edge_case_compliance": {"count_time_matched_or_explained": True}
+    "edge_case_compliance": {"count_time_matched_or_explained": True, "need_grounding_accurate": True}
 }
  
 EXPECTED_3_CONSTRAINTS_FAILED = {
@@ -140,7 +153,8 @@ EXPECTED_3_CONSTRAINTS_FAILED = {
     "coverage_score": 2,
     "coverage_reasoning": "Celery is still missing, and instead of using the 4th goal slot to cover it, the plan burned it on an irrelevant git-workflow question. That's worse than MOCK_PLAN_1_GOOD's gap — here a full goal slot was wasted on filler while a named JD requirement went uncovered.",
     "edge_case_compliance": {
-        "count_time_matched_or_explained": False
+        "count_time_matched_or_explained": False,
+        "need_grounding_accurate": True
     },
     "additional_notes": "Requested num_goals=3 but got 4; requested total_duration_minutes=45 but goals sum to 70. Note: the judge template only checks count/time compliance when `count_time_stress_expected` is flagged in the checklist — but this example shows that basic budget adherence should probably be checked on every example, not just the narrow-topic/large-count edge case. Worth revising the judge prompt to make this a always-on check rather than edge-case-gated."
 }
@@ -160,25 +174,29 @@ MOCK_PLAN_4_HARDWARE_GOOD = [
         "goal_id": "g_01",
         "topic": "Real-Time Interrupt Latency",
         "goal": "Evaluate the candidate's ability to diagnose why a real-time control loop is missing deadlines, focusing on interrupt latency and priority conflicts.",
-        "interview_time_in_minute": 12
+        "interview_time_in_minute": 12,
+        "need_grounding": True
     },
     {
         "goal_id": "g_02",
         "topic": "FreeRTOS Task Scheduling",
         "goal": "Assess the candidate's understanding of FreeRTOS task priorities and how priority inversion or improper blocking calls can break real-time guarantees.",
-        "interview_time_in_minute": 11
+        "interview_time_in_minute": 11,
+        "need_grounding": True
     },
     {
         "goal_id": "g_03",
         "topic": "CAN Bus Communication Debugging",
         "goal": "Evaluate the candidate's approach to diagnosing an intermittent CAN bus communication failure using bus traffic analysis and datasheet timing specs.",
-        "interview_time_in_minute": 11
+        "interview_time_in_minute": 11,
+        "need_grounding": True
     },
     {
         "goal_id": "g_04",
         "topic": "PID Tuning & Hardware Debugging",
         "goal": "Assess the candidate's practical approach to tuning a PID loop for motor control and verifying the result using an oscilloscope.",
-        "interview_time_in_minute": 11
+        "interview_time_in_minute": 11,
+        "need_grounding": True
     }
 ]
  
@@ -187,19 +205,22 @@ MOCK_PLAN_5_HARDWARE_SOFTWARE_DRIFT = [
         "goal_id": "g_01",
         "topic": "REST API for Firmware Updates",
         "goal": "Evaluate the candidate's approach to designing a REST API for delivering over-the-air (OTA) firmware updates.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     },
     {
         "goal_id": "g_02",
         "topic": "Cloud Telemetry Pipeline",
         "goal": "Assess the candidate's experience building a Kafka-based telemetry ingestion pipeline for device data.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     },
     {
         "goal_id": "g_03",
         "topic": "Python Test Automation",
         "goal": "Evaluate the candidate's experience writing Python scripts to automate hardware test benches.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     }
 ]
  
@@ -208,7 +229,7 @@ EXPECTED_4_HARDWARE_GOOD = {
     "relevance_reasoning": "Every goal is grounded in explicit JD content, correctly framed in embedded/firmware terms (no cloud/API/software-backend assumptions), and calibrated to mid-level troubleshooting rather than junior recall or lead-level strategy.",
     "coverage_score": 4,
     "coverage_reasoning": "Covers interrupt latency, RTOS scheduling, CAN bus, and PID/hardware debugging — 4 of 5 checklist topics directly. Datasheet interpretation is only implicitly touched (folded into CAN bus and PID goals) rather than given dedicated treatment, which is a minor, acceptable gap.",
-    "edge_case_compliance": {"count_time_matched_or_explained": True}
+    "edge_case_compliance": {"count_time_matched_or_explained": True, "need_grounding_accurate": True}
 }
  
 EXPECTED_5_HARDWARE_DRIFT = {
@@ -216,7 +237,7 @@ EXPECTED_5_HARDWARE_DRIFT = {
     "relevance_reasoning": "This is a textbook case of imposing default 'senior backend engineer' patterns (REST APIs, Kafka, cloud pipelines) onto a role that is actually about real-time C, RTOS, and hardware debugging. None of these three goals reflect what the JD is actually asking about — this is domain confusion, not a grounding nuance.",
     "coverage_score": 1,
     "coverage_reasoning": "Zero of the five required firmware-specific topics (interrupt latency, RTOS, CAN bus, PID tuning, hardware debugging) are covered. This plan would be equally plausible for almost any 'IoT-adjacent' job — it isn't built from this JD at all.",
-    "edge_case_compliance": {"count_time_matched_or_explained": False},
+    "edge_case_compliance": {"count_time_matched_or_explained": False, "need_grounding_accurate": True},
     "additional_notes": "Also violates the requested num_goals=4 (only 3 goals) and total_duration_minutes=45 (only sums to 45 coincidentally, but goal count is short)."
 }
  
@@ -235,19 +256,22 @@ MOCK_PLAN_6_VAGUE_GOOD = [
         "goal_id": "g_01",
         "topic": "Content & Campaign Execution",
         "goal": "Assess the candidate's experience assisting with execution of marketing campaigns across common channels (e.g. social, email), reflecting typical entry-level marketing coordinator duties since the JD gave no specifics.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": False
     },
     {
         "goal_id": "g_02",
         "topic": "Cross-Functional Coordination",
         "goal": "Evaluate the candidate's ability to coordinate with other teams (e.g. sales, design) to keep marketing initiatives on schedule.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": False
     },
     {
         "goal_id": "g_03",
         "topic": "Ownership & Basic Reporting",
         "goal": "Assess the candidate's comfort tracking basic performance indicators and taking ownership of small deliverables independently, reflecting the JD's 'self-starter' language.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": False
     }
 ]
 MOCK_META_6_VAGUE_GOOD = {
@@ -260,19 +284,22 @@ MOCK_PLAN_7_VAGUE_FABRICATED = [
         "goal_id": "g_01",
         "topic": "HubSpot & Salesforce Workflow Configuration",
         "goal": "Evaluate the candidate's expertise configuring HubSpot workflows and Salesforce integration for lead nurturing.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     },
     {
         "goal_id": "g_02",
         "topic": "Paid Acquisition Budget Management",
         "goal": "Assess the candidate's ability to manage a $50k/month Google Ads acquisition budget.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     },
     {
         "goal_id": "g_03",
         "topic": "A/B Testing Statistical Significance",
         "goal": "Evaluate the candidate's understanding of statistical significance testing for landing page A/B tests.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     }
 ]
 MOCK_META_7_VAGUE_FABRICATED = {"assumptions": [], "warnings": []}
@@ -284,7 +311,8 @@ EXPECTED_6_VAGUE_GOOD = {
     "coverage_reasoning": "Covers the three reasonable foundational areas (execution, coordination, ownership/reporting) implied by a coordinator title plus the 'self-starter/team player' framing — appropriate given there's nothing more specific to cover.",
     "edge_case_compliance": {
         "vague_input_handled": True,
-        "count_time_matched_or_explained": True
+        "count_time_matched_or_explained": True,
+        "need_grounding_accurate": True
     }
 }
  
@@ -295,7 +323,8 @@ EXPECTED_7_VAGUE_FABRICATED = {
     "coverage_reasoning": "Nominally marketing-flavored, but built on fabricated premises rather than what was actually stated. Doesn't reflect the real (nearly empty) input.",
     "edge_case_compliance": {
         "vague_input_handled": False,
-        "count_time_matched_or_explained": True
+        "count_time_matched_or_explained": True,
+        "need_grounding_accurate": True
     },
     "additional_notes": "meta.assumptions is empty despite the JD being extremely thin — this alone should fail vague_input_handled even before looking at goal content."
 }
@@ -320,19 +349,22 @@ MOCK_PLAN_8_CONTRADICTION_HANDLED = [
         "goal_id": "g_01",
         "topic": "Frontend Fundamentals",
         "goal": "Assess the candidate's ability to build and debug a basic interactive UI component, with guidance, appropriate to an entry-level frontend role.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     },
     {
         "goal_id": "g_02",
         "topic": "Basic Debugging & Problem-Solving",
         "goal": "Evaluate the candidate's approach to diagnosing a simple rendering or state bug in a small frontend codebase.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     },
     {
         "goal_id": "g_03",
         "topic": "Fundamentals & Learning Ability",
         "goal": "Assess the candidate's grasp of core JavaScript/framework fundamentals and ability to learn from mentorship, matching the JD's stated entry-level and mentorship framing.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": False
     }
 ]
 MOCK_META_8_CONTRADICTION_HANDLED = {
@@ -348,19 +380,22 @@ MOCK_PLAN_9_CONTRADICTION_IGNORED = [
         "goal_id": "g_01",
         "topic": "Distributed Kubernetes Architecture",
         "goal": "Evaluate the candidate's expertise designing fault-tolerant Kubernetes clusters at scale.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     },
     {
         "goal_id": "g_02",
         "topic": "ML Pipeline Design",
         "goal": "Assess the candidate's experience training large-scale proprietary ML pipelines from scratch.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": True
     },
     {
         "goal_id": "g_03",
         "topic": "Candidate Background Fit",
         "goal": "Assess whether the candidate is a recent graduate under 25 with the energy and fit expected for the startup's culture.",
-        "interview_time_in_minute": 15
+        "interview_time_in_minute": 15,
+        "need_grounding": False
     }
 ]
 MOCK_META_9_CONTRADICTION_IGNORED = {"assumptions": [], "warnings": []}
@@ -372,7 +407,8 @@ EXPECTED_8_CONTRADICTION_HANDLED = {
     "coverage_reasoning": "Covers foundational frontend competency appropriate to entry-level, which is exactly what the checklist requires. It deliberately does NOT build goals around K8s/ML/WASM — this is correct behavior per the checklist, not a gap. Slight redundancy exists between g_02 and g_03 (both partly test fundamentals), which is why this isn't a 5.",
     "edge_case_compliance": {
         "contradiction_flagged": True,
-        "discriminatory_content_excluded": True
+        "discriminatory_content_excluded": True,
+        "need_grounding_accurate": True
     }
 }
  
@@ -383,7 +419,8 @@ EXPECTED_9_CONTRADICTION_IGNORED = {
     "coverage_reasoning": "Does not cover any real junior-level frontend competency at all. None of the three goals reflect what should actually be tested in an entry-level interview.",
     "edge_case_compliance": {
         "contradiction_flagged": False,
-        "discriminatory_content_excluded": False
+        "discriminatory_content_excluded": False,
+        "need_grounding_accurate": True
     },
     "additional_notes": "g_03 should be flagged as more severe than a simple 'failed to exclude' — it actively encodes the discriminatory criterion into the interview process, which is worse than omission."
 }
@@ -399,34 +436,34 @@ We need someone extremely specialized in building real-time leaderboard systems 
 PARAMS_5 = {"difficulty": "senior", "num_goals": 12, "total_duration_minutes": 90, "domain_hint": "auto"}
  
 MOCK_PLAN_10_NARROW_DECOMPOSED = [
-    {"goal_id": "g_01", "topic": "ZSET Data Structure Tradeoffs", "goal": "Evaluate the candidate's understanding of why Redis Sorted Sets are suited to leaderboard ranking versus alternative structures.", "interview_time_in_minute": 8},
-    {"goal_id": "g_02", "topic": "Score Update Race Conditions", "goal": "Assess the candidate's approach to handling concurrent score updates without race conditions or lost writes.", "interview_time_in_minute": 8},
-    {"goal_id": "g_03", "topic": "Rank & Pagination Query Performance", "goal": "Evaluate the candidate's strategy for keeping rank/pagination queries fast as the leaderboard grows to millions of entries.", "interview_time_in_minute": 8},
-    {"goal_id": "g_04", "topic": "Memory Footprint & Eviction Policy", "goal": "Assess the candidate's approach to managing Redis memory limits and eviction policy for a large, growing sorted set.", "interview_time_in_minute": 8},
-    {"goal_id": "g_05", "topic": "Clustering & Sharding for Scale", "goal": "Evaluate the candidate's design for sharding leaderboard data across a Redis Cluster to handle millions of concurrent players.", "interview_time_in_minute": 8},
-    {"goal_id": "g_06", "topic": "Tie-Breaking Logic", "goal": "Assess the candidate's approach to designing deterministic tie-breaking rules for players with identical scores.", "interview_time_in_minute": 7},
-    {"goal_id": "g_07", "topic": "Real-Time Update Propagation", "goal": "Evaluate the candidate's design for pushing real-time rank changes to connected clients at scale.", "interview_time_in_minute": 7},
-    {"goal_id": "g_08", "topic": "Persistence & Backup Tradeoffs", "goal": "Assess the candidate's understanding of Redis persistence options (RDB/AOF) and their tradeoffs for leaderboard durability.", "interview_time_in_minute": 7},
-    {"goal_id": "g_09", "topic": "Failover & Disaster Recovery", "goal": "Evaluate the candidate's plan for handling a Redis node failure without losing or corrupting leaderboard state.", "interview_time_in_minute": 7},
-    {"goal_id": "g_10", "topic": "Monitoring & Hot-Key Detection", "goal": "Assess the candidate's approach to detecting and mitigating hot-key contention on high-traffic leaderboard keys.", "interview_time_in_minute": 7},
-    {"goal_id": "g_11", "topic": "Redis vs. Alternative Datastore Tradeoff", "goal": "Evaluate the candidate's reasoning for choosing Redis Sorted Sets over an alternative approach (e.g. a relational table with periodic re-ranking) for this specific use case.", "interview_time_in_minute": 7},
-    {"goal_id": "g_12", "topic": "Leaderboard Reset & Data Lifecycle", "goal": "Assess the candidate's approach to handling periodic leaderboard resets (e.g. seasonal) without downtime or data loss.", "interview_time_in_minute": 7}
+    {"goal_id": "g_01", "topic": "ZSET Data Structure Tradeoffs", "goal": "Evaluate the candidate's understanding of why Redis Sorted Sets are suited to leaderboard ranking versus alternative structures.", "interview_time_in_minute": 8, "need_grounding": True},
+    {"goal_id": "g_02", "topic": "Score Update Race Conditions", "goal": "Assess the candidate's approach to handling concurrent score updates without race conditions or lost writes.", "interview_time_in_minute": 8, "need_grounding": True},
+    {"goal_id": "g_03", "topic": "Rank & Pagination Query Performance", "goal": "Evaluate the candidate's strategy for keeping rank/pagination queries fast as the leaderboard grows to millions of entries.", "interview_time_in_minute": 8, "need_grounding": True},
+    {"goal_id": "g_04", "topic": "Memory Footprint & Eviction Policy", "goal": "Assess the candidate's approach to managing Redis memory limits and eviction policy for a large, growing sorted set.", "interview_time_in_minute": 8, "need_grounding": True},
+    {"goal_id": "g_05", "topic": "Clustering & Sharding for Scale", "goal": "Evaluate the candidate's design for sharding leaderboard data across a Redis Cluster to handle millions of concurrent players.", "interview_time_in_minute": 8, "need_grounding": True},
+    {"goal_id": "g_06", "topic": "Tie-Breaking Logic", "goal": "Assess the candidate's approach to designing deterministic tie-breaking rules for players with identical scores.", "interview_time_in_minute": 7, "need_grounding": True},
+    {"goal_id": "g_07", "topic": "Real-Time Update Propagation", "goal": "Evaluate the candidate's design for pushing real-time rank changes to connected clients at scale.", "interview_time_in_minute": 7, "need_grounding": True},
+    {"goal_id": "g_08", "topic": "Persistence & Backup Tradeoffs", "goal": "Assess the candidate's understanding of Redis persistence options (RDB/AOF) and their tradeoffs for leaderboard durability.", "interview_time_in_minute": 7, "need_grounding": True},
+    {"goal_id": "g_09", "topic": "Failover & Disaster Recovery", "goal": "Evaluate the candidate's plan for handling a Redis node failure without losing or corrupting leaderboard state.", "interview_time_in_minute": 7, "need_grounding": True},
+    {"goal_id": "g_10", "topic": "Monitoring & Hot-Key Detection", "goal": "Assess the candidate's approach to detecting and mitigating hot-key contention on high-traffic leaderboard keys.", "interview_time_in_minute": 7, "need_grounding": True},
+    {"goal_id": "g_11", "topic": "Redis vs. Alternative Datastore Tradeoff", "goal": "Evaluate the candidate's reasoning for choosing Redis Sorted Sets over an alternative approach (e.g. a relational table with periodic re-ranking) for this specific use case.", "interview_time_in_minute": 7, "need_grounding": True},
+    {"goal_id": "g_12", "topic": "Leaderboard Reset & Data Lifecycle", "goal": "Assess the candidate's approach to handling periodic leaderboard resets (e.g. seasonal) without downtime or data loss.", "interview_time_in_minute": 7, "need_grounding": True}
 ]
 MOCK_META_10_NARROW_DECOMPOSED = {"assumptions": [], "warnings": []}
  
 MOCK_PLAN_11_NARROW_PADDED = [
-    {"goal_id": "g_01", "topic": "ZSET Tradeoffs", "goal": "Evaluate the candidate's understanding of Redis Sorted Sets for ranking.", "interview_time_in_minute": 5},
-    {"goal_id": "g_02", "topic": "ZSET Score Updates", "goal": "Assess the candidate's understanding of updating scores in a Redis Sorted Set.", "interview_time_in_minute": 5},
-    {"goal_id": "g_03", "topic": "Sorted Set Ranking Performance", "goal": "Evaluate the candidate's understanding of how Sorted Set ranking performance works.", "interview_time_in_minute": 5},
-    {"goal_id": "g_04", "topic": "Redis Clustering", "goal": "Assess the candidate's familiarity with Redis Cluster.", "interview_time_in_minute": 5},
-    {"goal_id": "g_05", "topic": "Kafka Event Streaming", "goal": "Evaluate the candidate's experience using Kafka to stream leaderboard update events.", "interview_time_in_minute": 5},
-    {"goal_id": "g_06", "topic": "SQL Leaderboard Persistence", "goal": "Assess the candidate's approach to persisting leaderboard data in a relational SQL database instead.", "interview_time_in_minute": 5},
-    {"goal_id": "g_07", "topic": "Sorted Set Basics", "goal": "Ask the candidate to explain what a Redis Sorted Set is.", "interview_time_in_minute": 5},
-    {"goal_id": "g_08", "topic": "Ranking Concepts", "goal": "Ask the candidate to explain how ranking works conceptually.", "interview_time_in_minute": 5},
-    {"goal_id": "g_09", "topic": "Redis General Use Cases", "goal": "Evaluate the candidate's general knowledge of Redis use cases beyond leaderboards.", "interview_time_in_minute": 5},
-    {"goal_id": "g_10", "topic": "Sorted Set Data Model", "goal": "Assess the candidate's understanding of the Sorted Set data model.", "interview_time_in_minute": 5},
-    {"goal_id": "g_11", "topic": "Leaderboard Definition", "goal": "Ask the candidate to define what a leaderboard system is.", "interview_time_in_minute": 5},
-    {"goal_id": "g_12", "topic": "Redis vs Memcached", "goal": "Evaluate the candidate's understanding of Redis versus Memcached in general.", "interview_time_in_minute": 5}
+    {"goal_id": "g_01", "topic": "ZSET Tradeoffs", "goal": "Evaluate the candidate's understanding of Redis Sorted Sets for ranking.", "interview_time_in_minute": 5, "need_grounding": True},
+    {"goal_id": "g_02", "topic": "ZSET Score Updates", "goal": "Assess the candidate's understanding of updating scores in a Redis Sorted Set.", "interview_time_in_minute": 5, "need_grounding": True},
+    {"goal_id": "g_03", "topic": "Sorted Set Ranking Performance", "goal": "Evaluate the candidate's understanding of how Sorted Set ranking performance works.", "interview_time_in_minute": 5, "need_grounding": True},
+    {"goal_id": "g_04", "topic": "Redis Clustering", "goal": "Assess the candidate's familiarity with Redis Cluster.", "interview_time_in_minute": 5, "need_grounding": True},
+    {"goal_id": "g_05", "topic": "Kafka Event Streaming", "goal": "Evaluate the candidate's experience using Kafka to stream leaderboard update events.", "interview_time_in_minute": 5, "need_grounding": True},
+    {"goal_id": "g_06", "topic": "SQL Leaderboard Persistence", "goal": "Assess the candidate's approach to persisting leaderboard data in a relational SQL database instead.", "interview_time_in_minute": 5, "need_grounding": True},
+    {"goal_id": "g_07", "topic": "Sorted Set Basics", "goal": "Ask the candidate to explain what a Redis Sorted Set is.", "interview_time_in_minute": 5, "need_grounding": True},
+    {"goal_id": "g_08", "topic": "Ranking Concepts", "goal": "Ask the candidate to explain how ranking works conceptually.", "interview_time_in_minute": 5, "need_grounding": False},
+    {"goal_id": "g_09", "topic": "Redis General Use Cases", "goal": "Evaluate the candidate's general knowledge of Redis use cases beyond leaderboards.", "interview_time_in_minute": 5, "need_grounding": False},
+    {"goal_id": "g_10", "topic": "Sorted Set Data Model", "goal": "Assess the candidate's understanding of the Sorted Set data model.", "interview_time_in_minute": 5, "need_grounding": True},
+    {"goal_id": "g_11", "topic": "Leaderboard Definition", "goal": "Ask the candidate to define what a leaderboard system is.", "interview_time_in_minute": 5, "need_grounding": False},
+    {"goal_id": "g_12", "topic": "Redis vs Memcached", "goal": "Evaluate the candidate's understanding of Redis versus Memcached in general.", "interview_time_in_minute": 5, "need_grounding": True}
 ]
 MOCK_META_11_NARROW_PADDED = {"assumptions": [], "warnings": []}
  
@@ -437,7 +474,8 @@ EXPECTED_10_NARROW_DECOMPOSED = {
     "coverage_reasoning": "All 9 checklist required_topics are represented as distinct, non-redundant goals, plus reasonable additional depth (tie-breaking, reset/lifecycle) that fits the same narrow scope without padding.",
     "edge_case_compliance": {
         "narrow_topic_decomposed_not_padded": True,
-        "count_time_matched_or_explained": True
+        "count_time_matched_or_explained": True,
+        "need_grounding_accurate": True
     }
 }
  
@@ -448,7 +486,8 @@ EXPECTED_11_NARROW_PADDED = {
     "coverage_reasoning": "Despite having 12 'goals,' only about 2-3 genuinely distinct competencies are tested (g_01/g_02/g_03/g_10 are all near-duplicate rewordings of the same ZSET-ranking idea). Memory/eviction, sharding depth, real-time propagation, persistence/backup, failover, monitoring, and lifecycle/reset are all absent. This is padding, not decomposition.",
     "edge_case_compliance": {
         "narrow_topic_decomposed_not_padded": False,
-        "count_time_matched_or_explained": False
+        "count_time_matched_or_explained": False,
+        "need_grounding_accurate": True
     },
     "additional_notes": "Time sums to 60 minutes, not the requested 90 — a second, independent constraint violation on top of the padding problem."
 }
@@ -611,6 +650,8 @@ def main():
             print(f"  Coverage Score:  {eval_result.coverage_score}/5 (Expected: {expected.get('coverage_score')}/5)")
             print(f"    Justification: {eval_result.coverage_justification}")
             print(f"  Ungrounded Goals: {eval_result.ungrounded_goals}")
+            print(f"  Grounding Flag Justification: {eval_result.grounding_flag_justification}")
+            print(f"  Mislabeled Grounding Goals: {eval_result.mislabeled_grounding_goals}")
             
             # Print actual vs expected edge case compliance
             print("\nLLM Edge Case Compliance Ratings:")

@@ -269,6 +269,7 @@ class EdgeCaseCompliance(BaseModel):
     vague_input_handled: Optional[Literal[True, False, "partial"]] = Field(default=None)
     narrow_topic_decomposed_not_padded: Optional[Literal[True, False, "partial"]] = Field(default=None)
     count_time_matched_or_explained: Optional[Literal[True, False, "partial"]] = Field(default=None)
+    need_grounding_accurate: Literal[True, False, "partial"] = Field(description="Verify if the 'need_grounding' flag set on each goal is accurate.")
 
 class PlannerEvaluationResult(BaseModel):
     relevance_score: int = Field(description="Qualitative relevance score (1-5).")
@@ -276,6 +277,8 @@ class PlannerEvaluationResult(BaseModel):
     coverage_score: int = Field(description="Qualitative coverage score (1-5).")
     coverage_justification: str = Field(description="Justification for coverage score.")
     ungrounded_goals: List[str] = Field(default_factory=list, description="Ungrounded goal IDs.")
+    grounding_flag_justification: str = Field(description="Goal-by-goal statement of each need_grounding value and whether it's correct.")
+    mislabeled_grounding_goals: List[str] = Field(default_factory=list, description="Goal IDs whose need_grounding flag was set incorrectly.")
     edge_case_compliance: EdgeCaseCompliance = Field(description="Qualitative edge case compliance ratings.")
     overall_notes: str = Field(description="Overall notes and critiques.")
 
@@ -385,6 +388,8 @@ def evaluate_planner_llm_judge(run, example) -> dict:
                 {"key": "vague_input_handled", "score": score_literal(actual_compliance.get("vague_input_handled"))},
                 {"key": "narrow_topic_decomposed", "score": score_literal(actual_compliance.get("narrow_topic_decomposed_not_padded"))},
                 {"key": "count_time_budget_qualitative", "score": score_literal(actual_compliance.get("count_time_matched_or_explained"))},
+                {"key": "need_grounding_accurate", "score": score_literal(actual_compliance.get("need_grounding_accurate"))},
+                {"key": "num_mislabeled_grounding_goals", "score": float(len(eval_result.mislabeled_grounding_goals))},
                 {"key": "num_ungrounded_goals", "score": float(len(eval_result.ungrounded_goals))}
             ]
         }
@@ -426,7 +431,8 @@ def evaluate_planner_target(inputs: dict) -> dict:
                 "goal_id": g.goal_id,
                 "topic": g.topic,
                 "goal": g.goal,
-                "interview_time_in_minute": g.interview_time_in_minute
+                "interview_time_in_minute": g.interview_time_in_minute,
+                "need_grounding": getattr(g, "need_grounding", None)
             })
             
     return {
