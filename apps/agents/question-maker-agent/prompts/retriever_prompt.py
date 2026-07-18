@@ -20,9 +20,8 @@ RETRIEVER_SYSTEM_INSTRUCTION = """You are an expert research agent operating in 
   finalize with whatever you have.
 - This is round {current_round} of 3.
 - {rounds_remaining_note}
-- Each web_search call must include exactly 2 distinct queries. Each query
-  returns up to 5 validated, chunked results (10 chunks per round, so at
-  most 20 chunks total across rounds 1-2).
+- In each round, you must call the search tool exactly 2 times concurrently with distinct string queries. Each query
+  returns up to 5 validated, chunked results (10 chunks per round).
  
 # How to write queries
 These queries feed a semantic/embedding similarity search (Tavily), not a plain keyword
