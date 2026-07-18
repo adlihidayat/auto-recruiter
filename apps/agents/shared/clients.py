@@ -12,7 +12,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 load_dotenv()
 
 # Verify that the API key is present in environment
-_gemini_api_key = os.getenv("GEMINI_API_KEY")
+_gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY1")
 if not _gemini_api_key:
     raise ValueError("GEMINI_API_KEY environment variable is not set in the environment or .env file.")
 
@@ -21,6 +21,8 @@ gemini_flash_lite = ChatGoogleGenerativeAI(
     model="gemini-3.1-flash-lite",
     google_api_key=_gemini_api_key,
     temperature=0.0,
+    max_retries=0,
+    timeout=60.0,
 )
 
 # Gemini 3.5 Flash: Balanced model for general text processing and validation.

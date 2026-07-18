@@ -6,25 +6,31 @@ Boundaries: Does not contain the actual LLM prompts, tool execution logic, or Fa
 
 from typing import Dict, Any, Literal
 from langgraph.graph import StateGraph, START, END
+from langgraph.types import Send
 
 from .state import QuestionMakerState
 from .nodes.planner import plan_node
+from .nodes.retriever import retriever_generator_subgraph
 
-def retrieve_node(state: QuestionMakerState) -> Dict[str, Any]:
+def route_to_retriever(state: QuestionMakerState):
     """
-    [2] Retriever Loop: Performs web searches to collect source snippets + URLs for each subtopic in research_brief.
-    Uses: gemini-2.5-flash-lite (tool-calling model, search tools).
+    [2] Retriever Routing (Map): Uses LangGraph Send to launch parallel retriever sub-graphs 
+    for each goal that requires grounding.
     """
-    # TODO: Implement Retriever loop node logic
-    return {"context_pack": []}
-
-def cross_check_node(state: QuestionMakerState) -> Dict[str, Any]:
-    """
-    [2.5] Cross-check pass: Detects duplicate sources, empty subtopics, and corroborates snippets.
-    Uses: Single model call / helper utility.
-    """
-    # TODO: Implement Cross-check logic
-    return {"context_pack": state.get("context_pack", [])}
+    sends = []
+    for goal in state.get("goals", []):
+        if goal.need_grounding:
+            sends.append(Send("retriever_generator_subgraph", {
+                "goal": goal, 
+                "messages": [], 
+                "search_count": 0,
+                "grounding_theories": []
+            }))
+            
+    if not sends:
+        # If no goals need grounding, skip directly to generator
+        return "generate_node"
+    return sends
 
 def generate_node(state: QuestionMakerState) -> Dict[str, Any]:
     """
@@ -89,8 +95,7 @@ workflow = StateGraph(QuestionMakerState)
 
 # Add Nodes
 workflow.add_node("plan_node", plan_node)
-workflow.add_node("retrieve_node", retrieve_node)
-workflow.add_node("cross_check_node", cross_check_node)
+workflow.add_node("retriever_generator_subgraph", retriever_generator_subgraph)
 workflow.add_node("generate_node", generate_node)
 workflow.add_node("consolidate_node", consolidate_node)
 workflow.add_node("validate_node", validate_node)
@@ -100,9 +105,8 @@ workflow.add_node("assemble_node", assemble_node)
 workflow.add_edge(START, "plan_node")
 
 # Define Flow
-workflow.add_edge("plan_node", "retrieve_node")
-workflow.add_edge("retrieve_node", "cross_check_node")
-workflow.add_edge("cross_check_node", "generate_node")
+workflow.add_conditional_edges("plan_node", route_to_retriever, ["retriever_generator_subgraph", "generate_node"])
+workflow.add_edge("retriever_generator_subgraph", "generate_node")
 workflow.add_edge("generate_node", "consolidate_node")
 workflow.add_edge("consolidate_node", "validate_node")
 
