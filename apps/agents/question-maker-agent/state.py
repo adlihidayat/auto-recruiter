@@ -29,6 +29,15 @@ class PushbackTrigger(BaseModel):
     severity: Literal["critical", "mild"] = Field(description="Severity rating of the trigger.")
     pushback_type: str = Field(description="Type of pushback (e.g., 'concrete', 'conceptual').")
 
+class GeneratedQuestionContent(BaseModel):
+    """
+    The LLM-generated portion of a question item, excluding state-managed metadata.
+    """
+    suggested_opening: str = Field(description="Recommended opening prompt to start the question thread.")
+    passing_criteria: List[str] = Field(default_factory=list, description="List of criteria required to pass.")
+    pushback_triggers: List[PushbackTrigger] = Field(default_factory=list, description="Candidate responses triggering pushback.")
+    wrong_answer_signals: List[str] = Field(default_factory=list, description="Clear signals of incorrect or fabricated answers.")
+
 class QuestionItem(BaseModel):
     """
     A single, highly practical, scenario-based technical interview question item.
@@ -87,6 +96,47 @@ class GroundingTheory(BaseModel):
     theory: str = Field(description="The complete grounding theory text generated from web search.")
     references: List[ReferenceSource] = Field(default_factory=list, description="Verified sources for this theory.")
 
+class GoalAlignmentCheck(BaseModel):
+    pass_: bool = Field(alias="pass", description="True if the question perfectly aligns with the goal.")
+    reasoning: str = Field(description="Reasoning for the goal alignment score.")
+
+class PassingCriteriaCheck(BaseModel):
+    pass_: bool = Field(alias="pass", description="True if the passing criteria are valid, observable, and correct.")
+    reasoning: str = Field(description="Reasoning for the criteria validity.")
+
+class GroundingFidelityCheck(BaseModel):
+    pass_: bool = Field(alias="pass", description="True if there are no hallucinations beyond the provided theory.")
+    unsupported_claims: List[str] = Field(description="List of specific claims that are unsupported by the theory.")
+
+class SignalClassificationCheck(BaseModel):
+    pass_: bool = Field(alias="pass", description="True if the wrong answer signals are clear and accurate.")
+    issues: List[str] = Field(description="List of issues with the wrong answer signals.")
+
+class PushbackActionabilityCheck(BaseModel):
+    pass_: bool = Field(alias="pass", description="True if pushback triggers are highly actionable and realistic.")
+    issues: List[str] = Field(description="List of issues with the pushback triggers.")
+
+class CriticChecks(BaseModel):
+    goal_alignment: GoalAlignmentCheck
+    passing_criteria_valid: PassingCriteriaCheck
+    grounding_fidelity: GroundingFidelityCheck
+    signal_classification: SignalClassificationCheck
+    pushback_actionability: PushbackActionabilityCheck
+
+class CriticFeedback(BaseModel):
+    """
+    Feedback schema returned by the LLM Judge for a specific question.
+    """
+    verdict: Literal["pass", "fail"] = Field(description="'pass' only if ALL five checks pass, otherwise 'fail'.")
+    checks: CriticChecks
+
+class GeneratorState(TypedDict):
+    """
+    The state dictionary for a single Generator node execution.
+    """
+    goal: InterviewGoal
+    theory: Optional[GroundingTheory]
+
 class QuestionMakerState(TypedDict):
     """
     The state dictionary tracking the question-making agent execution flow.
@@ -103,7 +153,7 @@ class QuestionMakerState(TypedDict):
     meta: Optional[PlannerMeta]
     research_brief: Optional[List[str]]
     grounding_theories: Annotated[List[GroundingTheory], operator.add]
-    generated_questions: Optional[List[QuestionItem]]
+    generated_questions: Annotated[List[QuestionItem], operator.add]
     consolidated_questions: Optional[List[QuestionItem]]
     critic_feedback: Optional[Dict[str, any]]  # e.g., {"is_valid": bool, "feedback_per_question": List[Dict]}
     retry_counts: Optional[Dict[str, int]]  # Track retries per question ID to prevent infinite loops
