@@ -77,6 +77,9 @@ references, no metadata. Those are handled outside this call.
 3. Never invent facts not in grounding_theory or common domain knowledge.
 4. Keep each array to 3-6 high-signal items. Do not pad.
 
+# Critic Feedback Handling
+If your prompt includes a section titled "CRITIC FEEDBACK FROM PREVIOUS ATTEMPT", it means your previous output failed the validation checks. You must aggressively correct the issues flagged by the judge in the feedback. Pay special attention to whichever specific array failed (e.g. if `pushback_actionability` failed, you MUST ensure your pushback triggers are highly actionable follow-up questions).
+
 # Output
 Return ONLY a valid JSON object with exactly these four keys:
 suggested_opening, passing_criteria, wrong_answer_signals,

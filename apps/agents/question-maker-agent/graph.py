@@ -88,9 +88,19 @@ def route_validation_results(state: QuestionMakerState):
             if retry_counts.get(goal_id, 0) <= 2:
                 goal_obj = goals.get(goal_id)
                 if goal_obj:
+                    feedback_for_goal = feedback.get("feedback_per_question", {}).get(goal_id)
+                    
+                    prev_question = None
+                    for q in reversed(state.get("generated_questions", [])):
+                        if q.goal_id == goal_id:
+                            prev_question = q
+                            break
+                            
                     sends.append(Send("generateQuestionItemFromGoal", {
                         "goal": goal_obj,
-                        "theory": theories.get(goal_id)
+                        "theory": theories.get(goal_id),
+                        "critic_feedback": feedback_for_goal,
+                        "previous_generation": prev_question
                     }))
     
     if sends:
@@ -103,9 +113,13 @@ def route_validation_results(state: QuestionMakerState):
 
 workflow = StateGraph(QuestionMakerState)
 
+def retriever_wrapper(state: Any):
+    result = retriever_generator_subgraph.invoke(state)
+    return {"grounding_theories": result.get("grounding_theories", [])}
+
 # Add Nodes
 workflow.add_node("plan_node", plan_node)
-workflow.add_node("retriever_generator_subgraph", retriever_generator_subgraph)
+workflow.add_node("retriever_generator_subgraph", retriever_wrapper)
 workflow.add_node("synchronizeRetrieverNodes", synchronizeRetrieverNodes)
 workflow.add_node("generateQuestionItemFromGoal", generateQuestionItemFromGoal)
 workflow.add_node("validateQuestionSuite", validateQuestionSuite)

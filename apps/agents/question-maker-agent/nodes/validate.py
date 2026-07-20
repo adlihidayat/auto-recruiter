@@ -4,12 +4,15 @@ Why: Acts as a gatekeeper using both deterministic schema checks and qualitative
 Boundaries: Does not generate questions. Only evaluates them and sets critic_feedback.
 """
 
+import logging
 from typing import Dict, Any, List
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from apps.agents.shared.clients import gemini_flash_lite
 from ..state import QuestionMakerState, CriticFeedback
-from ..prompts.validator_prompt import VALIDATOR_SYSTEM_INSTRUCTION
+from ..prompts.validator_prompt import JUDGE_SYSTEM_INSTRUCTION
+
+logger = logging.getLogger(__name__)
 
 def validateQuestionSuite(state: QuestionMakerState) -> Dict[str, Any]:
     """
@@ -29,7 +32,7 @@ def validateQuestionSuite(state: QuestionMakerState) -> Dict[str, Any]:
     }
     
     structured_judge = gemini_flash_lite.with_structured_output(CriticFeedback)
-    sys_msg = SystemMessage(content=VALIDATOR_SYSTEM_INSTRUCTION)
+    sys_msg = SystemMessage(content=JUDGE_SYSTEM_INSTRUCTION)
     
     for question in generated_questions:
         goal_id = question.goal_id

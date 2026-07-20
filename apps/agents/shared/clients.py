@@ -43,6 +43,11 @@ class RotatingModelWrapper:
         structured_fallbacks = [c.with_structured_output(schema) for c in self.fallbacks]
         return structured_primary.with_fallbacks(structured_fallbacks)
 
+    def bind_tools(self, tools, **kwargs):
+        bound_primary = self.primary.bind_tools(tools, **kwargs)
+        bound_fallbacks = [c.bind_tools(tools, **kwargs) for c in self.fallbacks]
+        return bound_primary.with_fallbacks(bound_fallbacks)
+
 # Gemini 3.1 Flash-Lite: Cheap, extremely fast, ideal for planning, routing, and high-frequency checks.
 gemini_flash_lite = RotatingModelWrapper(
     "gemini-3.1-flash-lite",

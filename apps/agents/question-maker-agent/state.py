@@ -5,7 +5,7 @@ Boundaries: Does not implement LLM node logic, routing edges, or FastAPI routes.
 """
 
 import operator
-from typing import List, Optional, Literal, TypedDict, Dict, Annotated
+from typing import List, Optional, Literal, TypedDict, Dict, Annotated, Any
 from pydantic import BaseModel, Field
 
 # --- Question Suite Schema Contract ---
@@ -136,6 +136,8 @@ class GeneratorState(TypedDict):
     """
     goal: InterviewGoal
     theory: Optional[GroundingTheory]
+    critic_feedback: Optional[Dict[str, Any]]
+    previous_generation: Optional[QuestionItem]
 
 class QuestionMakerState(TypedDict):
     """

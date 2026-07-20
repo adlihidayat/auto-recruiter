@@ -45,6 +45,28 @@ def generateQuestionItemFromGoal(state: GeneratorState) -> Dict[str, Any]:
     else:
         formattedGoalAndTheoryContext += "\n--- Grounding Theory ---\nNone provided. Rely on general best practices.\n"
 
+    critic_feedback = state.get("critic_feedback")
+    previous_generation = state.get("previous_generation")
+    
+    if critic_feedback or previous_generation:
+        formattedGoalAndTheoryContext += "\n\n========================================\n"
+        formattedGoalAndTheoryContext += "CRITIC FEEDBACK FROM PREVIOUS ATTEMPT\n"
+        formattedGoalAndTheoryContext += "========================================\n"
+        formattedGoalAndTheoryContext += "Your previous generation failed validation. You MUST fix the issues listed below.\n\n"
+        
+        if critic_feedback:
+            formattedGoalAndTheoryContext += "--- FEEDBACK ---\n"
+            import json
+            # critic_feedback might be a dict or a string depending on the error
+            if isinstance(critic_feedback, dict):
+                formattedGoalAndTheoryContext += json.dumps(critic_feedback, indent=2) + "\n"
+            else:
+                formattedGoalAndTheoryContext += str(critic_feedback) + "\n"
+                
+        if previous_generation:
+            formattedGoalAndTheoryContext += "\n--- YOUR PREVIOUS (FAILED) GENERATION ---\n"
+            formattedGoalAndTheoryContext += previous_generation.model_dump_json(indent=2) + "\n"
+
     humanContextPrompt = HumanMessage(content=formattedGoalAndTheoryContext)
     
     structuredGeneratorModel = gemini_flash_lite.with_structured_output(GeneratedQuestionContent)
