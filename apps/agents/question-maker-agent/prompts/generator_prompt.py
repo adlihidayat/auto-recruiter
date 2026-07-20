@@ -1,3 +1,9 @@
+"""
+What: Defines the system instructions and formatting for the Generator node.
+Why: Instructs the LLM on how to construct a practical, scenario-based interview question from a Goal and Theory.
+Boundaries: Contains only the prompt text; does not execute LLM calls or route the graph.
+"""
+
 GENERATOR_SYSTEM_INSTRUCTION = """
 You are an expert technical interviewer and assessment designer. You will
 design ONE scenario-based interview question for ONE evaluation goal. You

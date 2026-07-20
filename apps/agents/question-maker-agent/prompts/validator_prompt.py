@@ -1,3 +1,9 @@
+"""
+What: Defines the system instructions and formatting for the Validator LLM Judge.
+Why: Used by the Validator node to critically evaluate a generated interview question against strict rubrics (goal alignment, fidelity, pushback actionability).
+Boundaries: Contains only the prompt text; does not execute LLM calls or route the graph.
+"""
+
 JUDGE_SYSTEM_INSTRUCTION = """
 You are a strict quality gate for interview questions. You will be given
 a topic, a goal, optional grounding_theory, and a generated question

@@ -1,12 +1,13 @@
+"""
+What: Implements the Assemble Node for the question-maker-agent.
+Why: Structures the final JSON output into the official QuestionSuite schema and deduplicates questions by goal_id.
+Boundaries: Formatting only (no model calls). Does not generate or validate questions.
+"""
+
 from typing import Dict, Any
 from ..state import QuestionMakerState, QuestionSuite
 
 def assemble_node(state: QuestionMakerState) -> Dict[str, Any]:
-    """
-    [6/Final] Assemble: Structures final JSON output into the official QuestionSuite schema.
-    Uses: Formatting only (no model call).
-    Deduplicates generated questions by goal_id, keeping the most recently generated one.
-    """
     generated = state.get("generated_questions", [])
     
     # Deduplicate keeping the latest generated item for each goal_id

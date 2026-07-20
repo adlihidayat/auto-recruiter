@@ -1,3 +1,9 @@
+"""
+What: Executes a full end-to-end local test of the Question-Maker Agent graph.
+Why: Used to verify that all nodes (Planner, Retriever, Generator, Validator, Assemble) correctly sequence data and handle fallbacks without needing to deploy the service.
+Boundaries: This is a standalone test script. It does not run as part of the core agent graph.
+"""
+
 import os
 import sys
 import json

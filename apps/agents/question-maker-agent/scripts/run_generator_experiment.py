@@ -1,3 +1,9 @@
+"""
+What: Evaluates the Generator node using LangSmith.
+Why: Runs a structured dataset of 24 interview goal scenarios against the Generator to measure its ability to create valid, grounded questions and respond to Validator feedback.
+Boundaries: This is a standalone evaluation script. It does not run as part of the core agent graph.
+"""
+
 import os
 import sys
 import json
