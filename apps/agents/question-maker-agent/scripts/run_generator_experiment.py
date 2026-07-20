@@ -35,8 +35,36 @@ validator_prompt_module = importlib.import_module("question-maker-agent.prompts.
 # Use the correct variable name we fixed earlier
 JUDGE_SYSTEM_INSTRUCTION = getattr(validator_prompt_module, "JUDGE_SYSTEM_INSTRUCTION", "")
 
+"""
+Generator eval fixtures. Each entry provides realistic `inputs` (matching
+the retriever/planner output shape) with `outputs: {}` left for the
+generator to fill in during a real run.
+
+Coverage map (why each of the 20 exists):
+  1  - baseline clean case
+  2  - nuanced/conditional theory (real exceptions, must not invent more)
+  3  - shortest time tier (1-2 min)
+  4  - longest time tier (30 min), no grounding, staged system design
+  5  - GROUNDING INTEGRITY: need_grounding=True but theory is missing/null
+  6  - GROUNDING INTEGRITY: need_grounding=False but theory attached anyway
+  7  - non-technical/behavioral goal, no grounding
+  8  - precise list-based grounding (exact enumerated identifiers)
+  9  - formula/numeric grounding
+  10 - hallucination-bait: deep DB internals, easy to overreach past theory
+  11 - security domain, moderate grounding
+  12 - deliberately vague/broad goal, no grounding
+  13 - deliberately terse one-line theory
+  14 - mixed-credibility references (tier A + tier B, non-corroborated)
+  15 - design/UX domain (non-engineering technical)
+  16 - statistics domain with real numeric grounding
+  17 - hallucination-bait: expert-level networking, long time tier
+  18 - deliberately trivial/low-bar goal, short time
+  19 - SCOPE PRECISION: explicit negative constraint ("X, not Y")
+  20 - shortest possible time tier + trivial goal + no grounding
+"""
+
 DATASET_EXAMPLES = [
- 
+
     # 1 — Baseline clean case.
     {
         "inputs": {
@@ -59,7 +87,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 2 — Nuanced/conditional theory with real exceptions (given example,
     # kept verbatim). Tests whether the generator represents the actual
     # exceptions rather than inventing simpler or additional ones.
@@ -141,7 +169,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 3 — Shortest realistic time tier. Simple topic, terse grounding.
     {
         "inputs": {
@@ -164,7 +192,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 4 — Longest time tier, staged system design, no grounding needed.
     {
         "inputs": {
@@ -179,7 +207,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 5 — GROUNDING INTEGRITY EDGE CASE: need_grounding=True but the
     # theory object is missing/null (simulated retriever failure).
     {
@@ -195,7 +223,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 6 — GROUNDING INTEGRITY EDGE CASE: need_grounding=False but a theory
     # was attached anyway (simulated upstream inconsistency).
     {
@@ -228,7 +256,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 7 — Non-technical/behavioral goal, no grounding.
     {
         "inputs": {
@@ -243,7 +271,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 8 — Precise, exhaustive list-based grounding. Tests whether the
     # generator gets the specifics right (or invents extra items) when
     # the theory contains an enumerated, countable list.
@@ -281,7 +309,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 9 — Formula/numeric grounding. Tests correct use of a given formula
     # without inventing a different one or extra numeric claims.
     {
@@ -308,7 +336,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 10 — HALLUCINATION-BAIT: deep database internals. A model's training
     # confidence on Postgres internals usually exceeds what's actually in
     # the supplied theory — tests overreach resistance.
@@ -345,7 +373,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 11 — Security domain, moderate grounding.
     {
         "inputs": {
@@ -371,7 +399,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 12 — Deliberately vague/broad goal with no topic-level constraints.
     # Tests whether the generator narrows this into something concrete
     # rather than producing an equally vague question.
@@ -388,7 +416,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 13 — Deliberately terse, single-sentence theory.
     {
         "inputs": {
@@ -407,7 +435,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 14 — Mixed-credibility references: tier A + tier B, one
     # non-corroborated. Tests whether the generator treats all grounding
     # as equally solid when it shouldn't, and whether it stays especially
@@ -453,7 +481,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 15 — Design/UX domain, non-engineering technical content.
     {
         "inputs": {
@@ -479,7 +507,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 16 — Statistics domain with real numeric grounding.
     {
         "inputs": {
@@ -506,7 +534,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 17 — HALLUCINATION-BAIT: expert-level networking, long time tier.
     # Deep enough that a model's confident prior knowledge often exceeds
     # what's actually supplied in the theory.
@@ -545,7 +573,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 18 — Deliberately trivial/low-bar goal, short time. Tests whether
     # the generator avoids over-engineering complexity for a goal that
     # explicitly asks for a basic bar.
@@ -562,7 +590,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 19 — SCOPE PRECISION: explicit negative constraint. Tests whether
     # the generator stays narrowly on the stated focus (write cost) rather
     # than drifting into the adjacent, more commonly-discussed topic
@@ -591,7 +619,7 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
- 
+
     # 20 — Shortest possible time tier, trivial goal, no grounding.
     {
         "inputs": {
@@ -606,6 +634,311 @@ DATASET_EXAMPLES = [
         },
         "outputs": {},
     },
+
+    # 21 — RETRY: single-check failure, pushback_actionability. Tests
+    # whether the generator fixes only the flagged array and leaves the
+    # rest of the previous attempt untouched.
+    {
+        "inputs": {
+            "goal": {
+                "goal_id": "g_21",
+                "topic": "Python Concurrency",
+                "goal": "Evaluate candidate's understanding of event loops and coroutines in Python.",
+                "interview_time_in_minute": 10,
+                "need_grounding": True,
+            },
+            "theory": {
+                "goal_id": "g_21",
+                "theory": (
+                    "The event loop is the core of asyncio. Coroutines pause "
+                    "execution at await, yielding control to the event loop. "
+                    "asyncio.gather runs awaitables concurrently."
+                ),
+                "references": [],
+            },
+            "critic_feedback": {
+                "layer": 2,
+                "failed_checks": [
+                    {
+                        "check": "pushback_actionability",
+                        "issue": "pushback_triggers is empty. At least one actionable pushback_trigger with a real, literally-askable follow_up_prompt is required.",
+                    }
+                ],
+            },
+            "previous_generation": {
+                "suggested_opening": "How does the event loop work in Python asyncio?",
+                "passing_criteria": [
+                    "Mentions event loop scheduling",
+                    "Mentions await yielding control",
+                ],
+                "wrong_answer_signals": [
+                    {"signal": "Says threads are used for everything", "severity": "critical"}
+                ],
+                "pushback_triggers": [],
+            },
+        },
+        "outputs": {},
+    },
+
+    # 22 — RETRY: single-check failure, signal_classification. A hard
+    # misconception was misplaced in pushback_triggers on the previous
+    # attempt. Tests whether the retry moves it to wrong_answer_signals
+    # with the correct shape, rather than just rewording it in place.
+    {
+        "inputs": {
+            "goal": {
+                "goal_id": "g_22",
+                "topic": "Memory Management",
+                "goal": "Evaluate candidate's understanding of garbage collection timing in managed languages.",
+                "interview_time_in_minute": 10,
+                "need_grounding": True,
+            },
+            "theory": {
+                "goal_id": "g_22",
+                "theory": (
+                    "Garbage collection reclaims memory from objects that are no longer "
+                    "reachable, but it does not happen instantly upon an object becoming "
+                    "unreachable — the collector runs on its own schedule (e.g. triggered by "
+                    "allocation thresholds or explicit invocation), so there can be a delay "
+                    "before memory is actually reclaimed."
+                ),
+                "references": [],
+            },
+            "critic_feedback": {
+                "layer": 2,
+                "failed_checks": [
+                    {
+                        "check": "signal_classification",
+                        "issue": "pushback_triggers contains 'Claims garbage collection instantly frees memory the moment an object becomes unreachable' — this is a flat factual error, not an incomplete-but-plausible answer. It must be moved to wrong_answer_signals with severity 'critical', not left as a pushback_trigger.",
+                    }
+                ],
+            },
+            "previous_generation": {
+                "suggested_opening": "You notice memory usage staying high right after a large object should have gone out of scope. What would you check?",
+                "passing_criteria": [
+                    "States that becoming unreachable doesn't guarantee immediate reclamation",
+                    "Mentions checking for lingering references or waiting for the next collection cycle",
+                ],
+                "wrong_answer_signals": [
+                    "Claims manually setting a reference to null always immediately frees the memory"
+                ],
+                "pushback_triggers": [
+                    {
+                        "trigger": "Claims garbage collection instantly frees memory the moment an object becomes unreachable",
+                        "severity": "mild",
+                        "pushback_type": "clarification"
+                    }
+                ],
+            },
+        },
+        "outputs": {},
+    },
+
+    # 23 — RETRY: single-check failure, grounding_fidelity. A specific
+    # detail in passing_criteria isn't traceable to the grounding_theory.
+    {
+        "inputs": {
+            "goal": {
+                "goal_id": "g_23",
+                "topic": "Kubernetes",
+                "goal": "Evaluate candidate's understanding of Kubernetes pod scheduling.",
+                "interview_time_in_minute": 15,
+                "need_grounding": True,
+            },
+            "theory": {
+                "goal_id": "g_23",
+                "theory": (
+                    "The kube-scheduler assigns pods to nodes based on resource requests, "
+                    "affinity/anti-affinity rules, and taints/tolerations."
+                ),
+                "references": [],
+            },
+            "critic_feedback": {
+                "layer": 2,
+                "failed_checks": [
+                    {
+                        "check": "grounding_fidelity",
+                        "issue": "passing_criteria states the scheduler uses the 'Bin-Packing v3 algorithm introduced in Kubernetes 1.29' — this specific algorithm name and version is not present in grounding_theory and must be removed or replaced with something traceable to it.",
+                    }
+                ],
+            },
+            "previous_generation": {
+                "suggested_opening": "Some of your pods are stuck in Pending state even though nodes have free capacity. How would you debug why the scheduler isn't placing them?",
+                "passing_criteria": [
+                    "Checks resource requests against available node capacity",
+                    "States that the scheduler uses the 'Bin-Packing v3 algorithm introduced in Kubernetes 1.29' to make placement decisions",
+                    "Checks for taints on nodes without matching tolerations on the pod",
+                ],
+                "wrong_answer_signals": [
+                    {"signal": "Claims pods are scheduled purely at random with no resource awareness", "severity": "critical"}
+                ],
+                "pushback_triggers": [
+                    {
+                        "trigger_condition": "Mentions taints/tolerations but doesn't explain how they interact with scheduling",
+                        "follow_up_prompt": "How exactly does a toleration change whether a pod can land on a tainted node?",
+                    }
+                ],
+            },
+        },
+        "outputs": {},
+    },
+
+    # 24 — RETRY: multi-check failure (goal_alignment + passing_criteria_
+    # valid together). Tests whether a broader failure correctly triggers
+    # a larger rewrite of suggested_opening and passing_criteria, while
+    # wrong_answer_signals and pushback_triggers — which weren't flagged
+    # — can still reasonably carry over or be lightly adapted.
+    {
+        "inputs": {
+            "goal": {
+                "goal_id": "g_24",
+                "topic": "Database Security",
+                "goal": "Evaluate candidate's understanding of SQL injection prevention techniques.",
+                "interview_time_in_minute": 8,
+                "need_grounding": True,
+            },
+            "theory": {
+                "goal_id": "g_24",
+                "theory": (
+                    "Parameterized queries (prepared statements) prevent SQL injection by "
+                    "separating query structure from user-supplied data, so input is never "
+                    "interpreted as SQL syntax."
+                ),
+                "references": [],
+            },
+            "critic_feedback": {
+                "layer": 2,
+                "failed_checks": [
+                    {
+                        "check": "goal_alignment",
+                        "issue": "suggested_opening asks about schema normalization tradeoffs, which does not evaluate SQL injection prevention at all — it's off-topic for this goal.",
+                    },
+                    {
+                        "check": "passing_criteria_valid",
+                        "issue": "passing_criteria items ('Understands database design well', 'Has good judgment about tradeoffs') are not observable and don't relate to the actual goal of SQL injection prevention.",
+                    },
+                ],
+            },
+            "previous_generation": {
+                "suggested_opening": "You're designing a schema for an e-commerce orders table. How would you decide whether to normalize customer address data into a separate table?",
+                "passing_criteria": [
+                    "Understands database design well",
+                    "Has good judgment about tradeoffs",
+                ],
+                "wrong_answer_signals": [
+                    {"signal": "Claims normalization has no performance implications at all", "severity": "moderate"}
+                ],
+                "pushback_triggers": [
+                    {
+                        "trigger_condition": "Mentions denormalization for performance without naming a specific tradeoff",
+                        "follow_up_prompt": "What's the specific cost you're trying to avoid by denormalizing here?",
+                    }
+                ],
+            },
+        },
+        "outputs": {},
+    },
+
+    # 25 — RETRY: Layer 1 schema failure. Different, terser feedback
+    # shape than a Layer 2 qualitative failure — no reasoning text, just
+    # a list of structurally missing/invalid fields. Tests whether the
+    # generator handles this format correctly per the prompt's explicit
+    # instruction to treat it the same way as a named Layer 2 check.
+    {
+        "inputs": {
+            "goal": {
+                "goal_id": "g_25",
+                "topic": "React",
+                "goal": "Evaluate candidate's understanding of when to lift state up versus keep it local.",
+                "interview_time_in_minute": 10,
+                "need_grounding": True,
+            },
+            "theory": {
+                "goal_id": "g_25",
+                "theory": (
+                    "In React, state should be lifted to the closest common ancestor of "
+                    "components that need to share it. Props pass data down; state changes "
+                    "should generally flow through the component that owns it."
+                ),
+                "references": [],
+            },
+            "critic_feedback": {
+                "layer": 1,
+                "failed_checks": [
+                    "missing or empty: wrong_answer_signals",
+                    "invalid severity: None",
+                ],
+            },
+            "previous_generation": {
+                "suggested_opening": "Two sibling components both need to reflect the same filter selection. Where would you put that state, and why?",
+                "passing_criteria": [
+                    "States that the state should be lifted to the closest common parent",
+                    "Explains that the parent passes the value and an updater down as props",
+                ],
+                "wrong_answer_signals": [],
+                "pushback_triggers": [
+                    {
+                        "trigger_condition": "Mentions 'lifting state up' vaguely without describing the mechanism",
+                        "follow_up_prompt": "What would the parent component actually need to pass down to make this work?",
+                    }
+                ],
+            },
+        },
+        "outputs": {},
+    },
+
+    # 26 — RETRY: stubborn second attempt. The SAME check failed twice in
+    # a row, with different specifics each time — simulates a model that
+    # fixed the letter of the first complaint but not the underlying
+    # pattern. Tests whether feedback that's more specific the second
+    # time actually produces a correct fix, or whether the model repeats
+    # a similar mistake.
+    {
+        "inputs": {
+            "goal": {
+                "goal_id": "g_26",
+                "topic": "Data Structures",
+                "goal": "Evaluate candidate's understanding of when to use a hash table versus a balanced tree.",
+                "interview_time_in_minute": 10,
+                "need_grounding": True,
+            },
+            "theory": {
+                "goal_id": "g_26",
+                "theory": (
+                    "Hash tables offer average O(1) lookup/insert but no ordering guarantee. "
+                    "Balanced trees offer O(log n) operations but maintain sorted order, "
+                    "enabling range queries and ordered traversal."
+                ),
+                "references": [],
+            },
+            "critic_feedback": {
+                "layer": 2,
+                "failed_checks": [
+                    {
+                        "check": "pushback_actionability",
+                        "issue": "This is the SECOND attempt. Your first fix changed the follow_up_prompt to 'Think about how range queries would work with a hash table' — this is still an instruction to the interviewer, not a question the interviewer could read aloud to the candidate. It must be phrased as a direct question addressed to the candidate.",
+                    }
+                ],
+            },
+            "previous_generation": {
+                "suggested_opening": "You need a data structure to store user sessions by ID for fast lookup, and separately one to store a leaderboard that needs range queries like 'top 10 scores.' Which would you use for each, and why?",
+                "passing_criteria": [
+                    "Chooses a hash table for session lookup, citing average O(1) access with no ordering need",
+                    "Chooses a balanced tree for the leaderboard, citing the need for ordered traversal and range queries",
+                ],
+                "wrong_answer_signals": [
+                    {"signal": "Claims hash tables maintain insertion or sorted order by default", "severity": "moderate"}
+                ],
+                "pushback_triggers": [
+                    {
+                        "trigger_condition": "Picks a hash table for the leaderboard without addressing how range queries would work",
+                        "follow_up_prompt": "Think about how range queries would work with a hash table.",
+                    }
+                ],
+            },
+        },
+        "outputs": {},
+    },
 ]
 
 
@@ -615,11 +948,62 @@ def evaluate_generator_target(inputs: dict) -> dict:
     """
     goal_data = inputs.get("goal", {})
     theory_data = inputs.get("theory")
+    critic_feedback = inputs.get("critic_feedback")
+    previous_generation_data = inputs.get("previous_generation")
     
     goal = InterviewGoal(**goal_data)
     theory = GroundingTheory(**theory_data) if theory_data else None
     
-    state = GeneratorState(goal=goal, theory=theory)
+    state_module = importlib.import_module("question-maker-agent.state")
+    QuestionItem = state_module.QuestionItem
+    
+    if previous_generation_data:
+        # Fill missing required fields from the main goal (for older datasets)
+        if "goal_id" not in previous_generation_data:
+            previous_generation_data["goal_id"] = goal.goal_id
+        if "topic" not in previous_generation_data:
+            previous_generation_data["topic"] = goal.topic
+        if "goal" not in previous_generation_data:
+            previous_generation_data["goal"] = goal.goal
+        if "references" not in previous_generation_data:
+            previous_generation_data["references"] = []
+        if "interview_time_in_minute" not in previous_generation_data:
+            previous_generation_data["interview_time_in_minute"] = goal.interview_time_in_minute
+            
+        # Fix wrong_answer_signals if they are dicts instead of strings
+        if "wrong_answer_signals" in previous_generation_data:
+            fixed_signals = []
+            for w in previous_generation_data["wrong_answer_signals"]:
+                if isinstance(w, dict):
+                    fixed_signals.append(w.get("signal", str(w)))
+                else:
+                    fixed_signals.append(w)
+            previous_generation_data["wrong_answer_signals"] = fixed_signals
+            
+        # Fix pushback_triggers if they use old schema keys
+        if "pushback_triggers" in previous_generation_data:
+            fixed_triggers = []
+            for p in previous_generation_data["pushback_triggers"]:
+                if "trigger" not in p and "trigger_condition" in p:
+                    fixed_triggers.append({
+                        "trigger": p["trigger_condition"],
+                        "severity": p.get("severity") if p.get("severity") in ["critical", "mild"] else "mild",
+                        "pushback_type": p.get("pushback_type", "clarification")
+                    })
+                else:
+                    if p.get("severity") not in ["critical", "mild"]:
+                        p["severity"] = "mild"
+                    fixed_triggers.append(p)
+            previous_generation_data["pushback_triggers"] = fixed_triggers
+            
+    previous_generation = QuestionItem(**previous_generation_data) if previous_generation_data else None
+    
+    state = GeneratorState(
+        goal=goal, 
+        theory=theory,
+        critic_feedback=critic_feedback,
+        previous_generation=previous_generation
+    )
     
     # Generate the question
     try:
@@ -634,9 +1018,11 @@ def evaluate_generator_target(inputs: dict) -> dict:
             "suggested_opening": q.suggested_opening,
             "passing_criteria": q.passing_criteria,
             "wrong_answer_signals": [w for w in q.wrong_answer_signals],
-            "pushback_triggers": [{"trigger": p.trigger, "severity": p.severity, "pushback_type": p.pushback_type} for p in q.pushback_triggers]
+            "pushback_triggers": [{"trigger": getattr(p, "trigger", getattr(p, "trigger_condition", "")), "severity": getattr(p, "severity", ""), "pushback_type": getattr(p, "pushback_type", "")} for p in q.pushback_triggers]
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"error": str(e)}
 
 def validator_judge_evaluator(run, example) -> dict:
@@ -715,7 +1101,7 @@ def validator_judge_evaluator(run, example) -> dict:
 if __name__ == "__main__":
     client = Client()
     
-    dataset_name = "Generator-Eval-Dataset"
+    dataset_name = "Generator-Eval-Dataset-v2"
     
     # Check if dataset exists, if not create it
     if not client.has_dataset(dataset_name=dataset_name):

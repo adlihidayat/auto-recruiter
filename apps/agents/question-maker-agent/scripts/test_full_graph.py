@@ -19,8 +19,8 @@ def test_workflow():
         "job_name": "Senior Backend Engineer",
         "job_description": "We need a senior engineer who can design scalable microservices and write high-performance Go code. Strong understanding of gRPC and Kubernetes is required.",
         "difficulty": "senior",
-        "num_goals": 2,
-        "total_duration_minutes": 30
+        "num_goals": 1,
+        "total_duration_minutes": 15
     }
 
     print("Invoking full Question-Maker workflow (Planner -> Retriever -> Generator -> Validator -> Assemble)...")
