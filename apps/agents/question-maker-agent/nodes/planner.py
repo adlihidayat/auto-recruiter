@@ -62,7 +62,29 @@ def plan_node(state: QuestionMakerState) -> Dict[str, Any]:
     structured_llm = gemini_flash_lite.with_structured_output(PlannerOutput)
     response: PlannerOutput = structured_llm.invoke(messages)
     
-    # 5. Return state updates, saving resolved/inferred difficulty and metadata back to state
+    # 5. Normalize generated times to match total_duration_minutes perfectly
+    total_generated_time = sum(g.interview_time_in_minute for g in response.goals)
+    
+    if total_generated_time != total_duration_minutes and total_generated_time > 0 and response.goals:
+        scale = total_duration_minutes / total_generated_time
+        
+        # Scale and round each goal
+        for g in response.goals:
+            g.interview_time_in_minute = max(1, int(round(g.interview_time_in_minute * scale)))
+            
+        # Fix any rounding discrepancy by adjusting the largest goal
+        new_total = sum(g.interview_time_in_minute for g in response.goals)
+        diff = total_duration_minutes - new_total
+        if diff != 0:
+            # Find the goal with the largest time to absorb the difference
+            largest_goal = max(response.goals, key=lambda g: g.interview_time_in_minute)
+            # Ensure we don't reduce a goal below 1 minute
+            if largest_goal.interview_time_in_minute + diff < 1:
+                largest_goal.interview_time_in_minute = 1
+            else:
+                largest_goal.interview_time_in_minute += diff
+
+    # 6. Return state updates, saving resolved/inferred difficulty and metadata back to state
     return {
         "goals": response.goals,
         "difficulty": response.inferred_difficulty,
