@@ -11,12 +11,14 @@ This file extends the root `/GEMINI.md` with Python-specific and AI-specific beh
 
 ## 1. Tech Stack & Architectural Boundaries
 
-This application is a standalone Python microservice responsible for orchestrating agentic AI workflows. It exposes endpoints to be consumed **solely** by `apps/backend`. Never attempt to communicate directly with `apps/frontend`.
+This application is a standalone Python microservice responsible for orchestrating agentic AI workflows.
 
+- **Default consumption model**: Agents expose endpoints via the FastAPI serving layer, to be consumed by `apps/backend` only. Never attempt to communicate directly with `apps/frontend`.
+- **Exception — `interviewer-agent`**: this agent is consumed differently. Because it runs on the hot path of a live voice call, it must be importable as a plain Python package by `apps/realtime-worker` and invoked in-process — not called over HTTP through `apps/backend`. It must therefore have zero dependency on `fastapi`/`uvicorn` in its core logic; any FastAPI wrapper exposed via `api/server.py` is for non-realtime tooling only (e.g. manual testing), never the call path used by the worker.
 - **Language**: Python 3.12+ (Strict type hinting required on all functions and variables).
 - **Agent Framework**: `langgraph` (Stateful, cyclical, multi-actor workflows).
 - **Observability & Tracing**: `langsmith` (Mandatory step-by-step tracing).
-- **Serving Layer**: `fastapi` + `uvicorn` (For exposing agent execution endpoints to the core backend).
+- **Serving Layer**: `fastapi` + `uvicorn` (For exposing non-realtime agent execution endpoints — question-maker, grader — to the core backend).
 - **Data Validation**: `pydantic` v2 (For all payload schemas, LLM structured outputs, and environment variables).
 
 ---
@@ -43,10 +45,15 @@ When building or modifying agent workflows, adhere strictly to the following fra
 
 ```text
 apps/agents/
-├── shared/                   # Core utilities shared across all agents
-│   ├── clients.py            # Initialized LLM clients (OpenAI, Gemini, etc.)
-│   ├── tracing.py            # LangSmith configuration and wrappers
-│   └── tools/                # Reusable agent tools (e.g., resume_parser, db_reader)
+apps/agents/
+├── shared/
+│   ├── clients.py
+│   ├── tracing.py
+│   ├── safety/                # NEW — shared guardrail primitives
+│   │   ├── regex_denylist.py  # fast first-pass pattern checks
+│   │   ├── injection_classifier.py  # wraps fine-tuned deberta-v3-small
+│   │   └── schemas.py         # GuardResult pydantic model, shared verdict shape
+│   └── tools/
 ├── api/                      # FastAPI server setup and route definitions
 │   └── server.py             # Main entrypoint exposing agent endpoints
 ├── interview-grader-agent/   # Evaluates transcripts against job rubrics
