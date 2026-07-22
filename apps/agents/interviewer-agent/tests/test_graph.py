@@ -5,8 +5,20 @@ Boundaries: Does not mock LLM network calls or test live server endpoints.
 """
 
 import pytest
-from ..graph import graph
-from ..state import InterviewerState, Goal
+import os
+import sys
+import importlib
+
+# Setup paths for monorepo structure
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../..")))
+
+graph_module = importlib.import_module("interviewer-agent.graph")
+state_module = importlib.import_module("interviewer-agent.state")
+
+graph = graph_module.graph
+Goal = state_module.Goal
 
 def test_graph_compiles() -> None:
     """

@@ -38,10 +38,17 @@ def decideNextConversationalTurn(current_state: InterviewerState) -> Dict[str, A
     
     # 2. Append turn history
     for history_item in current_state.get("goal_history", []):
-        if history_item.role == "interviewer":
-            conversation_messages.append(AIMessage(content=history_item.content))
+        if isinstance(history_item, dict):
+            role_val = history_item.get("role")
+            content_val = history_item.get("content", "")
         else:
-            conversation_messages.append(HumanMessage(content=history_item.content))
+            role_val = getattr(history_item, "role", None)
+            content_val = getattr(history_item, "content", "")
+
+        if role_val == "interviewer":
+            conversation_messages.append(AIMessage(content=content_val))
+        else:
+            conversation_messages.append(HumanMessage(content=content_val))
             
     # 3. Format candidate input and execution metrics
     turn_context_summary = (

@@ -56,8 +56,8 @@ class InterviewerDecision(BaseModel):
     """
     Structured output schema returned by the LLM for every conversational turn.
     """
-    action: Literal["advance", "pushback", "clarify", "next_question", "stop_interview"] = Field(
-        description="The target action to perform for this turn."
+    action: Literal["advance", "pushback"] = Field(
+        ..., description="The next action to take: 'advance' to move forward/close out, or 'pushback' to challenge or clarify."
     )
     message_to_candidate: str = Field(
         description="The exact spoken text to deliver to the candidate."
