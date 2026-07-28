@@ -1,10 +1,12 @@
-# Evals Subdirectory Manifest
+# Evals Directory Manifest
+
+This directory contains the evaluation and regression testing framework for the `interview-grader-agent`.
 
 | File Name | Purpose | Key Exports/Dependencies |
 | --- | --- | --- |
-| `schemas.py` | Pydantic data structures for GoldFacts, assertions, and LLM Judge scorecard output | `GoldFacts`, `GoldGoalAssertion`, `JudgeReportOutput`, `DeterministicCheckResult` |
-| `deterministic.py` | Fast, code-based verification for schema validity, enums, score ranges, and protected character leakage | `run_deterministic_checks`, `check_protected_characteristic_leakage` |
-| `prompts/judge_prompt.py` | System and user prompt templates for reference-based LLM judgment | `JUDGE_SYSTEM_PROMPT`, `JUDGE_USER_PROMPT` |
-| `judge.py` | Invokes `gemini_flash_lite` to perform qualitative reference-based evaluation | `evaluate_with_llm_judge` |
-| `cases/case_01_goroutine_and_db.py` | Mock test case 1 with multi-goal interview transcript and gold assertions | `MOCK_STATE_01`, `GOLD_FACTS_01` |
-| `run_evals.py` | CLI test runner that executes core analysis, runs checks, and outputs evaluation report | `main` |
+| `schemas.py` | Data contracts for test assertions, deterministic metrics, and LLM Judge reports | `GoldGoalAssertion`, `GoldFacts`, `DeterministicCaseResult`, `LLMJudgeResult`, `EvalCaseReport` |
+| `deterministic.py` | Zero-LLM pure Python code assertions (ranges, booleans, enums, guardrails) | `evaluate_deterministic()` |
+| `judge.py` | Qualitative reading comprehension judge powered by `gemini_flash_lite` | `evaluate_llm_judge()` |
+| `runner.py` | Orchestrates test runs across cases and formats console reporting tables | `run_evaluation_suite()` |
+| `prompts/judge_prompt.py` | System and user prompt templates for the LLM Judge | `JUDGE_SYSTEM_PROMPT`, `JUDGE_USER_PROMPT` |
+| `cases/core_analysis_cases.py` | Benchmark test cases (01-11) spanning diverse job types and edge cases | `ALL_TEST_CASES` |
