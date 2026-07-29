@@ -152,3 +152,69 @@ class JudgeBenchmarkReport(BaseModel):
     score_alignment_rate: float
     verdict_matched: bool
     dimension_alignments: Dict[str, DimensionAlignmentResult]
+
+
+# --- Communication Evaluation Schemas ---
+
+class ExpectedCommunicationTruth(BaseModel):
+    """Ground truth expected values for Layer 1 Communication node evaluation."""
+    expected_addressed: bool = True
+    min_score: Optional[int] = Field(default=None, ge=1, le=10)
+    max_score: Optional[int] = Field(default=None, ge=1, le=10)
+    expected_confidence: Optional[str] = None
+
+
+class DeterministicCommunicationEvalResult(BaseModel):
+    """Summary of Layer 1 Communication deterministic evaluation results."""
+    is_schema_valid: bool
+    passed: bool
+    pass_rate: float
+    total_checks: int
+    passed_checks: int
+    check_items: List[DeterministicCheckItem]
+    protected_characteristic_violations: List[ProtectedCharacteristicViolation]
+
+
+class CommunicationJudgeScore(BaseModel):
+    """LLM Judge score and rationale for 1 of the 5 communication dimensions."""
+    signal_name: str
+    score: int = Field(ge=0, le=10, description="Quality rating from 0 to 10")
+    passed: bool = Field(description="True if score >= 7")
+    rationale: str = Field(description="Detailed justification from LLM Judge")
+
+
+class CommunicationJudgeEvalResult(BaseModel):
+    """Summary of Layer 2 Communication LLM-as-a-Judge evaluation results."""
+    passed: bool
+    overall_judge_score: float
+    flow_control: CommunicationJudgeScore
+    active_listening: CommunicationJudgeScore
+    structure: CommunicationJudgeScore
+    assertiveness: CommunicationJudgeScore
+    objection_handling: CommunicationJudgeScore
+    judge_raw_feedback: Optional[str] = None
+
+
+class HumanJudgeSignalLabel(BaseModel):
+    """Simplified min and max score expected range for a signal."""
+    min_score: int = Field(ge=0, le=10)
+    max_score: int = Field(ge=0, le=10)
+
+
+class ExpectedCommunicationJudgeTruth(BaseModel):
+    """Human ground-truth expectations for evaluating a Communication LLM Judge run."""
+    flow_control: HumanJudgeSignalLabel
+    active_listening: HumanJudgeSignalLabel
+    structure: HumanJudgeSignalLabel
+    assertiveness: HumanJudgeSignalLabel
+    objection_handling: HumanJudgeSignalLabel
+
+
+class CommunicationJudgeBenchmarkTestCase(BaseModel):
+    """Test case for benchmarking the Communication LLM Judge against human labels."""
+    test_case_id: str
+    description: str
+    input_state: Dict[str, Any]
+    communication_payload: Dict[str, Any]
+    expected_judge_truth: ExpectedCommunicationJudgeTruth
+

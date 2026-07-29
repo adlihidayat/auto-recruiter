@@ -11,16 +11,23 @@
 | `nodes/aggregation.py` | Aggregation pure code node | `run_aggregation()` |
 | `prompts/core_analysis_prompt.py` | System & user prompts for Call 1 | `CORE_ANALYSIS_SYSTEM_PROMPT`, `CORE_ANALYSIS_USER_PROMPT` |
 | `prompts/communication_prompt.py` | System & user prompts for Call 2 Communication node | `COMMUNICATION_SYSTEM_PROMPT`, `COMMUNICATION_USER_PROMPT` |
-| `evals/schemas.py` | Evaluation & Meta-Judge Pydantic contracts | `ExpectedCoreAnalysisTruth`, `DeterministicEvalResult`, `LLMJudgeEvalResult`, `ExpectedJudgeTruth` |
-| `evals/deterministic_eval.py` | Layer 1 Deterministic evaluator (pure code) | `evaluate_deterministic()`, `scan_for_protected_characteristics()` |
+| `evals/schemas.py` | Evaluation & Meta-Judge Pydantic contracts | `ExpectedCoreAnalysisTruth`, `ExpectedCommunicationTruth`, `CommunicationJudgeEvalResult` |
+| `evals/deterministic_eval.py` | Layer 1 Core Analysis Deterministic evaluator | `evaluate_deterministic()`, `scan_for_protected_characteristics()` |
+| `evals/communication_deterministic_eval.py` | Layer 1 Communication Deterministic evaluator | `evaluate_communication_deterministic()` |
 | `evals/prompts/core_analysis_judge_prompts.py` | Core Analysis LLM-as-a-Judge system & user prompts | `CORE_ANALYSIS_JUDGE_SYSTEM_PROMPT`, `CORE_ANALYSIS_JUDGE_USER_PROMPT` |
+| `evals/prompts/communication_judge_prompts.py` | Communication LLM-as-a-Judge system & user prompts | `COMMUNICATION_JUDGE_SYSTEM_PROMPT`, `COMMUNICATION_JUDGE_USER_PROMPT` |
 | `evals/core_analysis_llm_judge_eval.py` | Layer 2 LLM-as-a-Judge evaluator for Core Analysis | `evaluate_llm_judge()` |
-| `evals/core_analysis_judge_benchmark.py` | Meta-Judge evaluator for calibrating Core Analysis Judge | `evaluate_meta_judge()` |
-| `evals/datasets/core_analysis_cases.py` | Test cases with ground truth labels | `ALL_CORE_ANALYSIS_TEST_CASES` |
-| `evals/datasets/core_analysis_judge_cases.py` | Human-calibrated test cases for Core Analysis Judge | `ALL_JUDGE_BENCHMARK_TEST_CASES` |
+| `evals/communication_llm_judge_eval.py` | Layer 2 LLM-as-a-Judge evaluator for Communication | `evaluate_communication_llm_judge()` |
+| `evals/core_analysis_judge_benchmark.py` | Meta-Judge evaluator for Core Analysis Judge | `evaluate_meta_judge()` |
+| `evals/communication_judge_benchmark.py` | Meta-Judge evaluator for Communication Judge | `evaluate_communication_meta_judge()` |
+| `evals/datasets/core_analysis_cases.py` | Core Analysis test cases with ground truth labels | `ALL_CORE_ANALYSIS_TEST_CASES` |
+| `evals/datasets/core_analysis_judge_cases.py` | Human-calibrated benchmark cases for Core Analysis Judge | `ALL_JUDGE_BENCHMARK_TEST_CASES` |
+| `evals/datasets/communication_judge_cases.py` | Human-calibrated 5 benchmark cases for Communication Judge | `ALL_COMMUNICATION_JUDGE_BENCHMARK_TEST_CASES` |
 | `evals/run_eval.py` | CLI runner for Core Analysis node evals | `run_evaluation()` |
 | `evals/run_core_analysis_judge_benchmark.py` | CLI runner for Core Analysis Meta-Judge calibration | `run_judge_calibration()` |
+| `evals/run_communication_judge_benchmark.py` | CLI runner for Communication Meta-Judge calibration | `run_communication_judge_calibration()` |
 | `scripts/debug_run.py` | Terminal runner for testing graph execution | `main()` |
 | `scripts/debug_run_communication.py` | Terminal runner for testing Call 2 Communication node | `run_communication_test_case()` |
 | `scripts/test_core_analysis_experiment.py` | LangSmith dataset & experiment runner for Core Analysis | `main()` |
+| `scripts/test_communication_experiment.py` | LangSmith dataset & experiment runner for Communication | `main()` |
 | `GEMINI.md` | Local constitution and rubric specifications | Local domain rules |
