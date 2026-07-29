@@ -3,6 +3,7 @@ What: Executes Call 1 (Core Analysis) of the interview grader pipeline.
 Why: Required for every candidate to extract evidence, score goals against the rubric, evaluate pushback, and scan for red flags in a single pass.
 Boundaries: Does not assess discourse-level communication styles or extract verbatim citations; operates only on the predefined rubric criteria.
 """
+import json
 from typing import Any
 from langchain_core.prompts import ChatPromptTemplate
 from ..state import GraderState, CoreAnalysisOutput
@@ -36,7 +37,17 @@ def run_core_analysis(state: GraderState) -> dict[str, Any]:
         goals_text += f"\n--- Goal: {g.goal_id} ({g.topic}) ---\n"
         goals_text += f"Passing Criteria: {g.passing_criteria}\n"
         goals_text += f"Wrong Answer Signals: {g.wrong_answer_signals}\n"
-        goals_text += f"Pushback Triggers: {[p.model_dump_json() for p in g.pushback_triggers]}\n"
+        pushback_str_list = []
+        for p in g.pushback_triggers:
+            if hasattr(p, "model_dump_json"):
+                pushback_str_list.append(p.model_dump_json())
+            elif isinstance(p, str):
+                pushback_str_list.append(p)
+            elif isinstance(p, dict):
+                pushback_str_list.append(json.dumps(p))
+            else:
+                pushback_str_list.append(str(p))
+        goals_text += f"Pushback Triggers: {pushback_str_list}\n"
         goals_text += "Transcript:\n"
         for t in g.interaction_history:
             goals_text += f"[{t.role.upper()}]: {t.content}\n"

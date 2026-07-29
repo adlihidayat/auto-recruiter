@@ -124,19 +124,20 @@ def evaluate_deterministic(
                     )
                 )
             else:
-                score_in_range = (
-                    expected_goal_truth.min_score <= actual_score <= expected_goal_truth.max_score
-                )
-                check_items.append(
-                    DeterministicCheckItem(
-                        check_name=f"score_range[{expected_goal_id}]",
-                        passed=score_in_range,
-                        details=(
-                            f"Expected score between {expected_goal_truth.min_score} and "
-                            f"{expected_goal_truth.max_score}, got {actual_score}."
-                        ),
+                if expected_goal_truth.min_score is not None and expected_goal_truth.max_score is not None:
+                    score_in_range = (
+                        expected_goal_truth.min_score <= actual_score <= expected_goal_truth.max_score
                     )
-                )
+                    check_items.append(
+                        DeterministicCheckItem(
+                            check_name=f"score_range[{expected_goal_id}]",
+                            passed=score_in_range,
+                            details=(
+                                f"Expected score between {expected_goal_truth.min_score} and "
+                                f"{expected_goal_truth.max_score}, got {actual_score}."
+                            ),
+                        )
+                    )
 
         # Pushback triggered check
         if expected_goal_truth.expected_pushback_triggered is not None:

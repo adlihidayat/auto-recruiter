@@ -12,8 +12,8 @@ from ..state import CoreAnalysisOutput, GraderState
 class ExpectedGoalTruth(BaseModel):
     """Ground truth expected values for a specific goal evaluation."""
     goal_id: str
-    min_score: int = Field(ge=1, le=10, description="Minimum acceptable score (inclusive)")
-    max_score: int = Field(ge=1, le=10, description="Maximum acceptable score (inclusive)")
+    min_score: Optional[int] = Field(default=None, description="Minimum acceptable score (inclusive)")
+    max_score: Optional[int] = Field(default=None, description="Maximum acceptable score (inclusive)")
     expected_addressed: bool = True
     expected_pushback_triggered: Optional[bool] = None
     expected_pushback_response_type: Optional[str] = None

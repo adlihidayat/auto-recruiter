@@ -20,4 +20,5 @@
 | `evals/run_eval.py` | CLI runner for Core Analysis node evals | `run_evaluation()` |
 | `evals/run_judge_benchmark.py` | CLI runner for Meta-Judge calibration | `run_judge_calibration()` |
 | `scripts/debug_run.py` | Terminal runner for testing graph execution | `main()` |
+| `scripts/test_core_analysis_experiment.py` | LangSmith dataset & experiment runner for Core Analysis | `main()` |
 | `GEMINI.md` | Local constitution and rubric specifications | Local domain rules |
