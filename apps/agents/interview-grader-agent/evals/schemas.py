@@ -1,86 +1,154 @@
 """
-What: Gold-fact schemas and LLM Judge evaluation models.
-Why: Ensures LLM Judge output shape matches JudgeGoldFacts (per_goal dict keyed by goal_id).
-Boundaries: Schema definitions only. No test data, no execution logic.
+What: Pydantic models for ground truth test cases, deterministic metric results, LLM-as-a-Judge evaluations, and Meta-Judge calibration.
+Why: Provides typed contracts for evaluating Call 1 (Core Analysis) outputs and benchmarking the LLM Judge against human ground truth.
+Boundaries: Contains only static data validation schemas and models; contains no runtime execution logic.
 """
-
-from typing import Dict, List, Optional
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
+from ..state import CoreAnalysisOutput, GraderState
+
+# --- Ground Truth Test Case Schemas ---
+
+class ExpectedGoalTruth(BaseModel):
+    """Ground truth expected values for a specific goal evaluation."""
+    goal_id: str
+    min_score: int = Field(ge=1, le=10, description="Minimum acceptable score (inclusive)")
+    max_score: int = Field(ge=1, le=10, description="Maximum acceptable score (inclusive)")
+    expected_addressed: bool = True
+    expected_pushback_triggered: Optional[bool] = None
+    expected_pushback_response_type: Optional[str] = None
 
 
-class GoldGoalJudgeAssertion(BaseModel):
-    """Expected judge verdicts for a single goal entry (or problem_solving_under_ambiguity) within one grader output."""
+class ExpectedCoreAnalysisTruth(BaseModel):
+    """Ground truth expected values for an entire Core Analysis execution."""
+    goals: Dict[str, ExpectedGoalTruth] = Field(
+        description="Mapping of goal_id to its expected goal evaluation truth"
+    )
+    expected_red_flag_keywords: List[str] = Field(
+        default_factory=list,
+        description="Keywords or key phrases that must appear in red_flags descriptions if caught"
+    )
+    expected_consistency_keywords: List[str] = Field(
+        default_factory=list,
+        description="Keywords or key phrases that must appear in consistency_issues descriptions"
+    )
+    should_have_red_flags: bool = False
+    should_have_consistency_issues: bool = False
 
-    expected_rationale_groundedness: str  # "grounded" | "partially_grounded" | "hallucinated" | "n_a"
-    expected_evidence_faithfulness: str  # "faithful" | "exaggerated" | "fabricated" | "n_a"
-    expected_reasoning_coherence: str  # "sound" | "flawed" | "invalid" | "n_a"
 
-
-class GoldFlagJudgeAssertion(BaseModel):
-    """Expected judge verdict for one entry in consistency_issues or red_flags arrays."""
-
-    flag_type: str  # "red_flag" | "consistency_issue"
-    description_excerpt: str
-    expected_reasoning_quality: str  # "sound" | "weak" | "incorrect"
-
-
-class JudgeGoldFacts(BaseModel):
-    """Full set of judge gold facts for one test case. Paired with a MOCK_GRADER_OUTPUT_XX."""
-
-    case_id: str
+class CoreAnalysisTestCase(BaseModel):
+    """Container holding input state and expected ground truth for a test case."""
+    test_case_id: str
     description: str
-    per_goal: Dict[str, GoldGoalJudgeAssertion]
-    flag_evaluations: List[GoldFlagJudgeAssertion] = []
+    input_state: Dict[str, Any]
+    ground_truth: ExpectedCoreAnalysisTruth
 
 
-class DeterministicCaseResult(BaseModel):
-    """Deterministic check results for an entire test case (schema & guardrails)."""
+# --- Layer 1 & Layer 2 Evaluation Result Schemas ---
 
-    case_id: str
-    schema_valid: bool = Field(description="True if Pydantic output validation passed cleanly.")
-    guardrail_leak_check: bool = Field(description="True if no protected characteristic terms leaked into output rationale.")
-    overall_pass: bool = Field(description="True if all deterministic checks passed.")
-
-
-class GoalJudgeEvaluation(BaseModel):
-    """Judge evaluation for a single goal or problem_solving_under_ambiguity."""
-
-    rationale_groundedness: str
-    evidence_faithfulness: str
-    reasoning_coherence: str
-    qualitative_notes: str = ""
-
-    # Match booleans against expected JudgeGoldFacts
-    groundedness_match: Optional[bool] = None
-    faithfulness_match: Optional[bool] = None
-    coherence_match: Optional[bool] = None
+class DeterministicCheckItem(BaseModel):
+    """Result of an individual deterministic code check."""
+    check_name: str
+    passed: bool
+    details: str
 
 
-class FlagJudgeEvaluation(BaseModel):
-    """Judge evaluation for a red flag or consistency issue."""
-
-    flag_type: str
-    description_excerpt: str
-    reasoning_quality: str
-    qualitative_notes: str = ""
-
-    # Match boolean against expected JudgeGoldFacts
-    quality_match: Optional[bool] = None
+class ProtectedCharacteristicViolation(BaseModel):
+    """Recorded instance of protected-characteristic text leakage."""
+    field_name: str
+    leaked_snippet: str
+    detected_keyword: str
 
 
-class LLMJudgeResult(BaseModel):
-    """Qualitative evaluation output generated by the LLM as Judge (gemini_flash_lite)."""
+class DeterministicEvalResult(BaseModel):
+    """Summary of Layer 1 deterministic evaluation results."""
+    is_schema_valid: bool
+    passed: bool
+    pass_rate: float
+    total_checks: int
+    passed_checks: int
+    check_items: List[DeterministicCheckItem]
+    protected_characteristic_violations: List[ProtectedCharacteristicViolation]
 
-    per_goal: Dict[str, GoalJudgeEvaluation] = Field(default_factory=dict)
-    flag_evaluations: List[FlagJudgeEvaluation] = Field(default_factory=list)
-    overall_qualitative_summary: str = ""
-    all_judge_assertions_passed: bool = True
+
+class LLMJudgeScore(BaseModel):
+    """LLM Judge score and rationale for a specific quality dimension."""
+    dimension_name: str
+    score: int = Field(ge=0, le=10, description="Quality rating from 0 to 10")
+    passed: bool = Field(description="True if score >= 7")
+    rationale: str = Field(description="Detailed justification from LLM Judge")
 
 
-class EvalCaseReport(BaseModel):
-    """Full evaluation report combining deterministic pass/fail metrics and qualitative judge findings."""
+class LLMJudgeEvalResult(BaseModel):
+    """Summary of Layer 2 LLM-as-a-Judge evaluation results."""
+    passed: bool
+    overall_judge_score: float
+    rationale_groundedness: LLMJudgeScore
+    evidence_faithfulness: LLMJudgeScore
+    reasoning_coherence: LLMJudgeScore
+    flag_justification_quality: LLMJudgeScore
+    judge_raw_feedback: Optional[str] = None
 
-    case_id: str
+
+class TestCaseEvalReport(BaseModel):
+    """Combined report for a single test case containing both evaluation layers."""
+    test_case_id: str
+    test_case_description: str
+    overall_passed: bool
+    deterministic_eval: DeterministicEvalResult
+    llm_judge_eval: Optional[LLMJudgeEvalResult] = None
+
+
+# --- Meta-Judge Calibration & Benchmark Schemas ---
+
+class HumanJudgeDimensionLabel(BaseModel):
+    """Human ground-truth expectations for a single LLM Judge dimension."""
+    dimension_name: str
+    min_score: int = Field(ge=0, le=10, description="Minimum acceptable judge score")
+    max_score: int = Field(ge=0, le=10, description="Maximum acceptable judge score")
+    expected_passed: bool = Field(description="Expected pass/fail verdict from human auditor")
+    human_rationale: str = Field(description="Human expert explanation for expected grade")
+
+
+class ExpectedJudgeTruth(BaseModel):
+    """Human ground-truth expectations for evaluating an LLM Judge run."""
+    rationale_groundedness: HumanJudgeDimensionLabel
+    evidence_faithfulness: HumanJudgeDimensionLabel
+    reasoning_coherence: HumanJudgeDimensionLabel
+    flag_justification_quality: HumanJudgeDimensionLabel
+    should_pass_overall: bool
+
+
+class JudgeBenchmarkTestCase(BaseModel):
+    """Test case for benchmarking the LLM Judge against human calibration labels."""
+    test_case_id: str
     description: str
-    deterministic: DeterministicCaseResult
-    judge: Optional[LLMJudgeResult] = None
+    input_state: Dict[str, Any]
+    core_analysis_payload: CoreAnalysisOutput
+    expected_judge_truth: ExpectedJudgeTruth
+
+
+class DimensionAlignmentResult(BaseModel):
+    """Result of comparing LLM Judge rating vs Human expected range for 1 dimension."""
+    dimension_name: str
+    llm_judge_score: int
+    llm_judge_passed: bool
+    human_min_score: int
+    human_max_score: int
+    human_expected_passed: bool
+    score_in_range: bool
+    verdict_matched: bool
+    aligned: bool
+    details: str
+    llm_rationale: Optional[str] = None
+    human_rationale: Optional[str] = None
+
+
+class JudgeBenchmarkReport(BaseModel):
+    """Overall report comparing LLM Judge against Human Calibration for a benchmark case."""
+    test_case_id: str
+    test_case_description: str
+    overall_aligned: bool
+    score_alignment_rate: float
+    verdict_matched: bool
+    dimension_alignments: Dict[str, DimensionAlignmentResult]

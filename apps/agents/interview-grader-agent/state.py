@@ -3,7 +3,7 @@ What: Defines the Pydantic schemas and LangGraph TypedDict for the interview gra
 Why: Ensures strict type safety, data validation, and predictable schema contracts across the 3-call pipeline.
 Boundaries: Does not contain runtime logic, LLM parsing code, or routing logic; strictly static definitions.
 """
-from typing import TypedDict, List, Dict, Any, Optional
+from typing import TypedDict, List, Dict, Any, Optional, Union
 from pydantic import BaseModel, Field
 
 # --- Input Schemas ---
@@ -31,7 +31,7 @@ class GoalInput(BaseModel):
     goal: str
     passing_criteria: List[str]
     wrong_answer_signals: List[str]
-    pushback_triggers: List[PushbackTrigger]
+    pushback_triggers: List[Union[PushbackTrigger, str, Dict[str, Any]]] = Field(default_factory=list)
     grounding_theory: str
     weight: float = 1.0
     gating: bool = False
