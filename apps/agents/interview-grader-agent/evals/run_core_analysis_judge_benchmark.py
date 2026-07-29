@@ -21,10 +21,10 @@ if "GEMINI_API_KEY1" in os.environ and "GEMINI_API_KEY" not in os.environ:
     os.environ["GEMINI_API_KEY"] = os.environ["GEMINI_API_KEY1"]
 
 # Dynamic imports
-benchmark_mod = importlib.import_module("interview-grader-agent.evals.judge_benchmark")
+benchmark_mod = importlib.import_module("interview-grader-agent.evals.core_analysis_judge_benchmark")
 evaluate_meta_judge = benchmark_mod.evaluate_meta_judge
 
-cases_mod = importlib.import_module("interview-grader-agent.evals.datasets.judge_benchmark_cases")
+cases_mod = importlib.import_module("interview-grader-agent.evals.datasets.core_analysis_judge_cases")
 ALL_JUDGE_BENCHMARK_TEST_CASES = cases_mod.ALL_JUDGE_BENCHMARK_TEST_CASES
 
 

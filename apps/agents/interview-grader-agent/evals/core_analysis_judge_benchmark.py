@@ -13,7 +13,7 @@ try:
         JudgeBenchmarkReport,
         LLMJudgeEvalResult,
     )
-    from .llm_judge_eval import evaluate_llm_judge
+    from .core_analysis_llm_judge_eval import evaluate_llm_judge
 except (ImportError, ValueError):
     schemas_mod = importlib.import_module("interview-grader-agent.evals.schemas")
     JudgeBenchmarkTestCase = schemas_mod.JudgeBenchmarkTestCase
@@ -21,7 +21,7 @@ except (ImportError, ValueError):
     JudgeBenchmarkReport = schemas_mod.JudgeBenchmarkReport
     LLMJudgeEvalResult = schemas_mod.LLMJudgeEvalResult
 
-    judge_mod = importlib.import_module("interview-grader-agent.evals.llm_judge_eval")
+    judge_mod = importlib.import_module("interview-grader-agent.evals.core_analysis_llm_judge_eval")
     evaluate_llm_judge = judge_mod.evaluate_llm_judge
 
 

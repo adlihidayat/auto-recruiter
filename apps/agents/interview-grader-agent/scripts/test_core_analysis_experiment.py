@@ -45,7 +45,7 @@ ExpectedGoalTruth = schemas_mod.ExpectedGoalTruth
 det_eval_mod = importlib.import_module("interview-grader-agent.evals.deterministic_eval")
 evaluate_deterministic = det_eval_mod.evaluate_deterministic
 
-judge_eval_mod = importlib.import_module("interview-grader-agent.evals.llm_judge_eval")
+judge_eval_mod = importlib.import_module("interview-grader-agent.evals.core_analysis_llm_judge_eval")
 evaluate_llm_judge = judge_eval_mod.evaluate_llm_judge
 
 

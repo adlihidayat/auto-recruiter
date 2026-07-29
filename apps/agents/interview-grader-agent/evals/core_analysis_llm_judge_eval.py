@@ -11,7 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate
 try:
     from ..state import GraderState, CoreAnalysisOutput
     from .schemas import LLMJudgeScore, LLMJudgeEvalResult
-    from .prompts.judge_prompts import (
+    from .prompts.core_analysis_judge_prompts import (
         CORE_ANALYSIS_JUDGE_SYSTEM_PROMPT,
         CORE_ANALYSIS_JUDGE_USER_PROMPT,
     )
@@ -24,7 +24,7 @@ except (ImportError, ValueError):
     LLMJudgeScore = schemas_mod.LLMJudgeScore
     LLMJudgeEvalResult = schemas_mod.LLMJudgeEvalResult
 
-    prompts_mod = importlib.import_module("interview-grader-agent.evals.prompts.judge_prompts")
+    prompts_mod = importlib.import_module("interview-grader-agent.evals.prompts.core_analysis_judge_prompts")
     CORE_ANALYSIS_JUDGE_SYSTEM_PROMPT = prompts_mod.CORE_ANALYSIS_JUDGE_SYSTEM_PROMPT
     CORE_ANALYSIS_JUDGE_USER_PROMPT = prompts_mod.CORE_ANALYSIS_JUDGE_USER_PROMPT
 
