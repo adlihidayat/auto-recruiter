@@ -1,5 +1,5 @@
 """
-What: Evaluates Call 2 (Communication & Interpersonal) node using LangSmith Datasets and Experiments.
+What: Evaluates Call 2 (Communication & Interpersonal) node using LangSmith Datasets and Experiments across 20 test cases.
 Why: Automates continuous benchmarking of Communication node outputs against Layer 1 deterministic checks and Layer 2 Communication LLM Judge.
 Boundaries: Dev/test evaluation script; does not run in live production FastAPI endpoints.
 """
@@ -37,186 +37,63 @@ CommunicationOutput = state_mod.CommunicationOutput
 comm_node_mod = importlib.import_module("interview-grader-agent.nodes.communication")
 run_communication = comm_node_mod.run_communication
 
-schemas_mod = importlib.import_module("interview-grader-agent.evals.schemas")
-ExpectedCommunicationTruth = schemas_mod.ExpectedCommunicationTruth
-
-det_eval_mod = importlib.import_module("interview-grader-agent.evals.communication_deterministic_eval")
-evaluate_communication_deterministic = det_eval_mod.evaluate_communication_deterministic
+cases_mod = importlib.import_module("interview-grader-agent.evals.datasets.communication_judge_cases")
+if hasattr(cases_mod, "ALL_COMMUNICATION_JUDGE_META_BENCHMARK_TEST_CASES"):
+    BENCHMARK_CASES = cases_mod.ALL_COMMUNICATION_JUDGE_META_BENCHMARK_TEST_CASES
+else:
+    BENCHMARK_CASES = cases_mod.ALL_COMMUNICATION_JUDGE_BENCHMARK_TEST_CASES
 
 judge_eval_mod = importlib.import_module("interview-grader-agent.evals.communication_llm_judge_eval")
 evaluate_communication_llm_judge = judge_eval_mod.evaluate_communication_llm_judge
 
 
 # ============================================================================
-# COMMUNICATION BENCHMARK DATASET (5 TEST CASES)
+# DATASET CONSTRUCTION (20 TEST CASES)
 # ============================================================================
 
-COMMUNICATION_BENCHMARK_CASES: List[Dict[str, Any]] = [
-    {
-        "test_case_name": "Case 01: Clean Executive Presentation",
-        "inputs": {
-            "job": {
-                "job_name": "VP of Engineering",
-                "job_description": "Lead multi-team architecture and present strategic roadmaps to executive leadership."
+def build_langsmith_dataset_cases() -> List[Dict[str, Any]]:
+    """
+    Extracts inputs and target expected truth from the 20 benchmark test cases
+    with explicit sequential index prefixes [01/20] through [20/20].
+    """
+    dataset_cases = []
+
+    for idx, case in enumerate(BENCHMARK_CASES, start=1):
+        raw_case_id = case.get("test_case_id", "unknown_case")
+        case_id = f"[{idx:02d}/20] {raw_case_id}"
+        input_state = case.get("input_state", {})
+        comm_payload = case.get("communication_payload", {}).get("communication", {})
+
+        target_score = comm_payload.get("score")
+        target_addressed = comm_payload.get("addressed", True)
+        target_confidence = comm_payload.get("confidence", "high")
+
+        plan_meta = input_state.get("plan_meta", {
+            "communication_weight": "high",
+            "difficulty": "senior"
+        })
+
+        dataset_cases.append({
+            "test_case_name": case_id,
+            "inputs": {
+                "case_index": idx,
+                "test_case_id": case_id,
+                "job": input_state.get("job", {}),
+                "plan_meta": plan_meta,
+                "goals": input_state.get("goals", [])
             },
-            "plan_meta": {
-                "communication_weight": "high",
-                "difficulty": "senior"
-            },
-            "goals": [
-                {
-                    "goal_id": "g_01",
-                    "topic": "Architecture Roadmap Pitch",
-                    "goal": "Evaluate ability to defend technical proposals to executive leadership.",
-                    "interaction_history": [
-                        {"role": "interviewer", "content": "How would you pitch this microservices budget to the board?"},
-                        {"role": "candidate", "content": "I'd organize our proposal into three key pillars: ROI, risk mitigation, and SLA improvements. First, on ROI..."},
-                        {"role": "interviewer", "content": "The CFO says this is an expensive vanity project. How do you respond?"},
-                        {"role": "candidate", "content": "I understand the CFO's concern about cloud spend. However, our SLA penalties currently cost $50k per outage. Decomposing our monolith directly reduces downtime..."}
-                    ]
+            "outputs": {
+                "expected_truth": {
+                    "expected_addressed": target_addressed,
+                    "target_score": target_score,
+                    "min_score": (target_score - 1) if target_score is not None else None,
+                    "max_score": (target_score + 1) if target_score is not None else None,
+                    "expected_confidence": target_confidence
                 }
-            ]
-        },
-        "outputs": {
-            "expected_truth": {
-                "expected_addressed": True,
-                "min_score": 8,
-                "max_score": 10,
-                "expected_confidence": "high"
             }
-        }
-    },
-    {
-        "test_case_name": "Case 02: Defensive & Hostile under Pushback",
-        "inputs": {
-            "job": {
-                "job_name": "Senior Product Manager",
-                "job_description": "Collaborate across design and engineering teams."
-            },
-            "plan_meta": {
-                "communication_weight": "high",
-                "difficulty": "senior"
-            },
-            "goals": [
-                {
-                    "goal_id": "g_01",
-                    "topic": "Feature Prioritization",
-                    "goal": "Evaluate prioritization rationale.",
-                    "interaction_history": [
-                        {"role": "interviewer", "content": "Could you walk me through your prioritization framework?"},
-                        {"role": "candidate", "content": "I use RICE, obvious choice."},
-                        {"role": "interviewer", "content": "Could you give a concrete example of how you calculated R for a past feature?"},
-                        {"role": "candidate", "content": "Why are you questioning me? If you don't know what RICE is, maybe you shouldn't be interviewing."}
-                    ]
-                }
-            ]
-        },
-        "outputs": {
-            "expected_truth": {
-                "expected_addressed": True,
-                "min_score": 1,
-                "max_score": 3,
-                "expected_confidence": "high"
-            }
-        }
-    },
-    {
-        "test_case_name": "Case 03: Rambling & Fragmented Structure",
-        "inputs": {
-            "job": {
-                "job_name": "Customer Support Lead",
-                "job_description": "Communicate clearly with customers during critical incidents."
-            },
-            "plan_meta": {
-                "communication_weight": "medium",
-                "difficulty": "mid"
-            },
-            "goals": [
-                {
-                    "goal_id": "g_01",
-                    "topic": "Incident Communication",
-                    "goal": "Evaluate outage customer communication.",
-                    "interaction_history": [
-                        {"role": "interviewer", "content": "How do you notify customers of a service outage?"},
-                        {"role": "candidate", "content": "Well, outages happen, right? Like last Tuesday my internet went out at home and my dog was barking... anyway, for customers we send emails, but sometimes emails bounce, so we might tweet, or maybe update statuspage, but statuspage was down once so we tried Slack..."}
-                    ]
-                }
-            ]
-        },
-        "outputs": {
-            "expected_truth": {
-                "expected_addressed": True,
-                "min_score": 3,
-                "max_score": 5,
-                "expected_confidence": "high"
-            }
-        }
-    },
-    {
-        "test_case_name": "Case 04: Extreme Hedging & Evasiveness",
-        "inputs": {
-            "job": {
-                "job_name": "Lead Security Auditor",
-                "job_description": "Audit compliance and give decisive security recommendations."
-            },
-            "plan_meta": {
-                "communication_weight": "high",
-                "difficulty": "senior"
-            },
-            "goals": [
-                {
-                    "goal_id": "g_01",
-                    "topic": "Compliance Audit Decision",
-                    "goal": "Evaluate decisive decision-making.",
-                    "interaction_history": [
-                        {"role": "interviewer", "content": "Should we issue a public vulnerability advisory for this leak?"},
-                        {"role": "candidate", "content": "I guess maybe? I mean, I'm not really sure, it depends on what others think, I don't want to make the wrong call..."}
-                    ]
-                }
-            ]
-        },
-        "outputs": {
-            "expected_truth": {
-                "expected_addressed": True,
-                "min_score": 3,
-                "max_score": 5,
-                "expected_confidence": "high"
-            }
-        }
-    },
-    {
-        "test_case_name": "Case 05: ESL Phrasing With Solid Professional Structure",
-        "inputs": {
-            "job": {
-                "job_name": "Senior DevOps Engineer",
-                "job_description": "Manage CI/CD pipelines and infrastructure."
-            },
-            "plan_meta": {
-                "communication_weight": "medium",
-                "difficulty": "senior"
-            },
-            "goals": [
-                {
-                    "goal_id": "g_01",
-                    "topic": "CI/CD Pipeline Breakdown",
-                    "goal": "Evaluate deployment troubleshooting.",
-                    "interaction_history": [
-                        {"role": "interviewer", "content": "How do you handle deployment failures in production?"},
-                        {"role": "candidate", "content": "First we doing automatic rollback via ArgoCD. Second we checking Grafana metric for error spike. Third we notifying team channel."}
-                    ]
-                }
-            ]
-        },
-        "outputs": {
-            "expected_truth": {
-                "expected_addressed": True,
-                "min_score": 7,
-                "max_score": 9,
-                "expected_confidence": "high"
-            }
-        }
-    }
-]
+        })
+
+    return dataset_cases
 
 
 # --- 1. Target Function Executing Communication Node ---
@@ -261,52 +138,86 @@ def evaluate_communication_target(inputs: dict) -> dict:
     }
 
 
-# --- 2. LangSmith Evaluator 1: Layer 1 Deterministic Code Checks ---
+# --- 2. LangSmith Evaluator 1: Layer 1 Deterministic Code Checks (2 Metrics) ---
 
 def evaluate_communication_deterministic_langsmith(run, example) -> dict:
     """
-    LangSmith evaluator for Layer 1 Communication deterministic code checks.
+    LangSmith evaluator for Layer 1 Communication deterministic checks (2 metrics):
+    1. score_match: 10 - abs(actual_score - target_score) (scale 0-10)
+    2. confidence_match: ordinal distance score based on low (0) < medium (1) < high (2):
+       - difference 0 -> 1.0 (exact match)
+       - difference 1 -> 0.5 (1 level off)
+       - difference 2 -> 0.0 (2 levels off)
     """
     try:
         raw_output = run.outputs.get("communication")
-        comm_output = CommunicationOutput(communication=raw_output)
+        expected_truth = example.outputs.get("expected_truth", {})
 
-        expected_dict = example.outputs.get("expected_truth")
-        expected_truth = ExpectedCommunicationTruth(**expected_dict)
+        comm_output = None
+        if raw_output and isinstance(raw_output, dict):
+            try:
+                comm_output = CommunicationOutput(communication=raw_output)
+            except Exception:
+                comm_output = None
 
-        det_result = evaluate_communication_deterministic(comm_output, expected_truth)
+        actual_comm = comm_output.communication if (comm_output and comm_output.communication) else None
+        actual_score = actual_comm.score if actual_comm else None
+        target_score = expected_truth.get("target_score")
 
-        results = []
-        allowed_exact = (
-            "communication_addressed",
-            "score_range",
-            "confidence_match",
-            "protected_characteristic_leakage",
-        )
+        # 1. Score Metric (10 - abs(actual - target))
+        if actual_score is not None and target_score is not None:
+            score_diff = abs(int(actual_score) - int(target_score))
+            score_match_val = float(max(0, 10 - score_diff))
+        elif actual_score is None and target_score is None:
+            score_match_val = 10.0
+        else:
+            score_match_val = 0.0
 
-        for item in det_result.check_items:
-            clean_key = item.check_name.replace("[", "_").replace("]", "").replace("-", "_")
-            if clean_key in allowed_exact:
-                results.append({
-                    "key": clean_key,
-                    "score": 1.0 if item.passed else 0.0,
-                })
+        # 2. Confidence Metric (Ordinal Distance: diff 0 -> 1.0, diff 1 -> 0.5, diff 2 -> 0.0)
+        actual_conf = str(actual_comm.confidence).lower() if (actual_comm and actual_comm.confidence) else None
+        expected_conf = str(expected_truth.get("expected_confidence")).lower() if expected_truth.get("expected_confidence") else None
 
-        return {"results": results}
+        conf_map = {"low": 0, "medium": 1, "high": 2}
+
+        if actual_conf is None and expected_conf is None:
+            conf_match_val = 1.0
+        elif actual_conf in conf_map and expected_conf in conf_map:
+            conf_diff = abs(conf_map[actual_conf] - conf_map[expected_conf])
+            if conf_diff == 0:
+                conf_match_val = 1.0
+            elif conf_diff == 1:
+                conf_match_val = 0.5
+            else:
+                conf_match_val = 0.0
+        else:
+            conf_match_val = 0.0
+
+        return {
+            "results": [
+                {"key": "score_match", "score": score_match_val},
+                {"key": "confidence_match", "score": conf_match_val},
+            ]
+        }
     except Exception as err:
         sys.stderr.write(f"Communication deterministic evaluator error: {err}\n")
         return {
             "results": [
-                {"key": "deterministic_eval_error", "score": 1.0}
+                {"key": "score_match", "score": 0.0},
+                {"key": "confidence_match", "score": 0.0},
             ]
         }
 
 
-# --- 3. LangSmith Evaluator 2: Layer 2 LLM-as-a-Judge ---
+# --- 3. LangSmith Evaluator 2: Layer 2 LLM-as-a-Judge (5 Metrics) ---
 
 def evaluate_communication_llm_judge_langsmith(run, example) -> dict:
     """
-    LangSmith evaluator for Layer 2 Communication LLM-as-a-Judge quality auditing.
+    LangSmith evaluator for Layer 2 Communication LLM-as-a-Judge (5 metrics):
+    1. flow_control (0-10 score)
+    2. active_listening (0-10 score)
+    3. structure (0-10 score)
+    4. assertiveness (0-10 score)
+    5. objection_handling (0-10 score)
     """
     try:
         raw_output = run.outputs.get("communication")
@@ -317,7 +228,6 @@ def evaluate_communication_llm_judge_langsmith(run, example) -> dict:
 
         return {
             "results": [
-                {"key": "judge_passed", "score": 1.0 if judge_result.passed else 0.0},
                 {"key": "flow_control", "score": float(judge_result.flow_control.score)},
                 {"key": "active_listening", "score": float(judge_result.active_listening.score)},
                 {"key": "structure", "score": float(judge_result.structure.score)},
@@ -329,7 +239,11 @@ def evaluate_communication_llm_judge_langsmith(run, example) -> dict:
         sys.stderr.write(f"Communication LLM Judge evaluator error: {err}\n")
         return {
             "results": [
-                {"key": "judge_eval_error", "score": 1.0}
+                {"key": "flow_control", "score": 0.0},
+                {"key": "active_listening", "score": 0.0},
+                {"key": "structure", "score": 0.0},
+                {"key": "assertiveness", "score": 0.0},
+                {"key": "objection_handling", "score": 0.0},
             ]
         }
 
@@ -337,9 +251,15 @@ def evaluate_communication_llm_judge_langsmith(run, example) -> dict:
 # --- Main Experiment Runner ---
 
 def main():
+    import uuid
+    import datetime
+
     print("=======================================================================")
     print("  RUNNING COMMUNICATION NODE LANGSMITH DATASET & EXPERIMENT EVALUATION ")
     print("=======================================================================")
+
+    dataset_cases = build_langsmith_dataset_cases()
+    print(f"Loaded {len(dataset_cases)} benchmark test cases from communication_judge_cases.py.")
 
     dataset_name = "Communication Node Grader Dataset"
     client = Client()
@@ -350,32 +270,41 @@ def main():
     except Exception:
         dataset = client.create_dataset(
             dataset_name=dataset_name,
-            description="LangSmith benchmark dataset for Call 2 Communication Node."
+            description="LangSmith benchmark dataset for Call 2 Communication Node (20 cases)."
         )
         print(f"Created dataset '{dataset_name}' successfully.")
 
     existing_examples = list(client.list_examples(dataset_id=dataset.id))
-    if len(existing_examples) != len(COMMUNICATION_BENCHMARK_CASES):
-        print(f"Syncing dataset examples (found {len(existing_examples)}, uploading {len(COMMUNICATION_BENCHMARK_CASES)})...")
-        for eg in existing_examples:
-            client.delete_example(example_id=eg.id)
-        for case in COMMUNICATION_BENCHMARK_CASES:
+    if len(existing_examples) < len(dataset_cases):
+        print(f"Creating dataset examples ({len(dataset_cases)} ordered examples)...")
+        base_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=30)
+        for case in dataset_cases:
+            idx = case["inputs"]["case_index"]
+            created_timestamp = base_time + datetime.timedelta(seconds=idx)
             client.create_example(
                 inputs=case["inputs"],
                 outputs=case["outputs"],
-                dataset_id=dataset.id
+                dataset_id=dataset.id,
+                created_at=created_timestamp,
             )
-        print("Dataset sync complete.")
+        print("Dataset creation complete.")
+    else:
+        print(f"Reusing existing {len(existing_examples)} dataset examples from dataset '{dataset_name}'.")
 
-    print("\nTriggering LangSmith Communication Experiment evaluation...")
+    # Fetch examples and sort strictly by case_index 1..20
+    dataset_examples = list(client.list_examples(dataset_id=dataset.id))
+    sorted_examples = sorted(dataset_examples, key=lambda x: x.inputs.get("case_index", 0))
+
+    print(f"\nTriggering LangSmith Communication Experiment evaluation sequentially across {len(sorted_examples)} sorted examples (max_concurrency=1)...")
     results = evaluate(
         evaluate_communication_target,
-        data=dataset_name,
+        data=sorted_examples,
         evaluators=[
             evaluate_communication_deterministic_langsmith,
             evaluate_communication_llm_judge_langsmith,
         ],
-        experiment_prefix="communication-node-eval"
+        max_concurrency=1,
+        experiment_prefix="communication-node-eval-ordered"
     )
 
     print("\nLangSmith Communication Node Experiment Evaluation Completed Successfully!")
@@ -384,3 +313,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

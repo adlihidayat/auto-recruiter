@@ -2,7 +2,7 @@
 
 | File / Folder Name | Purpose | Key Exports / Dependencies |
 | :--- | :--- | :--- |
-| `state.py` | State schemas & Pydantic contracts | `GraderState`, `CoreAnalysisOutput`, `CommunicationOutput`, `CitationsOutput`, `FinalReport` |
+| `state.py` | State schemas & Pydantic contracts | `GraderState`, `CoreAnalysisOutput`, `CommunicationOutput`, `EvidenceTally`, `CitationsOutput`, `FinalReport` |
 | `graph.py` | StateGraph initialization & orchestration | `create_grader_graph()` |
 | `edges.py` | Conditional routing functions | `route_after_core`, `route_after_comm` |
 | `nodes/core_analysis.py` | Call 1 Core Analysis node execution | `run_core_analysis()` |
@@ -22,7 +22,7 @@
 | `evals/communication_judge_benchmark.py` | Meta-Judge evaluator for Communication Judge | `evaluate_communication_meta_judge()` |
 | `evals/datasets/core_analysis_cases.py` | Core Analysis test cases with ground truth labels | `ALL_CORE_ANALYSIS_TEST_CASES` |
 | `evals/datasets/core_analysis_judge_cases.py` | Human-calibrated benchmark cases for Core Analysis Judge | `ALL_JUDGE_BENCHMARK_TEST_CASES` |
-| `evals/datasets/communication_judge_cases.py` | Human-calibrated 5 benchmark cases for Communication Judge | `ALL_COMMUNICATION_JUDGE_BENCHMARK_TEST_CASES` |
+| `evals/datasets/communication_judge_cases.py` | Human-calibrated 20 benchmark cases for Communication Judge | `ALL_COMMUNICATION_JUDGE_BENCHMARK_TEST_CASES` |
 | `evals/run_eval.py` | CLI runner for Core Analysis node evals | `run_evaluation()` |
 | `evals/run_core_analysis_judge_benchmark.py` | CLI runner for Core Analysis Meta-Judge calibration | `run_judge_calibration()` |
 | `evals/run_communication_judge_benchmark.py` | CLI runner for Communication Meta-Judge calibration | `run_communication_judge_calibration()` |

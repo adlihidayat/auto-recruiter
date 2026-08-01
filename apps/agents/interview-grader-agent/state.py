@@ -86,14 +86,21 @@ class CoreAnalysisOutput(BaseModel):
 # --- Output Schemas (Call 2) ---
 
 class CommSignals(BaseModel):
-    flow_control: str
-    active_listening: str
-    structure: str
-    assertiveness: str
-    objection_handling: str
+    flow_control: Optional[str] = None
+    active_listening: Optional[str] = None
+    structure: Optional[str] = None
+    assertiveness: Optional[str] = None
+    objection_handling: Optional[str] = None
+
+class EvidenceTally(BaseModel):
+    turn_count: Optional[int] = None
+    challenge_occurred: Optional[bool] = None
+    anomaly: Optional[str] = None
+    score_ceiling_band: Optional[str] = None
 
 class CommunicationEval(BaseModel):
     addressed: bool
+    evidence_tally: Optional[EvidenceTally] = None
     score: Optional[int] = None
     confidence: Optional[str] = None
     signals: Optional[CommSignals] = None
