@@ -11,6 +11,7 @@
 | `nodes/aggregation.py` | Aggregation pure code node | `run_aggregation()` |
 | `prompts/core_analysis_prompt.py` | System & user prompts for Call 1 | `CORE_ANALYSIS_SYSTEM_PROMPT`, `CORE_ANALYSIS_USER_PROMPT` |
 | `prompts/communication_prompt.py` | System & user prompts for Call 2 Communication node | `COMMUNICATION_SYSTEM_PROMPT`, `COMMUNICATION_USER_PROMPT` |
+| `prompts/citations_prompt.py` | System & user prompts for Call 3 Citation node | `CITATIONS_SYSTEM_PROMPT`, `CITATIONS_USER_PROMPT` |
 | `evals/schemas.py` | Evaluation & Meta-Judge Pydantic contracts | `ExpectedCoreAnalysisTruth`, `ExpectedCommunicationTruth`, `CommunicationJudgeEvalResult` |
 | `evals/deterministic_eval.py` | Layer 1 Core Analysis Deterministic evaluator | `evaluate_deterministic()`, `scan_for_protected_characteristics()` |
 | `evals/communication_deterministic_eval.py` | Layer 1 Communication Deterministic evaluator | `evaluate_communication_deterministic()` |
@@ -28,6 +29,7 @@
 | `evals/run_communication_judge_benchmark.py` | CLI runner for Communication Meta-Judge calibration | `run_communication_judge_calibration()` |
 | `scripts/debug_run.py` | Terminal runner for testing graph execution | `main()` |
 | `scripts/debug_run_communication.py` | Terminal runner for testing Call 2 Communication node | `run_communication_test_case()` |
+| `scripts/debug_run_citations.py` | Terminal runner for testing Call 3 Citation node | `run_citations_test()` |
 | `scripts/test_core_analysis_experiment.py` | LangSmith dataset & experiment runner for Core Analysis | `main()` |
 | `scripts/test_communication_experiment.py` | LangSmith dataset & experiment runner for Communication | `main()` |
 | `GEMINI.md` | Local constitution and rubric specifications | Local domain rules |
