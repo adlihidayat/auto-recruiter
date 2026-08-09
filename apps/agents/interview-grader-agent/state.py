@@ -115,29 +115,55 @@ class CoreAnalysisOutput(BaseModel):
 
 # --- Output Schemas (Call 2) ---
 
-class CommSignals(BaseModel):
-    flow_control: Optional[str] = None
-    active_listening: Optional[str] = None
-    structure: Optional[str] = None
-    assertiveness: Optional[str] = None
-    objection_handling: Optional[str] = None
+# --- LLM Extraction Schemas (Call 2) ---
 
-class EvidenceTally(BaseModel):
-    turn_count: Optional[int] = None
-    challenge_occurred: Optional[bool] = None
-    anomaly: Optional[str] = None
-    score_ceiling_band: Optional[str] = None
+class CommSignalMatch(BaseModel):
+    signal_id: str
+    turn_id: str
+    quote: str
+    rationale: str
 
-class CommunicationEval(BaseModel):
+class CommTraitExtraction(BaseModel):
+    positive: List[CommSignalMatch]
+    negative: List[CommSignalMatch]
+
+class CommunicationExtraction(BaseModel):
+    active_listening: CommTraitExtraction
+    structure: CommTraitExtraction
+    assertiveness: CommTraitExtraction
+    clarity: CommTraitExtraction
+
+# --- Node Output Schemas (Call 2) ---
+
+class CommEvidence(BaseModel):
+    signal_id: str
+    turn_id: str
+    quote: str
+    polarity: str
+
+class CommTraitEval(BaseModel):
     addressed: bool
-    evidence_tally: Optional[EvidenceTally] = None
+    is_passed: Optional[bool] = None
     score: Optional[int] = None
-    confidence: Optional[str] = None
-    signals: Optional[CommSignals] = None
-    rationale: Optional[str] = None
+    confidence: str
+    evidence: List[CommEvidence]
+    rationale: str
+
+class CommOverallEval(BaseModel):
+    is_passed: Optional[bool] = None
+    confidence: str
+    traits_passed: int
+    traits_failed: int
+    traits_not_addressed: int
+    rule_applied: str
+    rationale: str
+
+class CommunicationOutputData(BaseModel):
+    overall: CommOverallEval
+    traits: Dict[str, CommTraitEval]
 
 class CommunicationOutput(BaseModel):
-    communication: CommunicationEval
+    communication: CommunicationOutputData
 
 # --- Output Schemas (Call 3) ---
 

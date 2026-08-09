@@ -195,40 +195,47 @@ Template-based rendering of the structured output — no LLM call required for t
 
 `addressed: false` goals carry null score/confidence/evidence downstream and render as `"Not Assessed"` in the report.
 
-### Call 2 Output (only if triggered)
+### Call 2 LLM Extraction (Internal)
+
+```json
+{
+  "active_listening": {
+    "positive": [
+      {"signal_id": "al_pos_direct_answer", "turn_id": "t_02", "quote": "...", "rationale": "..."}
+    ],
+    "negative": []
+  },
+  "structure": { "positive": [], "negative": [] },
+  "assertiveness": { "positive": [], "negative": [] },
+  "clarity": { "positive": [], "negative": [] }
+}
+```
+
+### Call 2 Node Output (Post-Deterministic Logic)
 
 ```json
 {
   "communication": {
-    "flow_control": {
-      "addressed": true,
+    "overall": {
       "is_passed": true,
-      "confidence": "high",
-      "rationale": "..."
-    },
-    "active_listening": {
-      "addressed": true,
-      "is_passed": true,
-      "confidence": "high",
-      "rationale": "..."
-    },
-    "structure": {
-      "addressed": true,
-      "is_passed": true,
-      "confidence": "low",
-      "rationale": "..."
-    },
-    "assertiveness": {
-      "addressed": true,
-      "is_passed": false,
       "confidence": "medium",
+      "traits_passed": 3,
+      "traits_failed": 1,
+      "traits_not_addressed": 0,
+      "rule_applied": "majority_pass",
       "rationale": "..."
     },
-    "objection_handling": {
-      "addressed": true,
-      "is_passed": true,
-      "confidence": "high",
-      "rationale": "..."
+    "traits": {
+      "active_listening": {
+        "addressed": true,
+        "is_passed": true,
+        "score": 2,
+        "confidence": "medium",
+        "evidence": [
+          {"signal_id": "al_pos_direct_answer", "turn_id": "t_02", "quote": "...", "polarity": "positive"}
+        ],
+        "rationale": "..."
+      }
     }
   }
 }
