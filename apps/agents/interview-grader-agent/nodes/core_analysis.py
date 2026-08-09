@@ -1,23 +1,35 @@
 """
 What: Executes Call 1 (Core Analysis) of the interview grader pipeline.
-Why: Required for every candidate to extract evidence, score goals against the rubric, evaluate pushback, and scan for red flags in a single pass.
-Boundaries: Does not assess discourse-level communication styles or extract verbatim citations; operates only on the predefined rubric criteria.
+Why: Extracts evidence from the transcript via LLM, then applies deterministic rules to score goals.
+Boundaries: LLM extracts criteria/signal states and turn citations. Deterministic code calculates final scores.
 """
 import json
 from typing import Any
 from langchain_core.prompts import ChatPromptTemplate
-from ..state import GraderState, CoreAnalysisOutput
+from ..state import (
+    GraderState, 
+    CoreAnalysisOutput, 
+    CoreAnalysisExtraction,
+    GoalEval,
+    CriteriaMatch,
+    CriterionMatchDetail,
+    ProblemSolvingEval,
+    ConsistencyIssue,
+    RedFlag
+)
 from apps.agents.shared.clients import gemini_flash_lite
 
 # Initialize structured output runnable using the shared rotating model client
-structured_llm_client = gemini_flash_lite.with_structured_output(CoreAnalysisOutput)
+# Layer 1: Extraction Schema
+structured_llm_client = gemini_flash_lite.with_structured_output(CoreAnalysisExtraction)
 
 def run_core_analysis(state: GraderState) -> dict[str, Any]:
     """
     Call 1 - Core Analysis.
-    Evaluates evidence, score, confidence, pushback, consistency, and red flags.
+    Step 1: LLM extracts evidence mapping to criteria/signal IDs.
+    Step 2: Deterministic algorithm calculates is_passed, score, confidence.
     """
-    print("Running core analysis...")
+    print("Running core analysis extraction...")
     
     # Create the prompt exactly as required by GEMINI.md constraints
     from ..prompts.core_analysis_prompt import CORE_ANALYSIS_SYSTEM_PROMPT, CORE_ANALYSIS_USER_PROMPT
@@ -29,36 +41,208 @@ def run_core_analysis(state: GraderState) -> dict[str, Any]:
     chain = prompt | structured_llm_client
     
     # Format inputs for the prompt safely
-    job_context = f"Role: {state['job'].job_name}\nDescription: {state['job'].job_description}"
-    plan_meta_str = f"Difficulty: {state['plan_meta'].difficulty}\nCommunication Weight: {state['plan_meta'].communication_weight}"
+    job = state['job']
+    job_name = job.job_name if hasattr(job, 'job_name') else job.get('job_name', '')
+    job_desc = job.job_description if hasattr(job, 'job_description') else job.get('job_description', '')
+    job_context = f"Role: {job_name}\nDescription: {job_desc}"
+    
+    plan_meta = state['plan_meta']
+    diff = plan_meta.difficulty if hasattr(plan_meta, 'difficulty') else plan_meta.get('difficulty', '')
+    comm = plan_meta.communication_weight if hasattr(plan_meta, 'communication_weight') else plan_meta.get('communication_weight', '')
+    plan_meta_str = f"Difficulty: {diff}\nCommunication Weight: {comm}"
     
     goals_text = ""
     for g in state['goals']:
-        goals_text += f"\n--- Goal: {g.goal_id} ({g.topic}) ---\n"
-        goals_text += f"Passing Criteria: {g.passing_criteria}\n"
-        goals_text += f"Wrong Answer Signals: {g.wrong_answer_signals}\n"
-        pushback_str_list = []
-        for p in g.pushback_triggers:
-            if hasattr(p, "model_dump_json"):
-                pushback_str_list.append(p.model_dump_json())
-            elif isinstance(p, str):
-                pushback_str_list.append(p)
-            elif isinstance(p, dict):
-                pushback_str_list.append(json.dumps(p))
-            else:
-                pushback_str_list.append(str(p))
-        goals_text += f"Pushback Triggers: {pushback_str_list}\n"
+        gid = g.goal_id if hasattr(g, 'goal_id') else g.get('goal_id', '')
+        topic = g.topic if hasattr(g, 'topic') else g.get('topic', '')
+        goals_text += f"\n--- Goal: {gid} ({topic}) ---\n"
+        
+        # Criteria
+        passing_criteria = g.passing_criteria if hasattr(g, 'passing_criteria') else g.get('passing_criteria', [])
+        goals_text += "Passing Criteria:\n"
+        for pc in passing_criteria:
+            pid = pc.id if hasattr(pc, 'id') else pc.get('id', '')
+            pcrit = pc.criteria if hasattr(pc, 'criteria') else pc.get('criteria', '')
+            goals_text += f"  - [{pid}]: {pcrit}\n"
+            
+        # Signals
+        wrong_signals = g.wrong_answer_signals if hasattr(g, 'wrong_answer_signals') else g.get('wrong_answer_signals', [])
+        goals_text += "Wrong Answer Signals:\n"
+        for ws in wrong_signals:
+            wid = ws.id if hasattr(ws, 'id') else ws.get('id', '')
+            wsig = ws.signal if hasattr(ws, 'signal') else ws.get('signal', '')
+            goals_text += f"  - [{wid}]: {wsig}\n"
+            
         goals_text += "Transcript:\n"
-        for t in g.interaction_history:
-            goals_text += f"[{t.role.upper()}]: {t.content}\n"
+        history = g.interaction_history if hasattr(g, 'interaction_history') else g.get('interaction_history', [])
+        for t in history:
+            tid = t.turn_id if hasattr(t, 'turn_id') else t.get('turn_id', '')
+            role = t.role if hasattr(t, 'role') else t.get('role', '')
+            content = t.content if hasattr(t, 'content') else t.get('content', '')
+            goals_text += f"[{tid}] {role.upper()}: {content}\n"
     
-    # Invoke the chain
-    result = chain.invoke({
+    # Step 1: Invoke LLM for pure extraction
+    extraction_result: CoreAnalysisExtraction = chain.invoke({
         "job_context": job_context,
         "plan_meta": plan_meta_str,
         "goals": goals_text
     })
     
+    print("Running core analysis deterministic grading...")
+    # Step 2: Deterministic grading
+    final_goals = []
+    
+    for extracted_goal in extraction_result.goals:
+        gid = extracted_goal.goal_id
+        
+        # Find the original goal to get history for verification
+        input_goal = None
+        for g in state['goals']:
+            curr_gid = g.goal_id if hasattr(g, 'goal_id') else g.get('goal_id', '')
+            if curr_gid == gid:
+                input_goal = g
+                break
+                
+        history_map = {}
+        if input_goal:
+            history = input_goal.interaction_history if hasattr(input_goal, 'interaction_history') else input_goal.get('interaction_history', [])
+            for t in history:
+                tid = t.turn_id if hasattr(t, 'turn_id') else t.get('turn_id', '')
+                content = t.content if hasattr(t, 'content') else t.get('content', '')
+                history_map[tid] = content
+        
+        passing_met = []
+        failed_triggered = []
+        
+        downgrades = [] # list of ('low', 'reason') or ('medium', 'reason')
+        
+        any_not_assessed = False
+        all_criteria_met = True if extracted_goal.criteria_results else False
+        any_met = False
+        
+        # Process criteria
+        for cr in extracted_goal.criteria_results:
+            if cr.status == "not_assessed":
+                any_not_assessed = True
+                downgrades.append(("low", "Criterion not assessed"))
+                all_criteria_met = False
+            elif cr.status == "met":
+                any_met = True
+                verified = True
+                quote = cr.quote or ""
+                turn_id = cr.turn_id or ""
+                
+                # Verification & Vague Check
+                if turn_id in history_map:
+                    if quote not in history_map[turn_id]:
+                        verified = False
+                        downgrades.append(("low", "Quote failed substring check"))
+                else:
+                    verified = False
+                    downgrades.append(("low", "Turn ID not found"))
+                    
+                if len(quote) < 10 or len(quote.split()) < 2:
+                    downgrades.append(("medium", "Evidence quote too short/vague"))
+                
+                passing_met.append(CriterionMatchDetail(
+                    criterion_id=cr.criterion_id,
+                    status=cr.status,
+                    turn_id=cr.turn_id,
+                    quote=quote,
+                    verified=verified
+                ))
+            else:
+                all_criteria_met = False
+                
+        # Process signals
+        any_signal_triggered = False
+        for sr in extracted_goal.signal_results:
+            if sr.triggered:
+                any_signal_triggered = True
+                verified = True
+                quote = sr.quote or ""
+                turn_id = sr.turn_id or ""
+                
+                if turn_id in history_map:
+                    if quote not in history_map[turn_id]:
+                        verified = False
+                        downgrades.append(("low", "Signal quote failed substring check"))
+                else:
+                    verified = False
+                    downgrades.append(("low", "Signal Turn ID not found"))
+                
+                if len(quote) < 10 or len(quote.split()) < 2:
+                    downgrades.append(("medium", "Signal quote too short/vague"))
+                    
+                failed_triggered.append(CriterionMatchDetail(
+                    criterion_id=sr.signal_id,
+                    status="triggered",
+                    turn_id=sr.turn_id,
+                    quote=quote,
+                    verified=verified
+                ))
+                
+        if any_met and any_signal_triggered:
+            downgrades.append(("medium", "Met criterion and triggered wrong signal co-exist"))
+            
+        # Determine Pass / Not Pass Rule
+        is_passed = None
+        needs_review = False
+        
+        if any_signal_triggered:
+            # Overrides everything
+            is_passed = False
+        elif any_not_assessed:
+            # Don't grade yet
+            needs_review = True
+            is_passed = None
+        elif all_criteria_met:
+            is_passed = True
+        else:
+            is_passed = False
+            
+        # Determine Confidence
+        confidence = "high"
+        if downgrades:
+            has_low = any(d[0] == "low" for d in downgrades)
+            if has_low:
+                confidence = "low"
+            else:
+                confidence = "medium"
+                
+        # Placeholder score mapping since LLM no longer scores
+        score = None
+        if is_passed:
+            score = 8
+        elif is_passed is False:
+            if any_signal_triggered:
+                score = 2
+            else:
+                score = 5
+            
+        criteria_match = CriteriaMatch(
+            passing_met=passing_met,
+            failed_triggered=failed_triggered
+        )
+        
+        final_goals.append(GoalEval(
+            goal_id=gid,
+            addressed=True,
+            is_passed=is_passed,
+            needs_review=needs_review,
+            score=score,
+            confidence=confidence,
+            criteria_match=criteria_match,
+            rationale=extracted_goal.rationale
+        ))
+        
+    final_output = CoreAnalysisOutput(
+        goals=final_goals,
+        problem_solving_under_ambiguity=ProblemSolvingEval(addressed=False, score=None, confidence=None, rationale="Not assessed"),
+        consistency_issues=[],
+        red_flags=[]
+    )
+    
     return {
-        "core_analysis": result
+        "core_analysis": final_output
     }

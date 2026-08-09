@@ -135,7 +135,36 @@ Template-based rendering of the structured output — no LLM call required for t
 
 ## 8. Output Schema Contract
 
-### Call 1 Output
+### Call 1 LLM Extraction (Internal)
+
+```json
+{
+  "goals": [
+    {
+      "goal_id": "g_01",
+      "criteria_results": [
+        {
+          "criterion_id": "c_01",
+          "status": "met",
+          "turn_id": "t_02",
+          "quote": "..."
+        }
+      ],
+      "signal_results": [
+        {
+          "signal_id": "w_01",
+          "triggered": false,
+          "turn_id": null,
+          "quote": null
+        }
+      ],
+      "rationale": "..."
+    }
+  ]
+}
+```
+
+### Call 1 Node Output (Post-Deterministic Logic)
 
 ```json
 {
@@ -143,34 +172,24 @@ Template-based rendering of the structured output — no LLM call required for t
     {
       "goal_id": "g_01",
       "addressed": true,
-      "evidence": {
-        "claims": ["..."],
-        "demonstrated_reasoning": ["..."],
-        "specificity": "high"
-      },
-      "pushback": {
-        "triggered": true,
-        "response_type": "defended_with_new_info"
-      },
+      "is_passed": true,
       "score": 8,
       "confidence": "high",
       "criteria_match": {
-        "passing_met": ["..."],
+        "passing_met": [
+          {
+            "criterion_id": "c_01",
+            "status": "met",
+            "turn_id": "t_02",
+            "quote": "...",
+            "verified": true
+          }
+        ],
         "failed_triggered": []
       },
       "rationale": "..."
     }
-  ],
-  "problem_solving_under_ambiguity": {
-    "addressed": true,
-    "score": 6,
-    "confidence": "medium",
-    "rationale": "..."
-  },
-  "consistency_issues": [
-    { "description": "...", "goal_ids_involved": ["g_01", "g_02"] }
-  ],
-  "red_flags": [{ "description": "...", "goal_id": "g_02", "severity": "low" }]
+  ]
 }
 ```
 
@@ -181,17 +200,36 @@ Template-based rendering of the structured output — no LLM call required for t
 ```json
 {
   "communication": {
-    "addressed": true,
-    "score": 7,
-    "confidence": "high",
-    "signals": {
-      "flow_control": "...",
-      "active_listening": "...",
-      "structure": "...",
-      "assertiveness": "...",
-      "objection_handling": "..."
+    "flow_control": {
+      "addressed": true,
+      "is_passed": true,
+      "confidence": "high",
+      "rationale": "..."
     },
-    "rationale": "..."
+    "active_listening": {
+      "addressed": true,
+      "is_passed": true,
+      "confidence": "high",
+      "rationale": "..."
+    },
+    "structure": {
+      "addressed": true,
+      "is_passed": true,
+      "confidence": "low",
+      "rationale": "..."
+    },
+    "assertiveness": {
+      "addressed": true,
+      "is_passed": false,
+      "confidence": "medium",
+      "rationale": "..."
+    },
+    "objection_handling": {
+      "addressed": true,
+      "is_passed": true,
+      "confidence": "high",
+      "rationale": "..."
+    }
   }
 }
 ```

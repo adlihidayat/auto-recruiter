@@ -22,41 +22,71 @@ class PushbackTrigger(BaseModel):
     pushback_type: str
 
 class Interaction(BaseModel):
+    turn_id: str
     role: str
     content: str
+
+class PassingCriterion(BaseModel):
+    id: str
+    criteria: str
+
+class WrongAnswerSignal(BaseModel):
+    id: str
+    signal: str
 
 class GoalInput(BaseModel):
     goal_id: str
     topic: str
     goal: str
-    passing_criteria: List[str]
-    wrong_answer_signals: List[str]
+    passing_criteria: List[PassingCriterion]
+    wrong_answer_signals: List[WrongAnswerSignal]
     pushback_triggers: List[Union[PushbackTrigger, str, Dict[str, Any]]] = Field(default_factory=list)
     grounding_theory: str
     weight: float = 1.0
     gating: bool = False
     interaction_history: List[Interaction]
 
-# --- Output Schemas (Call 1) ---
+# --- LLM Output Schemas (Call 1) ---
 
-class Evidence(BaseModel):
-    claims: List[str]
-    demonstrated_reasoning: List[str]
-    specificity: str
+class CriterionResult(BaseModel):
+    criterion_id: str
+    status: str
+    turn_id: Optional[str] = None
+    quote: Optional[str] = None
 
-class PushbackEval(BaseModel):
+class SignalResult(BaseModel):
+    signal_id: str
     triggered: bool
-    response_type: Optional[str] = None
+    turn_id: Optional[str] = None
+    quote: Optional[str] = None
+
+class GoalExtraction(BaseModel):
+    goal_id: str
+    criteria_results: List[CriterionResult]
+    signal_results: List[SignalResult]
+    rationale: str
+
+class CoreAnalysisExtraction(BaseModel):
+    goals: List[GoalExtraction]
+
+# --- Node Output Schemas (Call 1) ---
+
+class CriterionMatchDetail(BaseModel):
+    criterion_id: str
+    status: str
+    turn_id: Optional[str] = None
+    quote: Optional[str] = None
+    verified: bool = True
 
 class CriteriaMatch(BaseModel):
-    passing_met: List[str]
-    failed_triggered: List[str]
+    passing_met: List[CriterionMatchDetail]
+    failed_triggered: List[CriterionMatchDetail]
 
 class GoalEval(BaseModel):
     goal_id: str
     addressed: bool
-    evidence: Optional[Evidence] = None
-    pushback: Optional[PushbackEval] = None
+    is_passed: Optional[bool] = None
+    needs_review: bool = False
     score: Optional[int] = None
     confidence: Optional[str] = None
     criteria_match: Optional[CriteriaMatch] = None
