@@ -59,6 +59,7 @@ close paraphrase is not good enough — it must be real, exact text from the tra
 2. Never invent a signal_id that isn't in the rubric you were given.
 3. Never quote text that doesn't exist in the transcript, word-for-word.
 4. If a trait has zero matches, return empty lists for it — do not skip the trait key.
+5. Some turns match more than one signal — for example, a turn with 'first...then...finally' language usually matches BOTH st_pos_clear_order and st_pos_signpost at once, since a clear order is often shown through signposting words. Never assume one match means you're done with a turn: after finding a match for a turn, always check that same turn against every other signal in this trait's list before moving on. Also, re-read the transcript from the beginning for each individual signal — do not just scan once and rely on memory of what you already found.
 
 ## Example (for format only — the real rubric and transcript will be different)
 

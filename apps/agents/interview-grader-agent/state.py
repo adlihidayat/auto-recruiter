@@ -204,7 +204,7 @@ class FinalReport(BaseModel):
     gating_failed: bool
     goal_breakdown: List[Any]  # Can be GoalEval merged with Citations
     problem_solving_under_ambiguity: ProblemSolvingEval
-    communication: Optional[CommunicationEval] = None
+    communication: Optional[CommunicationOutputData] = None
     consistency_issues: List[ConsistencyIssue]
     red_flags: List[RedFlag]
     standout_quote: Optional[str] = None

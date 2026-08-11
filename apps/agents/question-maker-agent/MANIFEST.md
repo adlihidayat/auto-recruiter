@@ -19,3 +19,4 @@ This directory manages the Question-Maker Agent LangGraph workflow.
 | `scripts/test_judge.py` | Local script to run the Planner LLM Judge against mock scenarios | (None) |
 | `scripts/test_retriever_judge.py` | Local script to run the Retriever LLM Judge against mock scenarios | (None) |
 | `scripts/run_planner_experiment.py` | Script to run experiments and evaluators on LangSmith | `evaluate_planner_target`, `evaluate_planner_algorithmic`, `evaluate_planner_llm_judge` |
+| `scripts/run_batch_cases.py` | CLI batch runner executing the full Question-Maker graph across user test cases | `executeQuestionMakerBatchSuite`, `BATCH_TEST_CASES` |
