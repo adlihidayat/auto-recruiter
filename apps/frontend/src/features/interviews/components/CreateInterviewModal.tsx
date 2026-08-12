@@ -149,7 +149,12 @@ export default function CreateInterviewModal({
                 value={targetSeniority}
                 onChange={(e) =>
                   setTargetSeniority(
-                    e.target.value as "Junior" | "Mid-Level" | "Senior" | "Lead" | "Principal"
+                    e.target.value as
+                      | "Junior"
+                      | "Mid-Level"
+                      | "Senior"
+                      | "Lead"
+                      | "Principal",
                   )
                 }
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
@@ -192,7 +197,8 @@ export default function CreateInterviewModal({
             >
               {isSubmitting ? (
                 <>
-                  <Bot className="w-4 h-4 animate-spin" /> Synthesizing Agent Plan...
+                  <Bot className="w-4 h-4 animate-spin" /> Synthesizing Agent
+                  Plan...
                 </>
               ) : (
                 <>

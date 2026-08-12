@@ -16,7 +16,7 @@ export const metadata = {
 
 export default function DashboardPage() {
   return (
-    <div className="min-h-screen bg-[#080c14] text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-[#F6F6F6] text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
       <Navbar />
       <div className="flex-1">
         <Suspense
