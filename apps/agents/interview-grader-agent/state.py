@@ -211,6 +211,20 @@ class FinalReport(BaseModel):
     grader_version: str
     graded_at: str
 
+# --- Output Schemas (Injection Check) ---
+
+class InjectionFinding(BaseModel):
+    goal_id: str
+    turn_id: str
+    layer_detected: str
+    layer_2_score: Optional[float] = None
+    confidence: str
+    quote: str
+    rationale: str
+
+class InjectionCheckOutput(BaseModel):
+    injection_findings: List[InjectionFinding] = Field(default_factory=list)
+
 # --- Graph State ---
 
 class GraderState(TypedDict):
@@ -225,6 +239,7 @@ class GraderState(TypedDict):
     # Intermediate / Outputs
     core_analysis: Optional[CoreAnalysisOutput]
     communication_analysis: Optional[CommunicationOutput]
+    injection_check: Optional[InjectionCheckOutput]
     citations: Optional[CitationsOutput]
     
     # Final

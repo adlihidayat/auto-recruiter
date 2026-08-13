@@ -5,26 +5,29 @@ Boundaries: Only reads state to return node routing strings; does not mutate sta
 """
 from .state import GraderState
 
-def route_after_core(state: GraderState) -> str:
+from typing import List
+
+def route_phase_1(state: GraderState) -> List[str]:
     """
-    Determine next step after core analysis.
-    If communication_weight is not 'low', run communication analysis.
-    Otherwise, check if citations are needed.
+    Determine which Phase 1 nodes to execute in parallel.
+    Core Analysis and Injection Check always run.
+    Communication runs conditionally based on plan_meta.
     """
+    nodes = ["core_analysis", "injection_check"]
+    
     plan_meta = state.get("plan_meta")
     
-    # Safely handle if it's parsed as a Pydantic model vs dict vs not present
     if plan_meta:
         comm_weight = plan_meta.communication_weight if hasattr(plan_meta, 'communication_weight') else plan_meta.get("communication_weight", "low")
         if comm_weight != "low":
-            return "communication"
+            nodes.append("communication")
             
-    return route_after_comm(state)
+    return nodes
 
-def route_after_comm(state: GraderState) -> str:
+def route_after_phase_1_join(state: GraderState) -> str:
     """
-    Determine next step after communication (or skipped communication).
-    Check if any goals need citations (score 4-6 or low/medium confidence).
+    Determine next step after Phase 1 parallel execution completes.
+    Check if any goals need citations (score 4-6 or low/medium confidence) from core_analysis.
     """
     core_analysis = state.get("core_analysis")
     if not core_analysis:

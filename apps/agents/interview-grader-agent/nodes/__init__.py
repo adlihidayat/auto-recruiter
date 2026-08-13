@@ -5,12 +5,14 @@ Boundaries: Contains no implementation logic; only manages exports.
 """
 from .core_analysis import run_core_analysis
 from .communication import run_communication
+from .injection_check import run_injection_check
 from .citations import run_citations
 from .aggregation import run_aggregation
 
 __all__ = [
     "run_core_analysis",
     "run_communication",
+    "run_injection_check",
     "run_citations",
     "run_aggregation"
 ]
