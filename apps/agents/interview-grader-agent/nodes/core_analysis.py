@@ -27,7 +27,7 @@ def run_core_analysis(state: GraderState) -> dict[str, Any]:
     """
     Call 1 - Core Analysis.
     Step 1: LLM extracts evidence mapping to criteria/signal IDs.
-    Step 2: Deterministic algorithm calculates is_passed, score, confidence.
+    Step 2: Deterministic algorithm calculates score and confidence.
     """
     print("Running core analysis extraction...")
     
@@ -185,21 +185,22 @@ def run_core_analysis(state: GraderState) -> dict[str, Any]:
         if any_met and any_signal_triggered:
             downgrades.append(("medium", "Met criterion and triggered wrong signal co-exist"))
             
-        # Determine Pass / Not Pass Rule
-        is_passed = None
-        needs_review = False
-        
-        if any_signal_triggered:
-            # Overrides everything
-            is_passed = False
-        elif any_not_assessed:
-            # Don't grade yet
-            needs_review = True
-            is_passed = None
-        elif all_criteria_met:
-            is_passed = True
+        # Calculate continuous score based on assessed criteria and signal penalties
+        met = sum(1 for cr in extracted_goal.criteria_results if cr.status == "met")
+        assessed = sum(1 for cr in extracted_goal.criteria_results if cr.status in ["met", "unmet"])
+        triggered_signals = sum(1 for sr in extracted_goal.signal_results if sr.triggered)
+
+        # 1. Base score from assessed criteria only (not_assessed excluded, not penalized)
+        base_score = round((met / assessed) * 10, 1) if assessed > 0 else None
+
+        # 2. Signal penalty — equal severity, but scales down with count
+        #    1 signal caps score at 2.0, 2 signals at 0.5, 3+ floors at 0.0
+        if triggered_signals > 0:
+            cap = max(0.0, 2.0 - (triggered_signals - 1) * 1.5)
+            score = min(base_score, cap) if base_score is not None else cap
         else:
-            is_passed = False
+            score = base_score
+            
             
         # Determine Confidence
         confidence = "high"
@@ -209,16 +210,6 @@ def run_core_analysis(state: GraderState) -> dict[str, Any]:
                 confidence = "low"
             else:
                 confidence = "medium"
-                
-        # Placeholder score mapping since LLM no longer scores
-        score = None
-        if is_passed:
-            score = 8
-        elif is_passed is False:
-            if any_signal_triggered:
-                score = 2
-            else:
-                score = 5
             
         criteria_match = CriteriaMatch(
             passing_met=passing_met,
@@ -227,9 +218,7 @@ def run_core_analysis(state: GraderState) -> dict[str, Any]:
         
         final_goals.append(GoalEval(
             goal_id=gid,
-            addressed=True,
-            is_passed=is_passed,
-            needs_review=needs_review,
+            addressed=(assessed > 0 or len(extracted_goal.criteria_results) > 0),
             score=score,
             confidence=confidence,
             criteria_match=criteria_match,
@@ -237,10 +226,7 @@ def run_core_analysis(state: GraderState) -> dict[str, Any]:
         ))
         
     final_output = CoreAnalysisOutput(
-        goals=final_goals,
-        problem_solving_under_ambiguity=ProblemSolvingEval(addressed=False, score=None, confidence=None, rationale="Not assessed"),
-        consistency_issues=[],
-        red_flags=[]
+        goals=final_goals
     )
     
     return {

@@ -85,16 +85,14 @@ class CriteriaMatch(BaseModel):
 class GoalEval(BaseModel):
     goal_id: str
     addressed: bool
-    is_passed: Optional[bool] = None
-    needs_review: bool = False
-    score: Optional[int] = None
+    score: Optional[float] = None
     confidence: Optional[str] = None
     criteria_match: Optional[CriteriaMatch] = None
     rationale: Optional[str] = None
 
 class ProblemSolvingEval(BaseModel):
     addressed: bool
-    score: Optional[int] = None
+    score: Optional[float] = None
     confidence: Optional[str] = None
     rationale: Optional[str] = None
 
@@ -109,9 +107,6 @@ class RedFlag(BaseModel):
 
 class CoreAnalysisOutput(BaseModel):
     goals: List[GoalEval]
-    problem_solving_under_ambiguity: ProblemSolvingEval
-    consistency_issues: List[ConsistencyIssue]
-    red_flags: List[RedFlag]
 
 # --- Output Schemas (Call 2) ---
 
@@ -144,7 +139,7 @@ class CommEvidence(BaseModel):
 class CommTraitEval(BaseModel):
     addressed: bool
     is_passed: Optional[bool] = None
-    score: Optional[int] = None
+    score: Optional[float] = None
     confidence: str
     evidence: List[CommEvidence]
     rationale: str

@@ -68,6 +68,16 @@ COMMUNICATION_RUBRIC = {
 
 structured_llm_client = gemini_flash_lite.with_structured_output(CommunicationExtraction)
 
+def trait_score(net_score: int, total_evidence: int) -> Optional[float]:
+    """
+    Computes a 0.0 - 10.0 continuous score for a communication trait based on net score.
+    net_score = 0 sits at 5.0 (the old fail boundary), each net point shifts it by 1.
+    """
+    if total_evidence == 0:
+        return None  # not addressed — excluded from aggregate
+    return max(0.0, min(10.0, 5.0 + float(net_score)))
+
+@traceable(name="run_communication")
 def run_communication(state: GraderState) -> dict[str, Any]:
     """
     Call 2 - Communication.
@@ -185,21 +195,16 @@ def run_communication(state: GraderState) -> dict[str, Any]:
                     quote=neg.quote,
                     polarity="negative"
                 ))
-                
         # Trait Calculations
         net_score = pos_count - neg_count
         total_evidence = pos_count + neg_count
         addressed = (total_evidence > 0)
         
+        score = trait_score(net_score, total_evidence)
+        
         is_passed = None
-        if not addressed:
-            is_passed = None
-        elif net_score >= 1:
-            is_passed = True
-        elif net_score <= -1:
-            is_passed = False
-        else: # net_score == 0
-            is_passed = False
+        if addressed:
+            is_passed = (score >= 6.0)
             
         margin = abs(net_score)
         
@@ -221,12 +226,12 @@ def run_communication(state: GraderState) -> dict[str, Any]:
         else:
             traits_not_addressed += 1
             
-        rationale = f"{pos_count} valid positive, {neg_count} valid negative signals. Net score: {net_score}."
+        rationale = f"{pos_count} valid positive, {neg_count} valid negative signals. Net score: {net_score}, Trait score: {score}."
         
         traits_output[trait_name] = CommTraitEval(
             addressed=addressed,
             is_passed=is_passed,
-            score=net_score,
+            score=score,
             confidence=confidence,
             evidence=evidence_list,
             rationale=rationale
