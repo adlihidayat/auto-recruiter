@@ -193,7 +193,7 @@ export default function CreateInterviewModal({
             <button
               type="submit"
               disabled={isSubmitting || !jobTitle.trim()}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-lg shadow-indigo-600/30"
+              className="px-4 py-2 rounded-xl bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-lg shadow-indigo-600/30"
             >
               {isSubmitting ? (
                 <>

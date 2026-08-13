@@ -82,7 +82,7 @@ Passed to this agent once, after the interview is complete:
     "job_description": "We need a senior engineer who can design scalable microservices..."
   },
   "plan_meta": {
-    "communication_weight": "low",
+    "communication_weight": 0.2, //range 0-1
     "difficulty": "senior"
   },
   "goals": [
@@ -146,18 +146,24 @@ Because interactions arrive pre-segmented per goal, the old "segmentation" stage
 
 **Phase 2 — Citation (Call 3, conditional, small).** Depends only on Core Analysis's output, so it starts as soon as the Core Analysis branch of Phase 1 resolves — it does not need to wait on Communication or Injection Check if those are still running. Only for goals where Call 1's score landed in the 4–6 band or confidence came back low/medium. Pulls 1–3 short quotes with turn references so HR can verify without re-reading the full transcript. Typically covers a small minority of goals per candidate.
 
-**Aggregation (pure code, no LLM call).** Waits on all of Phase 1 and Phase 2 to complete.
+**Aggregation (Hybrid deterministic calculations + LLM reasoning call).** Waits on all of Phase 1 and Phase 2 to complete.
 
-- Exclude `"Not Assessed"` goals from the composite.
-- Weighted average across remaining goals using `weight` (default 1).
-- Gating check: any gating goal failing caps the recommendation at "No Hire" regardless of composite.
-- Confidence rollup: overall confidence drops if a significant share of goals are low-confidence or unassessed.
-- Merge Injection Check's `injection_findings` into `red_flags` — this never affects score, confidence, or recommendation (see §4.2).
-- Recommendation mapping via deterministic rule table (see §8).
+- Weighted average across core goals (`core_score`) and communication traits (`comm_score`) using `communication_weight` (range 0.0–1.0) and `core_weight = 1.0 - communication_weight`.
+- `composite_score = round((core_weight * core_score) + (comm_weight * comm_score), 1)`.
+- Confidence rollup: converts `"low"`, `"medium"`, `"high"` string confidences into `0.3`, `0.7`, `1.0`, computes the weighted average, and maps back:
+  - `< 0.3` $\rightarrow$ `"Low"`
+  - `0.3 – 0.79` $\rightarrow$ `"Medium"`
+  - `≥ 0.8` $\rightarrow$ `"High"`
+- Recommendation mapping via 3-tier deterministic thresholds:
+  - `≥ 8.0` $\rightarrow$ `"Advance"`
+  - `3.0 – 7.9` $\rightarrow$ `"Advance with follow-up"`
+  - `< 3.0` $\rightarrow$ `"Hold"`
+  - *Gating check*: any gating goal failing (`score < 6.0`) overrides recommendation to `"Hold"`.
+- Calls `gemini-1.5-flash-8b` to generate a single, plain-language `reasoning` paragraph explaining *why* the candidate received their specific recommendation based on transcript evidence, scores, and injection red flags.
 
-**Report Generation.** Template-based rendering of the structured output — no LLM call required for the base report. An optional short LLM pass may generate a one-line narrative summary on top of the already-computed structured data, but must not alter any score, confidence, or recommendation value.
+**Report Generation.** Emits the minimal `FinalReport` object containing top-level metrics, overall confidence, recommendation, reasoning paragraph, and audit metadata.
 
-**Total real LLM calls per candidate: 1 mandatory (Core Analysis) + 0–1 conditional (Communication) + 0–1 conditional (Injection Check Layer 3) + 0–1 small conditional (Citation) — with Core Analysis, Communication, and Injection Check all dispatched in parallel in Phase 1 rather than run sequentially.**
+**Total real LLM calls per candidate: 2 mandatory (Core Analysis, Aggregation Reasoning) + 0–1 conditional (Communication) + 0–1 conditional (Injection Check Layer 3) + 0–1 small conditional (Citation).**
 
 ## 8. Output Schema Contract
 
@@ -291,28 +297,15 @@ Because interactions arrive pre-segmented per goal, the old "segmentation" stage
 
 ```json
 {
-  "summary": "One-line TL;DR: strongest area, weakest area, overall call.",
-  "recommendation": "Strong Hire | Hire | Lean Hire | Lean No-Hire | No-Hire",
-  "flags": ["Needs Follow-up"],
+  "overall_confidence": "Low | Medium | High",
+  "recommendation": "Advance | Advance with follow-up | Hold",
+  "reasoning": "Plain-language paragraph synthesizing candidate performance...",
   "composite_score": 7.2,
-  "overall_confidence": "medium",
-  "goals_assessed": 8,
-  "goals_total": 9,
-  "gating_failed": false,
-  "goal_breakdown": [
-    "... per-goal scores, rationale, citations if present ..."
-  ],
-  "problem_solving_under_ambiguity": { "...": "..." },
-  "communication": { "...": "..." },
-  "consistency_issues": ["..."],
-  "red_flags": ["..."],
-  "standout_quote": "...",
-  "grader_version": "v1.0",
-  "graded_at": "2026-07-28T00:00:00Z"
+  "grader_version": "v2.0",
+  "graded_at": "2026-08-13T17:37:00Z"
 }
 ```
 
-- `standout_quote` is populated for strong candidates (composite ≥ 8) even though citation logic (Call 3) is otherwise reserved for borderline cases — HR should get one memorable anchor point for top candidates too.
 - `grader_version` / `graded_at` are audit metadata, required for defensibility of any hiring decision informed by this report.
 
 ## 9. Boundary Recap: Who Owns What

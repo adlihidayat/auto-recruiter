@@ -109,7 +109,7 @@ export default function DashboardView() {
           >
             <CheckSquare className="w-3.5 h-3.5" /> All (36)
             {activeTab === "ALL" && (
-              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gray-900" />
+              <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-900" />
             )}
           </button>
 
@@ -123,7 +123,7 @@ export default function DashboardView() {
           >
             <CalendarDays className="w-3.5 h-3.5" /> Finished (17)
             {activeTab === "FINISHED" && (
-              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gray-900" />
+              <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-900" />
             )}
           </button>
 
@@ -137,7 +137,7 @@ export default function DashboardView() {
           >
             <Clock className="w-3.5 h-3.5" /> In-progressed (9)
             {activeTab === "IN_PROGRESS" && (
-              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gray-900" />
+              <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-900" />
             )}
           </button>
 
@@ -151,7 +151,7 @@ export default function DashboardView() {
           >
             <XSquare className="w-3.5 h-3.5" /> Not started (3)
             {activeTab === "NOT_STARTED" && (
-              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gray-900" />
+              <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-900" />
             )}
           </button>
         </div>

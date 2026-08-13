@@ -118,7 +118,7 @@ export default function InterviewDetailDialog({
       <div className="absolute inset-0" onClick={handleCloseDialog} />
 
       {/* Drawer Container */}
-      <div className="relative w-full max-w-[650px] h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+      <div className="relative w-full max-w-162.5 h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
         {/* Drawer Header */}
         <div className="px-7 py-4.5 flex items-center justify-between border-b border-[#F1F1F1]">
           <div className="flex items-center gap-3">
@@ -219,7 +219,7 @@ export default function InterviewDetailDialog({
                 <div className="flex items-center gap-1 h-2">
                   {/* <div className="h-full bg-[#FE6100] rounded-full w-[0%]" />
                   <div className="h-full bg-[#FFD3B8] rounded-full w-[0%]" /> */}
-                  <div className="h-full bg-[#E9E9E9] rounded-full w-[100%]" />
+                  <div className="h-full bg-[#E9E9E9] rounded-full w-full" />
                 </div>
               </div>
             </div>
@@ -273,7 +273,7 @@ export default function InterviewDetailDialog({
             </button>
           </div>
           {/* Candidates List */}
-          <div className="border border-[#F1F1F1] rounded-[14px] overflow-y-auto max-h-[380px] mb-8">
+          <div className="border border-[#F1F1F1] rounded-[14px] overflow-y-auto max-h-95 mb-8">
             {/* Candidates List Header */}
             {mockCandidates.map((candidate, idx) => (
               <div

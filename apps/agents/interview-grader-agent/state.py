@@ -13,7 +13,7 @@ class JobContext(BaseModel):
     job_description: str
 
 class PlanMeta(BaseModel):
-    communication_weight: str = "low"
+    communication_weight: float = 0.5
     difficulty: str = "senior"
 
 class PushbackTrigger(BaseModel):
@@ -189,20 +189,10 @@ class CitationsOutput(BaseModel):
 # --- Output Schemas (Aggregation) ---
 
 class FinalReport(BaseModel):
-    summary: str
-    recommendation: str
-    flags: List[str]
-    composite_score: float
     overall_confidence: str
-    goals_assessed: int
-    goals_total: int
-    gating_failed: bool
-    goal_breakdown: List[Any]  # Can be GoalEval merged with Citations
-    problem_solving_under_ambiguity: ProblemSolvingEval
-    communication: Optional[CommunicationOutputData] = None
-    consistency_issues: List[ConsistencyIssue]
-    red_flags: List[RedFlag]
-    standout_quote: Optional[str] = None
+    recommendation: str
+    reasoning: str
+    composite_score: float
     grader_version: str
     graded_at: str
 
