@@ -67,3 +67,43 @@ gemini_pro = RotatingModelWrapper(
     "gemini-3.1-pro-preview",
     temperature=0.0,
 )
+
+# --- HuggingFace Clients ---
+from huggingface_hub import InferenceClient
+from langsmith import traceable
+
+hf_token = os.getenv("HF_TOKEN")
+if hf_token:
+    hf_client = InferenceClient(token=hf_token)
+else:
+    hf_client = None
+
+@traceable(name="prompt_guard_score")
+def get_prompt_guard_score(text: str) -> float:
+    """
+    Calls meta-llama/Prompt-Guard-86M via HuggingFace Inference API.
+    Returns a float 0.0-1.0 representing the likelihood of injection or jailbreak.
+    """
+    if not hf_client:
+        raise ValueError("HF_TOKEN is not set.")
+        
+    try:
+        results = hf_client.text_classification(text, model="meta-llama/Prompt-Guard-86M")
+        
+        # Results is a list of elements like: TextClassificationOutputElement(label='INJECTION', score=0.99)
+        # We consider both INJECTION and JAILBREAK as malicious.
+        malicious_score = 0.0
+        for res in results:
+            # Handle if it returns a dict or an object
+            label = res.label if hasattr(res, 'label') else res.get('label', '')
+            score = res.score if hasattr(res, 'score') else res.get('score', 0.0)
+            
+            if label.upper() in ["INJECTION", "JAILBREAK"]:
+                malicious_score += score
+                
+        # Cap at 1.0 just in case
+        return min(malicious_score, 1.0)
+    except Exception as e:
+        print(f"Error calling PromptGuard: {e}")
+        # Fail open or closed? If API fails, return 0.5 (uncertain) to force LLM review
+        return 0.5
