@@ -18,9 +18,13 @@ def route_phase_1(state: GraderState) -> List[str]:
     plan_meta = state.get("plan_meta")
     
     if plan_meta:
-        comm_weight = plan_meta.communication_weight if hasattr(plan_meta, 'communication_weight') else plan_meta.get("communication_weight", "low")
-        if comm_weight != "low":
-            nodes.append("communication")
+        comm_weight = plan_meta.communication_weight if hasattr(plan_meta, 'communication_weight') else plan_meta.get("communication_weight", 0.0)
+        try:
+            if float(comm_weight) > 0.0:
+                nodes.append("communication")
+        except (ValueError, TypeError):
+            if str(comm_weight).lower() != "low":
+                nodes.append("communication")
             
     return nodes
 

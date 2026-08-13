@@ -4,7 +4,8 @@ Why: Extracts evidence for communication traits (active listening, structure, et
 Boundaries: Conditionally executed; does not score technical correctness.
 """
 import json
-from typing import Any
+from typing import Any, Optional
+from langsmith import traceable
 from langchain_core.prompts import ChatPromptTemplate
 from ..state import (
     GraderState, 
@@ -242,7 +243,15 @@ def run_communication(state: GraderState) -> dict[str, Any]:
     rule_applied = ""
     
     if (traits_passed + traits_failed) > 0:
-        if comm_weight.lower() == "high":
+        is_high_weight = False
+        try:
+            if float(comm_weight) >= 0.8:
+                is_high_weight = True
+        except (ValueError, TypeError):
+            if str(comm_weight).lower() == "high":
+                is_high_weight = True
+
+        if is_high_weight:
             rule_applied = "all_addressed_must_pass"
             overall_is_passed = (traits_failed == 0)
         else:

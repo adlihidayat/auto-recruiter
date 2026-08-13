@@ -6,10 +6,12 @@ Boundaries: Applies formulaic weighting for scores and confidence, maps recommen
 from typing import Any, Dict
 from datetime import datetime
 import json
-from langchain.chat_models import init_chat_model
+from langsmith import traceable
 from ..state import GraderState, FinalReport
 from ..prompts.aggregation_prompt import get_aggregation_prompt
+from apps.agents.shared.clients import gemini_flash_lite
 
+@traceable(name="run_aggregation")
 def run_aggregation(state: GraderState) -> dict[str, Any]:
     """
     Final Aggregation (Hybrid code + LLM).
@@ -138,24 +140,28 @@ def run_aggregation(state: GraderState) -> dict[str, Any]:
                 gb["citations"] = cit_dict[g_id].get("citations", [])
 
     # 7. LLM Reasoning Generation
-    llm = init_chat_model("gemini-1.5-flash-8b", model_provider="google_genai")
     prompt = get_aggregation_prompt()
     
     core_sum = json.dumps([{"goal": g.get("goal_id"), "score": g.get("score"), "rationale": g.get("rationale")} for g in goal_breakdown], indent=2)
     comm_sum = json.dumps(comm_output, indent=2) if comm_output else "None"
     rf_sum = json.dumps(red_flags, indent=2)
     
-    chain = prompt | llm
-    result = chain.invoke({
-        "recommendation": recommendation,
-        "composite_score": composite_score,
-        "overall_confidence": overall_confidence,
-        "core_summary": core_sum,
-        "communication_summary": comm_sum,
-        "red_flags_summary": rf_sum
-    })
+    messages = prompt.format_messages(
+        recommendation=recommendation,
+        composite_score=composite_score,
+        overall_confidence=overall_confidence,
+        core_summary=core_sum,
+        communication_summary=comm_sum,
+        red_flags_summary=rf_sum
+    )
+    result = gemini_flash_lite.invoke(messages)
     
-    reasoning = result.content.strip()
+    if isinstance(result.content, str):
+        reasoning = result.content.strip()
+    elif isinstance(result.content, list):
+        reasoning = "".join([c if isinstance(c, str) else c.get("text", "") for c in result.content]).strip()
+    else:
+        reasoning = str(result.content).strip()
 
     # 8. Build Final Report
     report = FinalReport(
