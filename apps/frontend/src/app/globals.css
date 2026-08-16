@@ -1,19 +1,23 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: var(--font-plus-jakarta-sans), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+}
+
 @layer base {
   :root {
     --background: #f4f4f5; /* Light gray background matching the design */
     --foreground: #09090b; /* Black text */
   }
 
+  * {
+    font-family: var(--font-plus-jakarta-sans), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family:
-      var(--font-plus-jakarta-sans),
-      system-ui,
-      -apple-system,
-      sans-serif;
+    font-family: var(--font-plus-jakarta-sans), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
   }
 }

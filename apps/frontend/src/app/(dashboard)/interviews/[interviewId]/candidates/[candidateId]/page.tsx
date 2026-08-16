@@ -1,4 +1,5 @@
 import React from "react";
+import Navbar from "@/components/layout/Navbar";
 import CandidateReportView from "@/features/candidates/components/CandidateReportView";
 import { Metadata } from "next";
 
@@ -15,8 +16,11 @@ export default async function CandidateReportPage({
   await params; // Await params per Next.js 15 convention
 
   return (
-    <main className="w-full min-h-screen bg-[#F4F4F5]">
-      <CandidateReportView />
+    <main className="w-full min-h-screen bg-[#F6F6F6] text-slate-100 flex flex-col">
+      <Navbar />
+      <div className="flex-1">
+        <CandidateReportView />
+      </div>
     </main>
   );
 }
