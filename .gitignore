@@ -1,6 +1,7 @@
 # Environment variables
 .env
 .env.*
+!.env.example
 apps/agents/.env
 
 # Python Virtual Environments
