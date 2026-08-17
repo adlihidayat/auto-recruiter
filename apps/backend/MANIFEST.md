@@ -5,6 +5,9 @@
 | `src/app/main.py` | FastAPI app entrypoint & DB connection check lifespan | `app` |
 | `src/app/core/config.py` | Strongly-typed environment configuration loader | `application_settings`, `ApplicationSettings` |
 | `src/app/core/db.py` | Async SQLAlchemy 2.0 engine & session factory | `async_database_engine`, `async_session_factory`, `get_async_database_session` |
+| `src/app/core/security.py` | Cryptographic utilities (Argon2 hashes, JWT encoding) | `verify_password`, `get_password_hash`, `create_access_token` |
+| `src/app/api/deps.py` | FastAPI reusable dependencies (DB sessions, auth JWT parsing) | `SessionDep`, `CurrentUser` |
+| `src/app/api/auth.py` | API Router handling OAuth2 login and token exchange | `router` |
 | `src/app/models/base.py` | SQLAlchemy Declarative Base | `Base` |
 | `src/app/models/user.py` | User entity schema | `User` |
 | `src/app/models/interview.py` | Interview entity schema | `Interview` |
