@@ -6,7 +6,7 @@
  * Boundaries: Operates on local client state until connected to FastAPI backend OpenAPI client.
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   MessageSquarePlus,
   CalendarDays,
@@ -18,6 +18,8 @@ import { InterviewCampaign } from "../types";
 import InterviewCard from "./InterviewCard";
 import InterviewDetailDialog from "./InterviewDetailDialog";
 import CreateInterviewModal from "./CreateInterviewModal";
+import { getInterviewsApi, getCandidatesForInterviewApi } from "@/lib/api/client";
+import { mapBackendInterviewToCampaign } from "../utils";
 
 const INITIAL_MOCK_CAMPAIGNS: InterviewCampaign[] = Array(12)
   .fill(null)
@@ -50,9 +52,111 @@ export default function DashboardView() {
   >("ALL");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
+  useEffect(() => {
+    async function loadBackendInterviews() {
+      try {
+        const rawToken = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("access_token="))
+          ?.split("=")[1];
+
+        const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
+
+        if (tokenCookie) {
+          const backendInterviews = await getInterviewsApi(tokenCookie);
+          if (backendInterviews && backendInterviews.length > 0) {
+            const mappedCampaigns = await Promise.all(
+              backendInterviews.map(async (bi) => {
+                const campaign = mapBackendInterviewToCampaign(bi);
+                try {
+                  const candidates = await getCandidatesForInterviewApi(
+                    bi.id,
+                    tokenCookie,
+                  );
+                  if (candidates) {
+                    campaign.activeCandidateCount = candidates.length;
+                    campaign.evaluatedCandidateCount = candidates.filter(
+                      (c) =>
+                        c.status?.toLowerCase() === "done" ||
+                        c.status?.toLowerCase() === "evaluated" ||
+                        c.status?.toLowerCase() === "completed" ||
+                        c.status?.toLowerCase() === "passed" ||
+                        c.status?.toLowerCase() === "rejected" ||
+                        (c.composite_score !== null &&
+                          c.composite_score !== undefined),
+                    ).length;
+                  }
+                } catch {
+                  // Candidates fetch handles empty list gracefully
+                }
+                return campaign;
+              }),
+            );
+            setCampaignsList(mappedCampaigns);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch backend interviews", err);
+      }
+    }
+
+    loadBackendInterviews();
+  }, []);
+
   const handleCampaignCreated = (newCampaign: InterviewCampaign) => {
     setCampaignsList((prevCampaigns) => [newCampaign, ...prevCampaigns]);
   };
+
+  const totalInterviews = campaignsList.length;
+  const finishedInterviews = campaignsList.filter(
+    (c) =>
+      c.currentPipelineStage === "COMPLETED" ||
+      (c.activeCandidateCount > 0 &&
+        c.evaluatedCandidateCount === c.activeCandidateCount),
+  ).length;
+
+  const notStartedInterviews = campaignsList.filter(
+    (c) =>
+      c.evaluatedCandidateCount === 0 &&
+      c.currentPipelineStage !== "COMPLETED",
+  ).length;
+
+  const inProgressInterviews = campaignsList.filter(
+    (c) =>
+      (c.evaluatedCandidateCount > 0 &&
+        c.evaluatedCandidateCount < c.activeCandidateCount) ||
+      c.currentPipelineStage === "INTERVIEWER_LIVE" ||
+      c.currentPipelineStage === "GRADER_EVALUATING",
+  ).length;
+
+  const finishedPercentage =
+    totalInterviews > 0 ? (finishedInterviews / totalInterviews) * 100 : 0;
+  const filledOrangeBars = Math.round((finishedPercentage / 100) * 17);
+
+  const filteredCampaigns = campaignsList.filter((c) => {
+    if (activeTab === "FINISHED") {
+      return (
+        c.currentPipelineStage === "COMPLETED" ||
+        (c.activeCandidateCount > 0 &&
+          c.evaluatedCandidateCount === c.activeCandidateCount)
+      );
+    }
+    if (activeTab === "NOT_STARTED") {
+      return (
+        c.evaluatedCandidateCount === 0 &&
+        c.currentPipelineStage !== "COMPLETED"
+      );
+    }
+    if (activeTab === "IN_PROGRESS") {
+      return (
+        (c.evaluatedCandidateCount > 0 &&
+          c.evaluatedCandidateCount < c.activeCandidateCount) ||
+        c.currentPipelineStage === "INTERVIEWER_LIVE" ||
+        c.currentPipelineStage === "GRADER_EVALUATING"
+      );
+    }
+    return true;
+  });
 
   return (
     <main className="max-w-350 mx-auto px-7 pb-7">
@@ -76,17 +180,21 @@ export default function DashboardView() {
         {/* Progress & Action Section */}
         <div className="flex items-center gap-7 mb-7">
           <div className="flex items-end gap-1 h-5.5">
-            {/* Mock Orange Bar Chart */}
+            {/* Percentage Bar Graph */}
             {[...Array(17)].map((_, i) => (
               <div
                 key={i}
-                className={`w-1 rounded-full ${i < 13 ? "h-full bg-[#FE6100]" : i < 15 ? "h-full bg-[#FFD3B8]/40" : "h-full bg-[#E9E9E9]"}`}
+                className={`w-1 rounded-full ${
+                  i < filledOrangeBars
+                    ? "h-full bg-[#FE6100]"
+                    : "h-full bg-[#E9E9E9]"
+                }`}
               />
             ))}
           </div>
 
           <div className="text-base font-semibold text-gray-900">
-            17/36 Interview
+            {finishedInterviews}/{totalInterviews} Interview
           </div>
 
           <button
@@ -107,7 +215,7 @@ export default function DashboardView() {
                 : "text-[#B8B8B8] hover:text-gray-600"
             }`}
           >
-            <CheckSquare className="w-3.5 h-3.5" /> All (36)
+            <CheckSquare className="w-3.5 h-3.5" /> All ({totalInterviews})
             {activeTab === "ALL" && (
               <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-900" />
             )}
@@ -121,7 +229,7 @@ export default function DashboardView() {
                 : "text-[#B8B8B8] hover:text-gray-600"
             }`}
           >
-            <CalendarDays className="w-3.5 h-3.5" /> Finished (17)
+            <CalendarDays className="w-3.5 h-3.5" /> Finished ({finishedInterviews})
             {activeTab === "FINISHED" && (
               <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-900" />
             )}
@@ -135,7 +243,7 @@ export default function DashboardView() {
                 : "text-[#B8B8B8] hover:text-gray-600"
             }`}
           >
-            <Clock className="w-3.5 h-3.5" /> In-progressed (9)
+            <Clock className="w-3.5 h-3.5" /> In-progressed ({inProgressInterviews})
             {activeTab === "IN_PROGRESS" && (
               <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-900" />
             )}
@@ -149,7 +257,7 @@ export default function DashboardView() {
                 : "text-[#B8B8B8] hover:text-gray-600"
             }`}
           >
-            <XSquare className="w-3.5 h-3.5" /> Not started (3)
+            <XSquare className="w-3.5 h-3.5" /> Not started ({notStartedInterviews})
             {activeTab === "NOT_STARTED" && (
               <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-900" />
             )}
@@ -158,7 +266,7 @@ export default function DashboardView() {
 
         {/* Campaigns Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {campaignsList.map((campaignItem) => (
+          {filteredCampaigns.map((campaignItem) => (
             <InterviewCard key={campaignItem.id} campaign={campaignItem} />
           ))}
         </div>

@@ -25,6 +25,17 @@ export default function InterviewCard({ campaign }: InterviewCardProps) {
     router.push(`/?${currentParams.toString()}`, { scroll: false });
   };
 
+  const progressPercentage =
+    campaign.activeCandidateCount > 0
+      ? Math.min(
+          100,
+          Math.round(
+            (campaign.evaluatedCandidateCount / campaign.activeCandidateCount) *
+              100,
+          ),
+        )
+      : 0;
+
   return (
     <div
       onClick={handleOpenDetailModal}
@@ -44,12 +55,14 @@ export default function InterviewCard({ campaign }: InterviewCardProps) {
         <div className="mb-4.5">
           <div className="flex items-center justify-between text-xs font-semibold text-[#616161] mb-2">
             <span>Progress</span>
-            <span>11/23</span>
+            <span>
+              {campaign.evaluatedCandidateCount}/{campaign.activeCandidateCount}
+            </span>
           </div>
           <div className="h-2.5 w-full bg-gray-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#ff6b2b] rounded-full"
-              style={{ width: "48%" }}
+              className="h-full bg-[#ff6b2b] rounded-full transition-all duration-300"
+              style={{ width: `${progressPercentage}%` }}
             />
           </div>
         </div>
@@ -74,11 +87,11 @@ export default function InterviewCard({ campaign }: InterviewCardProps) {
       <div className="flex items-center gap-3 text-xs font-semibold text-[#616161] mt-4.5">
         <span className="flex items-center gap-1">
           <Users className="w-2.5 h-2.5 text-[#616161]" />
-          11/23
+          {campaign.evaluatedCandidateCount}/{campaign.activeCandidateCount}
         </span>
         <span className="flex items-center gap-1">
           <CalendarDays className="w-2.5 h-2.5 text-[#616161]" />
-          11/06/2026
+          {campaign.createdAtTimestamp}
         </span>
         <span className="flex items-center gap-1">
           <Clock className="w-2.5 h-2.5 text-[#616161]" />

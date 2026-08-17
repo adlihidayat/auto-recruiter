@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from app.core.db import async_database_engine, async_session_factory
 from app.api.auth import router as auth_router
+from app.api.interviews import router as interviews_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -64,6 +65,7 @@ app.add_middleware(
 
 # Register API Routers
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(interviews_router, prefix="/api/interviews", tags=["Interviews"])
 
 @app.get("/health")
 async def check_health_status() -> dict[str, str]:

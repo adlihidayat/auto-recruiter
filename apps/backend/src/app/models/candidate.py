@@ -20,8 +20,8 @@ class Candidate(Base):
     first_name: Mapped[str] = mapped_column(String(100), nullable=True)
     last_name: Mapped[str] = mapped_column(String(100), nullable=True)
     
-    # enum: pending_plan, invited, ready, in_progress, interview_completed, grading, graded, failed_grading
-    status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending_plan")
+    # enum: not_started, in_progress, finished
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="not_started")
     
     composite_score: Mapped[float] = mapped_column(Float, nullable=True)
     recommendation: Mapped[str] = mapped_column(String(100), nullable=True)

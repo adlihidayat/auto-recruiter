@@ -24,6 +24,7 @@ import {
   CircleGauge,
 } from "lucide-react";
 import { InterviewCampaign } from "../types";
+import { getCandidatesForInterviewApi } from "@/lib/api/client";
 
 interface InterviewDetailDialogProps {
   interviewCampaignsList: InterviewCampaign[];
@@ -37,6 +38,136 @@ export default function InterviewDetailDialog({
   const activeInterviewId = searchParams.get("interview");
 
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(true);
+
+  const baseCandidates = [
+    {
+      name: "andika saputra",
+      email: "andika.saputra@company.com",
+      stageStatus: "Done",
+      recommendation: "Advance" as const,
+      img: "https://i.pravatar.cc/150?u=1",
+    },
+    {
+      name: "sari putri",
+      email: "sari.putri@example.com",
+      stageStatus: "Done",
+      recommendation: "Advance with follow-up" as const,
+      img: "https://i.pravatar.cc/150?u=2",
+    },
+    {
+      name: "Fahril arrasyid",
+      email: "Fahril-arrasyid@gmail.com",
+      stageStatus: "On-Interview",
+      recommendation: "Hold" as const,
+      img: "https://i.pravatar.cc/150?u=3",
+    },
+    {
+      name: "rizky hadi",
+      email: "rizky.hadi@mail.com",
+      stageStatus: "On-Interview",
+      recommendation: "Hold" as const,
+      img: "https://i.pravatar.cc/150?u=4",
+    },
+    {
+      name: "ijal dilan",
+      email: "ijaldilan@gmail.com",
+      stageStatus: "Not-started",
+      recommendation: "Hold" as const,
+      img: "https://i.pravatar.cc/150?u=5",
+    },
+    {
+      name: "lina maulani",
+      email: "lina.maulani@gmail.com",
+      stageStatus: "Not-started",
+      recommendation: "Hold" as const,
+      img: "https://i.pravatar.cc/150?u=6",
+    },
+  ];
+
+  const defaultMockCandidates = Array(4)
+    .fill(baseCandidates)
+    .flat()
+    .map((c, i) => ({
+      ...c,
+      email: `${i + 1}.${c.email}`,
+    }));
+
+  const [candidatesListState, setCandidatesListState] = useState(
+    defaultMockCandidates,
+  );
+
+  useEffect(() => {
+    async function loadCandidates() {
+      if (!activeInterviewId) return;
+      try {
+        const rawToken = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("access_token="))
+          ?.split("=")[1];
+        const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
+
+        if (tokenCookie) {
+          const backendCandidates = await getCandidatesForInterviewApi(
+            activeInterviewId,
+            tokenCookie,
+          );
+          if (backendCandidates && backendCandidates.length > 0) {
+            const mapped = backendCandidates.map((cand, idx) => {
+              const fullName =
+                cand.first_name && cand.last_name
+                  ? `${cand.first_name} ${cand.last_name}`
+                  : cand.first_name || cand.email.split("@")[0];
+
+              let stageStatus = "Not-started";
+              const sUpper = cand.status?.toUpperCase() || "";
+              if (
+                sUpper.includes("EVALUAT") ||
+                sUpper.includes("DONE") ||
+                sUpper.includes("COMPLET") ||
+                sUpper.includes("PASSED") ||
+                sUpper.includes("REJECTED")
+              ) {
+                stageStatus = "Done";
+              } else if (
+                sUpper.includes("PROGRESS") ||
+                sUpper.includes("INTERVIEW") ||
+                sUpper.includes("INVITED")
+              ) {
+                stageStatus = "On-Interview";
+              }
+
+              let recLabel: "Advance" | "Advance with follow-up" | "Hold" =
+                "Hold";
+              const rUpper = cand.recommendation?.toUpperCase() || "";
+              if (rUpper.includes("FOLLOW") || rUpper.includes("FOLLOW-UP")) {
+                recLabel = "Advance with follow-up";
+              } else if (
+                rUpper.includes("ADVANCE") ||
+                rUpper.includes("PASS")
+              ) {
+                recLabel = "Advance";
+              } else {
+                recLabel = "Hold";
+              }
+
+              return {
+                name: fullName,
+                email: cand.email,
+                stageStatus,
+                recommendation: recLabel,
+                img: `https://i.pravatar.cc/150?u=${idx + 1}`,
+              };
+            });
+            setCandidatesListState(mapped);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch candidates from backend", err);
+      }
+    }
+
+    loadCandidates();
+  }, [activeInterviewId]);
 
   useEffect(() => {
     if (activeInterviewId) {
@@ -65,52 +196,47 @@ export default function InterviewDetailDialog({
     router.push(destinationUrl, { scroll: false });
   };
 
-  const baseCandidates = [
-    {
-      name: "andika saputra",
-      email: "andika.saputra@company.com",
-      status: "Done",
-      img: "https://i.pravatar.cc/150?u=1",
-    },
-    {
-      name: "sari putri",
-      email: "sari.putri@example.com",
-      status: "Done",
-      img: "https://i.pravatar.cc/150?u=2",
-    },
-    {
-      name: "Fahril arrasyid",
-      email: "Fahril-arrasyid@gmail.com",
-      status: "On-Interview",
-      img: "https://i.pravatar.cc/150?u=3",
-    },
-    {
-      name: "rizky hadi",
-      email: "rizky.hadi@mail.com",
-      status: "On-Interview",
-      img: "https://i.pravatar.cc/150?u=4",
-    },
-    {
-      name: "ijal dilan",
-      email: "ijaldilan@gmail.com",
-      status: "Not-started",
-      img: "https://i.pravatar.cc/150?u=5",
-    },
-    {
-      name: "lina maulani",
-      email: "lina.maulani@gmail.com",
-      status: "Not-started",
-      img: "https://i.pravatar.cc/150?u=6",
-    },
-  ];
+  // Candidate Metrics
+  const totalCandidates = candidatesListState.length;
+  const finishedCandidates = candidatesListState.filter(
+    (c) => c.stageStatus === "Done",
+  ).length;
+  const inProgressCandidates = candidatesListState.filter(
+    (c) => c.stageStatus === "On-Interview",
+  ).length;
+  const notStartedCandidates = candidatesListState.filter(
+    (c) => c.stageStatus === "Not-started",
+  ).length;
 
-  const mockCandidates = Array(4)
-    .fill(baseCandidates)
-    .flat()
-    .map((c, i) => ({
-      ...c,
-      email: `${i + 1}.${c.email}`,
-    }));
+  const isInterviewFinished =
+    targetCampaign.currentPipelineStage === "COMPLETED" ||
+    (totalCandidates > 0 && finishedCandidates === totalCandidates);
+
+  // Status Bar 3-Color Percentages (Orange, Light Orange, Gray)
+  const orangePct =
+    totalCandidates > 0 ? (finishedCandidates / totalCandidates) * 100 : 0;
+  const lightOrangePct =
+    totalCandidates > 0 ? (inProgressCandidates / totalCandidates) * 100 : 0;
+  const grayPct =
+    totalCandidates > 0 ? (notStartedCandidates / totalCandidates) * 100 : 0;
+
+  // Passing Rate 3-Color Percentages (Green, Gray, Red)
+  const advanceCandidates = candidatesListState.filter(
+    (c) => c.recommendation === "Advance",
+  ).length;
+  const followUpCandidates = candidatesListState.filter(
+    (c) => c.recommendation === "Advance with follow-up",
+  ).length;
+  const holdCandidates = candidatesListState.filter(
+    (c) => c.recommendation === "Hold",
+  ).length;
+
+  const greenPct =
+    totalCandidates > 0 ? (advanceCandidates / totalCandidates) * 100 : 0;
+  const passGrayPct =
+    totalCandidates > 0 ? (followUpCandidates / totalCandidates) * 100 : 0;
+  const redPct =
+    totalCandidates > 0 ? (holdCandidates / totalCandidates) * 100 : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/20 animate-in fade-in duration-200">
@@ -161,20 +287,22 @@ export default function InterviewDetailDialog({
           {/* Title and Pills */}
           <div className="mb-7.5">
             <h2 className="text-xl font-semibold text-[#272727] mb-2.5">
-              Machine Learning Engineer
+              {targetCampaign.jobTitle}
             </h2>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#F4F4F4] text-[#2563EB] text-xs font-medium">
-                <CalendarDays className="w-3.5 h-3.5" /> 12/12/2026
+                <CalendarDays className="w-3.5 h-3.5" />{" "}
+                {targetCampaign.createdAtTimestamp}
               </span>
               <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F4F4F4] text-[#DC2626] text-xs font-medium">
-                <User className="w-3.5 h-3.5" /> Dhiya Adli Hidayat
+                <User className="w-3.5 h-3.5" /> {targetCampaign.departmentName}
               </span>
             </div>
           </div>
 
           {/* Status Cards */}
           <div className="grid grid-cols-2 gap-4 mb-7.5">
+            {/* Card 1: Interview Status */}
             <div className="border border-[#F1F1F1] rounded-2xl p-1">
               <div className="flex items-center justify-between p-2.5">
                 <div className="flex items-center gap-2 text-[#616161] text-sm font-medium">
@@ -184,21 +312,34 @@ export default function InterviewDetailDialog({
               </div>
               <div className="bg-[#FBFBFB] rounded-md p-2.5">
                 <div className="text-2xl font-semibold text-[#272727] mb-2.5">
-                  89 / 127
+                  {finishedCandidates} / {totalCandidates}
                 </div>
 
                 <div className="flex items-center gap-1 text-xs font-medium text-[#059669] mb-2.5">
-                  <TrendingUp className="w-3.5 h-3.5" /> +8.4%{" "}
-                  <span className="text-[#616161]">Newly hired</span>
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span className="text-[#616161]">
+                    {isInterviewFinished ? "Interview Finished" : "In Progress"}
+                  </span>
                 </div>
 
-                <div className="flex items-center gap-1 h-2">
-                  <div className="h-full bg-[#FE6100] rounded-full w-[60%]" />
-                  <div className="h-full bg-[#FFD3B8] rounded-full w-[15%]" />
-                  <div className="h-full bg-[#E9E9E9] rounded-full w-[25%]" />
+                <div className="flex items-center h-2">
+                  <div
+                    className="h-full bg-[#FE6100] rounded-full mb-1 transition-all duration-300"
+                    style={{ width: `${orangePct}%` }}
+                  />
+                  <div
+                    className="h-full bg-[#FFD3B8] rounded-full mb-1 transition-all duration-300"
+                    style={{ width: `${lightOrangePct}%` }}
+                  />
+                  <div
+                    className="h-full bg-[#E9E9E9] rounded-full transition-all duration-300"
+                    style={{ width: `${grayPct}%` }}
+                  />
                 </div>
               </div>
-            </div>{" "}
+            </div>
+
+            {/* Card 2: Passing Rate */}
             <div className="border border-[#F1F1F1] rounded-2xl p-1">
               <div className="flex items-center justify-between p-2.5">
                 <div className="flex items-center gap-2 text-[#616161] text-sm font-medium">
@@ -208,18 +349,38 @@ export default function InterviewDetailDialog({
               </div>
               <div className="bg-[#FBFBFB] rounded-md p-2.5">
                 <div className="text-2xl font-semibold text-[#272727] mb-2.5">
-                  -/-
+                  {isInterviewFinished
+                    ? `${advanceCandidates} / ${totalCandidates}`
+                    : "-/-"}
                 </div>
 
                 <div className="flex items-center gap-1 text-xs font-medium text-[#059669] mb-2.5">
-                  {/* <TrendingUp className="w-3.5 h-3.5" /> +8.4%{" "} */}
-                  <span className="text-[#616161]">Not finished yet</span>
+                  <span className="text-[#616161]">
+                    {isInterviewFinished
+                      ? `${greenPct.toFixed(0)}% Advance Rate`
+                      : "Not finished yet"}
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-1 h-2">
-                  {/* <div className="h-full bg-[#FE6100] rounded-full w-[0%]" />
-                  <div className="h-full bg-[#FFD3B8] rounded-full w-[0%]" /> */}
-                  <div className="h-full bg-[#E9E9E9] rounded-full w-full" />
+                  {isInterviewFinished ? (
+                    <>
+                      <div
+                        className="h-full bg-[#16A34A] rounded-full transition-all duration-300"
+                        style={{ width: `${greenPct}%` }}
+                      />
+                      <div
+                        className="h-full bg-[#616161] rounded-full transition-all duration-300"
+                        style={{ width: `${passGrayPct}%` }}
+                      />
+                      <div
+                        className="h-full bg-[#DC2626] rounded-full transition-all duration-300"
+                        style={{ width: `${redPct}%` }}
+                      />
+                    </>
+                  ) : (
+                    <div className="h-full bg-[#E9E9E9] rounded-full w-full" />
+                  )}
                 </div>
               </div>
             </div>
@@ -239,25 +400,7 @@ export default function InterviewDetailDialog({
             <p
               className={`text-sm font-medium text-[#616161] leading-relaxed overflow-y-hidden ${isDescriptionExpanded ? "h-20" : "h-max"}`}
             >
-              About ACME Corp : At ACME Corporation, We Pride Ourselves On Being
-              The World&apos;s Leading Purveyor Of Highly Inventive (And
-              Sometimes Explosive) Gadgets. We Are Actively Expanding Our
-              Digital Infrastructure To Support Our Growing Catalog. We&apos;re
-              Looking For An Innovative AI Engineer Who Can Bridge The Gap
-              Between Complex Machine Learning Models And Intuitive Web
-              Applications. About ACME Corp : At ACME Corporation, We Pride
-              Ourselves On Being The World&apos;s Leading Purveyor Of Highly
-              Inventive (And Sometimes Explosive) Gadgets. We Are Actively
-              Expanding Our Digital Infrastructure To Support Our Growing
-              Catalog. We&apos;re Looking For An Innovative AI Engineer Who Can
-              Bridge The Gap Between Complex Machine Learning Models And
-              Intuitive Web Applications. About ACME Corp : At ACME Corporation,
-              We Pride Ourselves On Being The World&apos;s Leading Purveyor Of
-              Highly Inventive (And Sometimes Explosive) Gadgets. We Are
-              Actively Expanding Our Digital Infrastructure To Support Our
-              Growing Catalog. We&apos;re Looking For An Innovative AI Engineer
-              Who Can Bridge The Gap Between Complex Machine Learning Models And
-              Intuitive Web Applications. ...
+              {targetCampaign.agentSummary}
             </p>
             {isDescriptionExpanded && (
               <div className="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-white to-transparent pointer-events-none" />
@@ -266,7 +409,7 @@ export default function InterviewDetailDialog({
 
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-base font-semibold text-[#272727]">
-              Candidates (127)
+              Candidates ({candidatesListState.length})
             </h3>
             <button className="text-[#616161] hover:text-[#272727] transition-colors">
               <SlidersHorizontal className="w-4 h-4" />
@@ -275,10 +418,10 @@ export default function InterviewDetailDialog({
           {/* Candidates List */}
           <div className="border border-[#F1F1F1] rounded-[14px] overflow-y-auto max-h-95 mb-8">
             {/* Candidates List Header */}
-            {mockCandidates.map((candidate, idx) => (
+            {candidatesListState.map((candidate, idx) => (
               <div
                 key={idx}
-                className={`px-2.5 py-2.5 flex items-center justify-between ${idx !== mockCandidates.length - 1 ? "border-b border-[#F1F1F1]" : ""}`}
+                className={`px-2.5 py-2.5 flex items-center justify-between ${idx !== candidatesListState.length - 1 ? "border-b border-[#F1F1F1]" : ""}`}
               >
                 <div className="flex items-center gap-2.5">
                   <div className="w-9.5 h-9.5 rounded-full bg-gray-200 overflow-hidden shrink-0 relative">
@@ -301,20 +444,43 @@ export default function InterviewDetailDialog({
                 </div>
 
                 <div className="flex items-center gap-4">
-                  {candidate.status === "Done" && (
-                    <span className="px-3 py-1 bg-[#DCFCE7] text-[#16A34A] rounded-full text-xs font-medium">
-                      Done
-                    </span>
-                  )}
-                  {candidate.status === "On-Interview" && (
-                    <span className="px-3 py-1 bg-[#EFF6FF] text-[#2563EB] rounded-full text-xs font-medium">
-                      On-Interview
-                    </span>
-                  )}
-                  {candidate.status === "Not-started" && (
-                    <span className="px-3 py-1 bg-[#F4F4F4] text-[#616161] rounded-full text-xs font-medium">
-                      Not-started
-                    </span>
+                  {!isInterviewFinished ? (
+                    <>
+                      {candidate.stageStatus === "Done" && (
+                        <span className="px-3 py-1 bg-[#DCFCE7] text-[#16A34A] rounded-full text-xs font-medium">
+                          Done
+                        </span>
+                      )}
+                      {candidate.stageStatus === "On-Interview" && (
+                        <span className="px-3 py-1 bg-[#EFF6FF] text-[#2563EB] rounded-full text-xs font-medium">
+                          On-Interview
+                        </span>
+                      )}
+                      {candidate.stageStatus === "Not-started" && (
+                        <span className="px-3 py-1 bg-[#F4F4F4] text-[#616161] rounded-full text-xs font-medium">
+                          Not-started
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {candidate.recommendation === "Advance" && (
+                        <span className="px-3 py-1 bg-[#DCFCE7] text-[#16A34A] rounded-full text-xs font-medium">
+                          Advance
+                        </span>
+                      )}
+                      {candidate.recommendation ===
+                        "Advance with follow-up" && (
+                        <span className="px-3 py-1 bg-[#F4F4F4] text-[#616161] rounded-full text-xs font-medium">
+                          Advance w/ follow-up
+                        </span>
+                      )}
+                      {candidate.recommendation === "Hold" && (
+                        <span className="px-3 py-1 bg-[#FEF2F2] text-[#DC2626] rounded-full text-xs font-medium">
+                          Hold
+                        </span>
+                      )}
+                    </>
                   )}
 
                   <button className="text-[#B8B8B8] hover:text-[#616161] transition-colors">
