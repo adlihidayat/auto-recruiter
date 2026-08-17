@@ -3,16 +3,34 @@
 import React, { useState } from "react";
 import { FileCode2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { loginAction } from "../actions";
 
 export default function SignInView() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Navigate to dashboard on login
-    router.push("/");
+    if (!username || !password) {
+      setErrorMessage("Please enter both email and password.");
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    const result = await loginAction(username, password);
+
+    if (result.success) {
+      router.push("/");
+      router.refresh();
+    } else {
+      setErrorMessage(result.error || "Invalid email or password");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -20,7 +38,7 @@ export default function SignInView() {
       {/* Outer Card Container */}
       <div className="bg-white rounded-3xl border border-[#F1F1F1] p-5 md:p-4.5 shadow-2xs max-w-325 w-full grid grid-cols-1 lg:grid-cols-12 items-stretch">
         {/* Left Hero Panel */}
-        <div className="lg:col-span-7 bg-[#F9F9F9] rounded-[24px] p-8 md:p-8 flex flex-col justify-between min-h-[700px]">
+        <div className="lg:col-span-7 bg-[#F9F9F9] rounded-3xl p-8 md:p-8 flex flex-col justify-between min-h-175">
           {/* Top Brand & Menu Row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-black">
@@ -92,11 +110,18 @@ export default function SignInView() {
               />
             </div>
 
+            {errorMessage && (
+              <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold">
+                {errorMessage}
+              </div>
+            )}
+
             <button
               type="submit"
-              className="w-full bg-black hover:bg-[#272727] text-white text-sm font-semibold py-2.5 rounded-xl transition-colors cursor-pointer mt-4"
+              disabled={isLoading}
+              className="w-full bg-black hover:bg-[#272727] text-white text-sm font-semibold py-2.5 rounded-xl transition-colors cursor-pointer mt-4 disabled:opacity-50"
             >
-              Login
+              {isLoading ? "Logging in..." : "Login"}
             </button>
           </form>
 

@@ -84,7 +84,7 @@ export default function CandidateReportView() {
             <div className="flex items-center gap-4 pb-5 border-b border-[#F1F1F1]">
               <div className="w-10 h-10 rounded-full bg-[#EFEFEF] shrink-0" />
               <div>
-                <h2 className="text-base font-bold text-[#272727] leading-snug">
+                <h2 className="text-base font-semibold text-[#272727] leading-snug">
                   {candidateData.name}
                 </h2>
                 <p className="text-sm text-[#616161]">{candidateData.email}</p>
@@ -168,7 +168,7 @@ export default function CandidateReportView() {
                     </span>
                     <Info className="w-3.5 h-3.5 text-[#616161] cursor-pointer" />
                   </div>
-                  <div className="text-2xl font-bold text-[#272727] mb-4.5">
+                  <div className="text-2xl font-semibold text-[#272727] mb-4.5">
                     {candidateData.knowledgeScore.score}
                   </div>
 
@@ -202,7 +202,7 @@ export default function CandidateReportView() {
                   <p className="text-xs font-medium text-[#FE6100] leading-snug mb-4.5">
                     {candidateData.knowledgeScore.note}
                   </p>
-                  <button className="w-full flex items-center justify-end gap-1.5 text-sm font-bold text-[#272727] underline hover:text-black transition-colors cursor-pointer">
+                  <button className="w-full flex items-center justify-end gap-1.5 text-sm font-semibold text-[#272727] underline hover:text-black transition-colors cursor-pointer">
                     <FileText className="w-3.5 h-3.5" />
                     See Detail
                   </button>
@@ -218,7 +218,7 @@ export default function CandidateReportView() {
                     </span>
                     <Info className="w-3.5 h-3.5 text-[#616161] cursor-pointer" />
                   </div>
-                  <div className="text-2xl font-bold text-[#272727] mb-4.5">
+                  <div className="text-2xl font-semibold text-[#272727] mb-4.5">
                     {candidateData.communicationScore.score}
                   </div>
 
@@ -252,7 +252,7 @@ export default function CandidateReportView() {
                   <p className="text-[11px] font-medium text-[#FE6100] leading-snug mb-4.5">
                     {candidateData.communicationScore.note}
                   </p>
-                  <button className="w-full flex items-center justify-end gap-1.5 text-sm font-bold text-[#272727] underline hover:text-black transition-colors cursor-pointer">
+                  <button className="w-full flex items-center justify-end gap-1.5 text-sm font-semibold text-[#272727] underline hover:text-black transition-colors cursor-pointer">
                     <FileText className="w-3.5 h-3.5" />
                     See Detail
                   </button>
