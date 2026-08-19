@@ -9,8 +9,11 @@
 | `src/app/api/deps.py` | FastAPI reusable dependencies (DB sessions, auth JWT parsing) | `SessionDep`, `CurrentUser` |
 | `src/app/api/auth.py` | API Router handling OAuth2 login and token exchange | `router` |
 | `src/app/api/interviews.py` | API Router handling interviews and candidate lists | `router` |
+| `src/app/api/candidates.py` | API Router handling candidate reports and turn-by-turn transcripts | `router` |
 | `src/app/schemas/interview.py` | Pydantic response schemas for interviews | `InterviewResponse` |
 | `src/app/schemas/candidate.py` | Pydantic response schemas for candidates | `CandidateResponse` |
+| `src/app/schemas/report.py` | Pydantic response schema for candidate grading reports | `CandidateReportResponse` |
+| `src/app/schemas/transcript.py` | Pydantic response schema for interaction transcripts | `TranscriptResponse` |
 | `src/app/models/base.py` | SQLAlchemy Declarative Base | `Base` |
 | `src/app/models/user.py` | User entity schema | `User` |
 | `src/app/models/interview.py` | Interview entity schema | `Interview` |

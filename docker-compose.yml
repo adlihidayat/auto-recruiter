@@ -22,5 +22,12 @@ services:
       MP_MAX_MESSAGES: 5000
     restart: unless-stopped
 
+  adminer:
+    image: adminer
+    container_name: adminer
+    ports:
+      - "8080:8080" # Web Database GUI
+    restart: unless-stopped
+
 volumes:
   postgres_data:

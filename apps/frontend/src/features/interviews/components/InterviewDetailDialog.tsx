@@ -41,6 +41,7 @@ export default function InterviewDetailDialog({
 
   const baseCandidates = [
     {
+      id: "candidate-1",
       name: "andika saputra",
       email: "andika.saputra@company.com",
       stageStatus: "Done",
@@ -48,6 +49,7 @@ export default function InterviewDetailDialog({
       img: "https://i.pravatar.cc/150?u=1",
     },
     {
+      id: "candidate-2",
       name: "sari putri",
       email: "sari.putri@example.com",
       stageStatus: "Done",
@@ -55,6 +57,7 @@ export default function InterviewDetailDialog({
       img: "https://i.pravatar.cc/150?u=2",
     },
     {
+      id: "candidate-3",
       name: "Fahril arrasyid",
       email: "Fahril-arrasyid@gmail.com",
       stageStatus: "On-Interview",
@@ -62,6 +65,7 @@ export default function InterviewDetailDialog({
       img: "https://i.pravatar.cc/150?u=3",
     },
     {
+      id: "candidate-4",
       name: "rizky hadi",
       email: "rizky.hadi@mail.com",
       stageStatus: "On-Interview",
@@ -69,6 +73,7 @@ export default function InterviewDetailDialog({
       img: "https://i.pravatar.cc/150?u=4",
     },
     {
+      id: "candidate-5",
       name: "ijal dilan",
       email: "ijaldilan@gmail.com",
       stageStatus: "Not-started",
@@ -76,6 +81,7 @@ export default function InterviewDetailDialog({
       img: "https://i.pravatar.cc/150?u=5",
     },
     {
+      id: "candidate-6",
       name: "lina maulani",
       email: "lina.maulani@gmail.com",
       stageStatus: "Not-started",
@@ -89,12 +95,30 @@ export default function InterviewDetailDialog({
     .flat()
     .map((c, i) => ({
       ...c,
+      id: `mock-cand-${i + 1}`,
       email: `${i + 1}.${c.email}`,
     }));
 
   const [candidatesListState, setCandidatesListState] = useState(
     defaultMockCandidates,
   );
+  const [candidateNoticeMessage, setCandidateNoticeMessage] = useState<string | null>(null);
+
+  const handleCandidateClick = (candidate: {
+    id: string;
+    stageStatus: string;
+    name: string;
+  }) => {
+    if (candidate.stageStatus === "Done") {
+      setCandidateNoticeMessage(null);
+      router.push(`/interviews/${activeInterviewId}/candidates/${candidate.id}`);
+    } else {
+      setCandidateNoticeMessage(`"${candidate.name}" has not finished their interview yet.`);
+      setTimeout(() => {
+        setCandidateNoticeMessage(null);
+      }, 3500);
+    }
+  };
 
   useEffect(() => {
     async function loadCandidates() {
@@ -111,7 +135,7 @@ export default function InterviewDetailDialog({
             activeInterviewId,
             tokenCookie,
           );
-          if (backendCandidates && backendCandidates.length > 0) {
+          if (backendCandidates) {
             const mapped = backendCandidates.map((cand, idx) => {
               const fullName =
                 cand.first_name && cand.last_name
@@ -124,8 +148,11 @@ export default function InterviewDetailDialog({
                 sUpper.includes("EVALUAT") ||
                 sUpper.includes("DONE") ||
                 sUpper.includes("COMPLET") ||
+                sUpper.includes("FINISH") ||
                 sUpper.includes("PASSED") ||
-                sUpper.includes("REJECTED")
+                sUpper.includes("REJECTED") ||
+                (cand.composite_score !== null &&
+                  cand.composite_score !== undefined)
               ) {
                 stageStatus = "Done";
               } else if (
@@ -143,7 +170,8 @@ export default function InterviewDetailDialog({
                 recLabel = "Advance with follow-up";
               } else if (
                 rUpper.includes("ADVANCE") ||
-                rUpper.includes("PASS")
+                rUpper.includes("PASS") ||
+                rUpper.includes("ACCEPT")
               ) {
                 recLabel = "Advance";
               } else {
@@ -151,6 +179,7 @@ export default function InterviewDetailDialog({
               }
 
               return {
+                id: cand.id,
                 name: fullName,
                 email: cand.email,
                 stageStatus,
@@ -407,6 +436,18 @@ export default function InterviewDetailDialog({
             )}
           </div>
 
+          {candidateNoticeMessage && (
+            <div className="mb-3 px-3.5 py-2.5 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium rounded-xl flex items-center justify-between animate-in fade-in duration-200">
+              <span>{candidateNoticeMessage}</span>
+              <button
+                onClick={() => setCandidateNoticeMessage(null)}
+                className="text-amber-600 hover:text-amber-900 font-bold ml-2"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-base font-semibold text-[#272727]">
               Candidates ({candidatesListState.length})
@@ -420,8 +461,9 @@ export default function InterviewDetailDialog({
             {/* Candidates List Header */}
             {candidatesListState.map((candidate, idx) => (
               <div
-                key={idx}
-                className={`px-2.5 py-2.5 flex items-center justify-between ${idx !== candidatesListState.length - 1 ? "border-b border-[#F1F1F1]" : ""}`}
+                key={candidate.id || idx}
+                onClick={() => handleCandidateClick(candidate)}
+                className={`px-2.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-gray-50/80 transition-colors ${idx !== candidatesListState.length - 1 ? "border-b border-[#F1F1F1]" : ""}`}
               >
                 <div className="flex items-center gap-2.5">
                   <div className="w-9.5 h-9.5 rounded-full bg-gray-200 overflow-hidden shrink-0 relative">

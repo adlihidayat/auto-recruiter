@@ -1,77 +1,250 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Info, FileText } from "lucide-react";
+import {
+  getCandidateReportApi,
+  getCandidateTranscriptsApi,
+  getCandidatesForInterviewApi,
+} from "@/lib/api/client";
 
-export default function CandidateReportView() {
-  const candidateData = {
-    name: "Dhiya Adli Hidayat",
-    email: "dhiyaadlihidayat@gmai.com",
-    status: "Hold",
-    statusReason: "Reason here asdasdas",
-    overallScore: 87.5,
-    overallScoreSubtext: "placeholder word",
-    shortSummaryParagraphs: [
-      "We Pride Ourselves On Being The World's Leading Purveyor Of Highly Inventive (And Sometimes Explosive) Gadgets. We Are Actively Expanding Our Digital Infrastructure To Support Our Growing Catalog. We're Looking For An Innovative AI Engineer Who Can Bridge The Gap Between Complex Machine Learning Models And Intuitive Web Applications.",
-      "The Role: As Our Senior AI Engineer, You Will Be The Brain Behind Our Next-Generation Product Recommendation And Customer Support Systems. You Will Build End-To-End Solutions, From Training NLP Models That Understand Customer Intent, To AI Engineer Who Can Bridge The Gap Between Complex Machine Learning Models And Intuitiv",
-    ],
-    highlightBars: [
-      { text: "We Pride Ourselves On Being The", type: "pass" },
-      {
-        text: "Understand Customer Intent, To Deploying Them On High-Performance Web Interf",
-        type: "pass",
-      },
-      {
-        text: "Upport Systems. You Will Build End-To-End Solutio",
-        type: "fail",
-      },
-      {
-        text: "Ctively Expanding Our Digital Infrastructure To Support Our Gro",
-        type: "fail",
-      },
-    ],
-    knowledgeScore: {
-      score: "60%",
-      items: [
-        { label: "Goal 1", status: "Failed", type: "fail" },
-        { label: "Goal 2", status: "Pass", type: "pass" },
-        { label: "Goal 3", status: "Pass", type: "pass" },
-        { label: "Goal 4", status: "Pass", type: "pass" },
-        { label: "Goal 5", status: "Failed", type: "fail" },
-      ],
-      note: "The World's Leading Purveyor Of Highly Inventive (And Sometimes Explosive) Gadget...",
-    },
-    communicationScore: {
-      score: "75%",
-      items: [
-        { label: "Active Listening", status: "Failed", type: "fail" },
-        { label: "Structure", status: "Pass", type: "pass" },
-        { label: "Assertiveness", status: "Pass", type: "pass" },
-        { label: "Clarity", status: "Pass", type: "pass" },
-      ],
-      note: "The World's Leading Purveyor Of Highly Inventive (And Sometimes Explosive) Gadget...",
-    },
-    interactions: [
-      {
-        turn: "[T1]",
-        speaker: "Interviewer",
-        role: "interviewer",
-        text: "Welcome To The Interview. Hello! This Interview Is ...",
-      },
-      {
-        turn: "[T2]",
-        speaker: "Candidate",
-        role: "candidate",
-        text: "The Brain Behind Our Next-Generation Product Recommendation And Customer Support Systems. You Will Build End-To-End Solutions, From Training NLP Models That Understand Customer Intent, To",
-      },
-      {
-        turn: "[T3]",
-        speaker: "Interviewer",
-        role: "interviewer",
-        text: "Karena Selalu Ada Pro-Kontra Dalam Cerita-Cerita Yang Berkaitan Dengan Dunia Dimensional. Dalam Hal Ini Narasumber Hanya Ingin Berbagi Kisahnya Agar Kita Bisa Mengambil Banyak Pelajaran Dari Kisah-Kisah Tersebut.",
-      },
-    ],
-  };
+interface CandidateReportViewProps {
+  interviewId?: string;
+  candidateId?: string;
+}
+
+interface HighlightBar { text: string; type: "pass" | "fail" }
+interface ScoreItem { label: string; status: string; type: "pass" | "fail" }
+interface Interaction { turn: string; speaker: string; role: string; text: string }
+
+const INITIAL_MOCK_DATA = {
+  name: "Loading...",
+  email: "loading@example.com",
+  status: "Hold",
+  statusColor: "bg-[#DC2626]",
+  statusReason: "Did not meet core requirements",
+  overallScore: 0,
+  overallScoreSubtext: "Under average",
+  shortSummaryParagraphs: ["Loading candidate report..."],
+  highlightBars: [
+    { text: "Loading traits...", type: "pass" },
+  ] as HighlightBar[],
+  knowledgeScore: {
+    score: "0%",
+    items: [] as ScoreItem[],
+    note: "Loading...",
+  },
+  communicationScore: {
+    score: "0%",
+    items: [] as ScoreItem[],
+    note: "Loading...",
+  },
+  interactions: [] as Interaction[],
+};
+
+export default function CandidateReportView({
+  interviewId,
+  candidateId,
+}: CandidateReportViewProps) {
+  const [candidateData, setCandidateData] = useState(INITIAL_MOCK_DATA);
+
+  useEffect(() => {
+    async function loadReportAndTranscripts() {
+      if (!candidateId) return;
+
+      try {
+        const rawToken = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("access_token="))
+          ?.split("=")[1];
+        const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
+
+        if (!tokenCookie) return;
+
+        const promises: Promise<unknown>[] = [
+          getCandidateReportApi(candidateId, tokenCookie).catch(() => null),
+          getCandidateTranscriptsApi(candidateId, tokenCookie).catch(() => null),
+        ];
+
+        if (interviewId) {
+          promises.push(
+            getCandidatesForInterviewApi(interviewId, tokenCookie).catch(() => null)
+          );
+        } else {
+          promises.push(Promise.resolve(null));
+        }
+
+        const [reportRes, transcriptsRes, candidatesRes] = (await Promise.all(
+          promises
+        )) as [
+          { raw_report?: Record<string, unknown>; reasoning?: string; overall_confidence?: string } | null,
+          Array<{ role: string; content: string }> | null,
+          Array<{ id: string; first_name?: string; last_name?: string; email?: string; recommendation?: string; composite_score?: number }> | null
+        ];
+
+        const candidateInfo = candidatesRes?.find(
+          (c) => c.id === candidateId
+        );
+
+        if (reportRes || transcriptsRes || candidateInfo) {
+          const raw = reportRes?.raw_report || {};
+
+          // Map transcripts to interaction turns
+          const mappedInteractions = transcriptsRes && transcriptsRes.length > 0
+            ? transcriptsRes.map((t: { role: string; content: string }, idx: number) => ({
+                turn: `[T${idx + 1}]`,
+                speaker: t.role === "candidate" ? "Candidate" : "Interviewer",
+                role: t.role === "candidate" ? "candidate" : "interviewer",
+                text: t.content,
+              }))
+            : [];
+
+          const recStr = candidateInfo?.recommendation || "Hold";
+          let statusColor = "bg-[#DC2626]";
+          let statusReason = "Did not meet core requirements";
+          if (recStr.includes("Advance with follow-up") || recStr.includes("follow-up")) {
+            statusColor = "bg-[#828282]"; // Grey
+            statusReason = "Passed with minor concerns";
+          } else if (recStr.includes("Advance") || recStr.includes("Pass") || recStr.includes("Accept")) {
+            statusColor = "bg-[#00C835]"; // Green
+            statusReason = "Passed all criteria needed";
+          }
+
+          const oScore = candidateInfo?.composite_score ?? 0;
+          let scoreSubtext = "Under average";
+          if (oScore > 70 || oScore > 7) {
+            scoreSubtext = "Pretty high";
+          } else if (oScore >= 60 || oScore >= 6) {
+            scoreSubtext = "Average";
+          }
+
+          const allGoodTraits: HighlightBar[] = [];
+          const allBadTraits: HighlightBar[] = [];
+          
+          const goals = (raw?.goals || raw?.goal_breakdown || []) as Array<{ score?: number; rationale?: string; key_observations?: string }>;
+          const comm = raw?.communication || raw?.communication_traits || null;
+
+          // Parse goals for good and bad traits
+          for (const goal of goals) {
+            const gScore = goal.score ?? 0;
+            const gText = goal.rationale || goal.key_observations || "No rationale provided.";
+            if (gScore >= 8.0) {
+              allGoodTraits.push({ text: gText, type: "pass" });
+            } else {
+              allBadTraits.push({ text: gText, type: "fail" });
+            }
+          }
+
+          // Supplement bad traits from communication if needed
+          if (comm) {
+            // Check if it's the { traits: {} } structure or flat { clarity: 9.0 } structure
+            const commDict = (comm as Record<string, unknown>).traits ? (comm as Record<string, unknown>).traits : comm;
+            for (const [tName, tData] of Object.entries(commDict as Record<string, unknown>)) {
+              if (typeof tData === "object" && tData !== null) {
+                const td = tData as { is_passed?: boolean; rationale?: string };
+                if (td.is_passed === false) {
+                  allBadTraits.push({ text: td.rationale || `Failed communication trait: ${tName}`, type: "fail" });
+                } else if (td.is_passed === true) {
+                  allGoodTraits.push({ text: td.rationale || `Passed communication trait: ${tName}`, type: "pass" });
+                }
+              } else if (typeof tData === "number") {
+                // Flat structure fallback e.g. "clarity": 9.0
+                if (tData < 8.0) {
+                  allBadTraits.push({ text: `Needs improvement in ${tName.replace("_", " ")}`, type: "fail" });
+                } else if (tData >= 8.0) {
+                  allGoodTraits.push({ text: `Strong ${tName.replace("_", " ")} skills`, type: "pass" });
+                }
+              }
+            }
+          }
+
+          let finalBadTraits: HighlightBar[] = [];
+          let finalGoodTraits: HighlightBar[] = [];
+
+          if (allGoodTraits.length === 0) {
+            finalBadTraits = allBadTraits.slice(0, 4);
+          } else if (allBadTraits.length === 0) {
+            finalGoodTraits = allGoodTraits.slice(0, 4);
+          } else {
+            finalBadTraits = allBadTraits.slice(0, 2);
+            finalGoodTraits = allGoodTraits.slice(0, 4 - finalBadTraits.length);
+          }
+
+          const combinedTraits = [...finalGoodTraits, ...finalBadTraits];
+          const highlightBars = combinedTraits.length > 0 ? combinedTraits : INITIAL_MOCK_DATA.highlightBars;
+
+          const summaryText = reportRes?.reasoning || "";
+          const paragraphs = summaryText
+            ? summaryText.split("\n").filter((p: string) => p.trim().length > 0)
+            : ["No summary available."];
+
+          // Parse knowledge & communication for matrix (mock structure with real data)
+          let knowledgeItems: ScoreItem[] = [];
+          let commItems: ScoreItem[] = [];
+          let kScoreText = "0%";
+          let cScoreText = "0%";
+
+          if (goals.length > 0) {
+            const sumScore = goals.reduce((acc: number, g: { score?: number }) => acc + (g.score || 0), 0);
+            kScoreText = `${Math.round((sumScore / (goals.length * 10)) * 100)}%`;
+            knowledgeItems = goals.map((g: { score?: number; topic?: string }, i: number) => ({
+              label: `Goal ${i + 1}`,
+              status: (g.score || 0) >= 8.0 ? "Pass" : "Failed",
+              type: (g.score || 0) >= 8.0 ? "pass" : "fail",
+            }));
+          }
+
+          if (comm) {
+            const commDict = (comm as Record<string, unknown>).traits ? (comm as Record<string, unknown>).traits : comm;
+            const overallPassed = (comm as Record<string, unknown>).overall
+              ? ((comm as Record<string, unknown>).overall as { is_passed?: boolean }).is_passed ?? true
+              : true;
+            cScoreText = overallPassed ? "Pass" : "Fail";
+            
+            commItems = Object.entries(commDict as Record<string, unknown>).map(([k, tv]) => {
+              const isPass = typeof tv === "number" ? tv >= 8.0 : (tv as { is_passed?: boolean }).is_passed;
+              return {
+                label: k.replace("_", " "),
+                status: isPass ? "Pass" : "Failed",
+                type: isPass ? "pass" : "fail",
+              };
+            });
+          }
+
+          const fullName = candidateInfo?.first_name
+            ? `${candidateInfo.first_name} ${candidateInfo.last_name || ""}`.trim()
+            : "Unknown Candidate";
+
+          setCandidateData({
+            name: fullName,
+            email: candidateInfo?.email || "Unknown Email",
+            status: recStr,
+            statusColor,
+            statusReason,
+            overallScore: Math.round(oScore * 10) / 10,
+            overallScoreSubtext: scoreSubtext,
+            shortSummaryParagraphs: paragraphs,
+            highlightBars,
+            knowledgeScore: {
+              score: kScoreText,
+              items: knowledgeItems,
+              note: "Detailed knowledge evaluation",
+            },
+            communicationScore: {
+              score: cScoreText,
+              items: commItems,
+              note: ((comm as Record<string, unknown>)?.overall as { rationale?: string })?.rationale || "Detailed communication evaluation",
+            },
+            interactions: mappedInteractions,
+          });
+        }
+      } catch (err) {
+        console.warn("Failed to load candidate report or transcripts", err);
+      }
+    }
+
+    loadReportAndTranscripts();
+  }, [candidateId, interviewId]);
 
   return (
     <div className="max-w-350 mx-auto px-6 py-6 pb-20 font-sans">
@@ -133,7 +306,7 @@ export default function CandidateReportView() {
                   Status
                 </span>
                 <div className="flex items-center gap-2.5 mb-2.5">
-                  <div className="w-2.5 h-7 bg-[#DC2626] rounded-full shrink-0" />
+                  <div className={`w-2.5 h-7 ${candidateData.statusColor} rounded-full shrink-0`} />
                   <span className="text-2xl font-semibold text-[#272727]">
                     {candidateData.status}
                   </span>

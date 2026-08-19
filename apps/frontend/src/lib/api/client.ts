@@ -142,3 +142,91 @@ export async function getCandidatesForInterviewApi(
 
   return response.json();
 }
+
+export interface BackendCandidateReportResponse {
+  id: string;
+  candidate_id: string;
+  overall_confidence: string;
+  reasoning: string;
+  raw_report: {
+    candidate_name?: string;
+    candidate_email?: string;
+    overall_score?: number;
+    recommendation?: string;
+    status_reason?: string;
+    short_summary?: string | string[];
+    highlight_bars?: Array<{ text: string; type: "pass" | "fail" }>;
+    knowledge_score?: {
+      score?: string;
+      items?: Array<{ label: string; status: string; type: "pass" | "fail" }>;
+      note?: string;
+    };
+    communication_score?: {
+      score?: string;
+      items?: Array<{ label: string; status: string; type: "pass" | "fail" }>;
+      note?: string;
+    };
+    [key: string]: unknown;
+  };
+  grader_version: string;
+  graded_at: string;
+}
+
+export interface BackendTranscriptResponse {
+  id: string;
+  candidate_id: string;
+  goal_id: string;
+  role: string;
+  content: string;
+  action?: string | null;
+  reasoning?: string | null;
+  trigger_matched?: string | null;
+  flag_for_human_review: boolean;
+  created_at: string;
+}
+
+/**
+ * Fetch the detailed grading report for a specific candidate.
+ */
+export async function getCandidateReportApi(
+  candidateId: string,
+  token: string
+): Promise<BackendCandidateReportResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}/report`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    handleAuthError(response.status);
+    const errorData = await response.json().catch(() => ({ detail: "Failed to fetch candidate report" }));
+    throw new Error(`Failed to fetch candidate report (${response.status}): ${errorData.detail || "Not found"}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Fetch turn-by-turn conversation logs for a candidate.
+ */
+export async function getCandidateTranscriptsApi(
+  candidateId: string,
+  token: string
+): Promise<BackendTranscriptResponse[]> {
+  const response = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}/transcripts`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    handleAuthError(response.status);
+    const errorData = await response.json().catch(() => ({ detail: "Failed to fetch candidate transcripts" }));
+    throw new Error(`Failed to fetch candidate transcripts (${response.status}): ${errorData.detail || "Not found"}`);
+  }
+
+  return response.json();
+}

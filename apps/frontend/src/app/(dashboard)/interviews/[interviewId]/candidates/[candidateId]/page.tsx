@@ -13,13 +13,16 @@ export default async function CandidateReportPage({
 }: {
   params: Promise<{ interviewId: string; candidateId: string }>;
 }) {
-  await params; // Await params per Next.js 15 convention
+  const { interviewId, candidateId } = await params;
 
   return (
     <main className="w-full min-h-screen bg-[#F6F6F6] text-slate-100 flex flex-col">
       <Navbar />
       <div className="flex-1">
-        <CandidateReportView />
+        <CandidateReportView
+          interviewId={interviewId}
+          candidateId={candidateId}
+        />
       </div>
     </main>
   );

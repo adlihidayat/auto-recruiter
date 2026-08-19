@@ -7,7 +7,15 @@
  */
 
 import React, { useState } from "react";
-import { Search, Bell, FileText, ChevronDown, FileCode2, LogOut, User } from "lucide-react";
+import {
+  Search,
+  Bell,
+  FileText,
+  ChevronDown,
+  FileCode2,
+  LogOut,
+  User,
+} from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { logoutAction } from "@/features/auth/actions";
@@ -18,7 +26,8 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     // Clear document cookie on client
-    document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
+    document.cookie =
+      "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
     // Call server action to delete cookie
     await logoutAction();
     setIsDropdownOpen(false);
@@ -28,7 +37,7 @@ export default function Navbar() {
 
   return (
     <header className="w-full py-6">
-      <div className="max-w-[1400px] mx-auto px-12 flex items-center justify-between">
+      <div className="max-w-350 mx-auto px-12 flex items-center justify-between">
         {/* Brand identity */}
         <div className="flex items-center gap-1 text-black">
           <FileCode2 className="w-8 h-8" strokeWidth={2.5} />
