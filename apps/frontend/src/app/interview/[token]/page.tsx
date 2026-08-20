@@ -12,7 +12,6 @@ import {
   ChevronDown,
   X,
   Play,
-  ShieldCheck,
   Clock,
 } from "lucide-react";
 import Image from "next/image";
@@ -151,6 +150,25 @@ export default function CandidateInterviewPage({
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#272727] font-sans flex flex-col justify-between selection:bg-[#FE6100]/20 selection:text-[#FE6100]">
       {/* Top Navigation Bar */}
+      <header className="h-16 border-b border-[#E9E9E9] bg-white px-6 flex items-center justify-between shadow-sm sticky top-0 z-40">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#FE6100] flex items-center justify-center text-white font-bold text-lg shadow-sm shadow-[#FE6100]/30">
+            A
+          </div>
+          <div>
+            <span className="font-bold text-base text-[#272727] tracking-tight">AutoRecruiter</span>
+            <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-50 text-[#FE6100] border border-orange-100">
+              Candidate Portal
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 text-sm font-medium text-[#616161]">
+          <div className="text-xs font-mono bg-gray-100 px-2.5 py-1 rounded-md text-gray-500">
+            Token: <span className="text-[#272727] font-semibold">{token}</span>
+          </div>
+        </div>
+      </header>
 
       {/* Main Body Content based on active phase */}
       <main className="flex-1 max-w-5xl w-full mx-auto p-6 flex flex-col justify-center items-center">

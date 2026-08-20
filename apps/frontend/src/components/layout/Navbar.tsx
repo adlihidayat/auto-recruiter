@@ -6,13 +6,12 @@
  * Boundaries: Does not handle route rendering or candidate scoring logic.
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   Bell,
   FileText,
   ChevronDown,
-  FileCode2,
   LogOut,
   User,
 } from "lucide-react";
@@ -20,10 +19,31 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { logoutAction } from "@/features/auth/actions";
+import { getMeApi, UserMeResponse } from "@/lib/api/client";
 
 export default function Navbar() {
   const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserMeResponse | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const rawToken = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("access_token="))
+          ?.split("=")[1];
+        const token = rawToken ? decodeURIComponent(rawToken) : null;
+        if (token) {
+          const profile = await getMeApi(token);
+          setUserProfile(profile);
+        }
+      } catch (err) {
+        console.error("Failed to load user profile in Navbar:", err);
+      }
+    };
+    fetchUser();
+  }, []);
 
   const handleLogout = async () => {
     // Clear document cookie on client
@@ -35,6 +55,19 @@ export default function Navbar() {
     router.push("/login");
     router.refresh();
   };
+
+  // Format display name from email (e.g. admin@example.com -> Admin)
+  const getDisplayName = (email?: string) => {
+    if (!email) return "Recruiter";
+    const prefix = email.split("@")[0];
+    return prefix
+      .split(/[._-]/)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  };
+
+  const email = userProfile?.email || "Recruiter Account";
+  const displayName = getDisplayName(userProfile?.email);
 
   return (
     <header className="w-full py-6">
@@ -66,21 +99,16 @@ export default function Navbar() {
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="flex items-center gap-3 px-3 py-2.5 bg-white rounded-full hover:bg-gray-50 transition-colors text-left cursor-pointer"
             >
-              <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative shrink-0">
-                <Image
-                  src="https://i.pravatar.cc/150?u=dhiya"
-                  alt="User Avatar"
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
+              {/* Blank User Avatar Icon */}
+              <div className="w-10 h-10 rounded-full bg-[#F1F1F1] border border-[#E9E9E9] flex items-center justify-center text-[#616161] shrink-0">
+                <User className="w-5 h-5" />
               </div>
-              <div className="flex flex-col">
-                <span className="text-base font-semibold text-[#272727] leading-tight">
-                  Dhiya Adli Hidayat
+              <div className="flex flex-col max-w-[160px]">
+                <span className="text-base font-semibold text-[#272727] leading-tight truncate">
+                  {displayName}
                 </span>
-                <span className="text-sm text-[#616161] font-medium">
-                  dhiyaadli30@gmai...
+                <span className="text-sm text-[#616161] font-medium truncate">
+                  {userProfile?.email ? userProfile.email : "Logged in"}
                 </span>
               </div>
               <ChevronDown
@@ -106,7 +134,7 @@ export default function Navbar() {
                       <span>Logged in User</span>
                     </div>
                     <p className="text-xs text-[#616161] mt-1 truncate font-medium">
-                      admin@example.com
+                      {email}
                     </p>
                   </div>
 
