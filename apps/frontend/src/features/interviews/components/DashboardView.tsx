@@ -103,26 +103,35 @@ export default function DashboardView() {
     loadBackendInterviews();
   }, []);
 
+  // Helper to strictly classify an interview into exactly ONE status (mutually exclusive)
+  const getInterviewStatus = (c: InterviewCampaign): "FINISHED" | "NOT_STARTED" | "IN_PROGRESS" => {
+    const isFinished =
+      c.currentPipelineStage === "COMPLETED" ||
+      (c.activeCandidateCount > 0 && c.evaluatedCandidateCount === c.activeCandidateCount);
+
+    if (isFinished) return "FINISHED";
+
+    const isNotStarted =
+      c.evaluatedCandidateCount === 0 &&
+      c.currentPipelineStage !== "INTERVIEWER_LIVE" &&
+      c.currentPipelineStage !== "GRADER_EVALUATING";
+
+    if (isNotStarted) return "NOT_STARTED";
+
+    return "IN_PROGRESS";
+  };
+
   const totalInterviews = campaignsList.length;
   const finishedInterviews = campaignsList.filter(
-    (c) =>
-      c.currentPipelineStage === "COMPLETED" ||
-      (c.activeCandidateCount > 0 &&
-        c.evaluatedCandidateCount === c.activeCandidateCount),
+    (c) => getInterviewStatus(c) === "FINISHED"
   ).length;
 
   const notStartedInterviews = campaignsList.filter(
-    (c) =>
-      c.evaluatedCandidateCount === 0 &&
-      c.currentPipelineStage !== "COMPLETED",
+    (c) => getInterviewStatus(c) === "NOT_STARTED"
   ).length;
 
   const inProgressInterviews = campaignsList.filter(
-    (c) =>
-      (c.evaluatedCandidateCount > 0 &&
-        c.evaluatedCandidateCount < c.activeCandidateCount) ||
-      c.currentPipelineStage === "INTERVIEWER_LIVE" ||
-      c.currentPipelineStage === "GRADER_EVALUATING",
+    (c) => getInterviewStatus(c) === "IN_PROGRESS"
   ).length;
 
   const finishedPercentage =
@@ -130,27 +139,9 @@ export default function DashboardView() {
   const filledOrangeBars = Math.round((finishedPercentage / 100) * 17);
 
   const filteredCampaigns = campaignsList.filter((c) => {
-    if (activeTab === "FINISHED") {
-      return (
-        c.currentPipelineStage === "COMPLETED" ||
-        (c.activeCandidateCount > 0 &&
-          c.evaluatedCandidateCount === c.activeCandidateCount)
-      );
-    }
-    if (activeTab === "NOT_STARTED") {
-      return (
-        c.evaluatedCandidateCount === 0 &&
-        c.currentPipelineStage !== "COMPLETED"
-      );
-    }
-    if (activeTab === "IN_PROGRESS") {
-      return (
-        (c.evaluatedCandidateCount > 0 &&
-          c.evaluatedCandidateCount < c.activeCandidateCount) ||
-        c.currentPipelineStage === "INTERVIEWER_LIVE" ||
-        c.currentPipelineStage === "GRADER_EVALUATING"
-      );
-    }
+    if (activeTab === "FINISHED") return getInterviewStatus(c) === "FINISHED";
+    if (activeTab === "NOT_STARTED") return getInterviewStatus(c) === "NOT_STARTED";
+    if (activeTab === "IN_PROGRESS") return getInterviewStatus(c) === "IN_PROGRESS";
     return true;
   });
 

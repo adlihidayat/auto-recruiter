@@ -14,9 +14,21 @@ interface CandidateReportViewProps {
   candidateId?: string;
 }
 
-interface HighlightBar { text: string; type: "pass" | "fail" }
-interface ScoreItem { label: string; status: string; type: "pass" | "fail" }
-interface Interaction { turn: string; speaker: string; role: string; text: string }
+interface HighlightBar {
+  text: string;
+  type: "pass" | "fail";
+}
+interface ScoreItem {
+  label: string;
+  status: string;
+  type: "pass" | "fail";
+}
+interface Interaction {
+  turn: string;
+  speaker: string;
+  role: string;
+  text: string;
+}
 
 const INITIAL_MOCK_DATA = {
   name: "Loading...",
@@ -64,49 +76,73 @@ export default function CandidateReportView({
 
         const promises: Promise<unknown>[] = [
           getCandidateReportApi(candidateId, tokenCookie).catch(() => null),
-          getCandidateTranscriptsApi(candidateId, tokenCookie).catch(() => null),
+          getCandidateTranscriptsApi(candidateId, tokenCookie).catch(
+            () => null,
+          ),
         ];
 
         if (interviewId) {
           promises.push(
-            getCandidatesForInterviewApi(interviewId, tokenCookie).catch(() => null)
+            getCandidatesForInterviewApi(interviewId, tokenCookie).catch(
+              () => null,
+            ),
           );
         } else {
           promises.push(Promise.resolve(null));
         }
 
         const [reportRes, transcriptsRes, candidatesRes] = (await Promise.all(
-          promises
+          promises,
         )) as [
-          { raw_report?: Record<string, unknown>; reasoning?: string; overall_confidence?: string } | null,
+          {
+            raw_report?: Record<string, unknown>;
+            reasoning?: string;
+            overall_confidence?: string;
+          } | null,
           Array<{ role: string; content: string }> | null,
-          Array<{ id: string; first_name?: string; last_name?: string; email?: string; recommendation?: string; composite_score?: number }> | null
+          Array<{
+            id: string;
+            first_name?: string;
+            last_name?: string;
+            email?: string;
+            recommendation?: string;
+            composite_score?: number;
+          }> | null,
         ];
 
-        const candidateInfo = candidatesRes?.find(
-          (c) => c.id === candidateId
-        );
+        const candidateInfo = candidatesRes?.find((c) => c.id === candidateId);
 
         if (reportRes || transcriptsRes || candidateInfo) {
           const raw = reportRes?.raw_report || {};
 
           // Map transcripts to interaction turns
-          const mappedInteractions = transcriptsRes && transcriptsRes.length > 0
-            ? transcriptsRes.map((t: { role: string; content: string }, idx: number) => ({
-                turn: `[T${idx + 1}]`,
-                speaker: t.role === "candidate" ? "Candidate" : "Interviewer",
-                role: t.role === "candidate" ? "candidate" : "interviewer",
-                text: t.content,
-              }))
-            : [];
+          const mappedInteractions =
+            transcriptsRes && transcriptsRes.length > 0
+              ? transcriptsRes.map(
+                  (t: { role: string; content: string }, idx: number) => ({
+                    turn: `[T${idx + 1}]`,
+                    speaker:
+                      t.role === "candidate" ? "Candidate" : "Interviewer",
+                    role: t.role === "candidate" ? "candidate" : "interviewer",
+                    text: t.content,
+                  }),
+                )
+              : [];
 
           const recStr = candidateInfo?.recommendation || "Hold";
           let statusColor = "bg-[#DC2626]";
           let statusReason = "Did not meet core requirements";
-          if (recStr.includes("Advance with follow-up") || recStr.includes("follow-up")) {
+          if (
+            recStr.includes("Advance with follow-up") ||
+            recStr.includes("follow-up")
+          ) {
             statusColor = "bg-[#828282]"; // Grey
             statusReason = "Passed with minor concerns";
-          } else if (recStr.includes("Advance") || recStr.includes("Pass") || recStr.includes("Accept")) {
+          } else if (
+            recStr.includes("Advance") ||
+            recStr.includes("Pass") ||
+            recStr.includes("Accept")
+          ) {
             statusColor = "bg-[#00C835]"; // Green
             statusReason = "Passed all criteria needed";
           }
@@ -121,14 +157,21 @@ export default function CandidateReportView({
 
           const allGoodTraits: HighlightBar[] = [];
           const allBadTraits: HighlightBar[] = [];
-          
-          const goals = (raw?.goals || raw?.goal_breakdown || []) as Array<{ score?: number; rationale?: string; key_observations?: string }>;
+
+          const goals = (raw?.goals || raw?.goal_breakdown || []) as Array<{
+            score?: number;
+            rationale?: string;
+            key_observations?: string;
+          }>;
           const comm = raw?.communication || raw?.communication_traits || null;
 
           // Parse goals for good and bad traits
           for (const goal of goals) {
             const gScore = goal.score ?? 0;
-            const gText = goal.rationale || goal.key_observations || "No rationale provided.";
+            const gText =
+              goal.rationale ||
+              goal.key_observations ||
+              "No rationale provided.";
             if (gScore >= 8.0) {
               allGoodTraits.push({ text: gText, type: "pass" });
             } else {
@@ -139,21 +182,39 @@ export default function CandidateReportView({
           // Supplement bad traits from communication if needed
           if (comm) {
             // Check if it's the { traits: {} } structure or flat { clarity: 9.0 } structure
-            const commDict = (comm as Record<string, unknown>).traits ? (comm as Record<string, unknown>).traits : comm;
-            for (const [tName, tData] of Object.entries(commDict as Record<string, unknown>)) {
+            const commDict = (comm as Record<string, unknown>).traits
+              ? (comm as Record<string, unknown>).traits
+              : comm;
+            for (const [tName, tData] of Object.entries(
+              commDict as Record<string, unknown>,
+            )) {
               if (typeof tData === "object" && tData !== null) {
                 const td = tData as { is_passed?: boolean; rationale?: string };
                 if (td.is_passed === false) {
-                  allBadTraits.push({ text: td.rationale || `Failed communication trait: ${tName}`, type: "fail" });
+                  allBadTraits.push({
+                    text:
+                      td.rationale || `Failed communication trait: ${tName}`,
+                    type: "fail",
+                  });
                 } else if (td.is_passed === true) {
-                  allGoodTraits.push({ text: td.rationale || `Passed communication trait: ${tName}`, type: "pass" });
+                  allGoodTraits.push({
+                    text:
+                      td.rationale || `Passed communication trait: ${tName}`,
+                    type: "pass",
+                  });
                 }
               } else if (typeof tData === "number") {
                 // Flat structure fallback e.g. "clarity": 9.0
                 if (tData < 8.0) {
-                  allBadTraits.push({ text: `Needs improvement in ${tName.replace("_", " ")}`, type: "fail" });
+                  allBadTraits.push({
+                    text: `Needs improvement in ${tName.replace("_", " ")}`,
+                    type: "fail",
+                  });
                 } else if (tData >= 8.0) {
-                  allGoodTraits.push({ text: `Strong ${tName.replace("_", " ")} skills`, type: "pass" });
+                  allGoodTraits.push({
+                    text: `Strong ${tName.replace("_", " ")} skills`,
+                    type: "pass",
+                  });
                 }
               }
             }
@@ -172,7 +233,10 @@ export default function CandidateReportView({
           }
 
           const combinedTraits = [...finalGoodTraits, ...finalBadTraits];
-          const highlightBars = combinedTraits.length > 0 ? combinedTraits : INITIAL_MOCK_DATA.highlightBars;
+          const highlightBars =
+            combinedTraits.length > 0
+              ? combinedTraits
+              : INITIAL_MOCK_DATA.highlightBars;
 
           const summaryText = reportRes?.reasoning || "";
           const paragraphs = summaryText
@@ -186,30 +250,46 @@ export default function CandidateReportView({
           let cScoreText = "0%";
 
           if (goals.length > 0) {
-            const sumScore = goals.reduce((acc: number, g: { score?: number }) => acc + (g.score || 0), 0);
+            const sumScore = goals.reduce(
+              (acc: number, g: { score?: number }) => acc + (g.score || 0),
+              0,
+            );
             kScoreText = `${Math.round((sumScore / (goals.length * 10)) * 100)}%`;
-            knowledgeItems = goals.map((g: { score?: number; topic?: string }, i: number) => ({
-              label: `Goal ${i + 1}`,
-              status: (g.score || 0) >= 8.0 ? "Pass" : "Failed",
-              type: (g.score || 0) >= 8.0 ? "pass" : "fail",
-            }));
+            knowledgeItems = goals.map(
+              (g: { score?: number; topic?: string }, i: number) => ({
+                label: `Goal ${i + 1}`,
+                status: (g.score || 0) >= 8.0 ? "Pass" : "Failed",
+                type: (g.score || 0) >= 8.0 ? "pass" : "fail",
+              }),
+            );
           }
 
           if (comm) {
-            const commDict = (comm as Record<string, unknown>).traits ? (comm as Record<string, unknown>).traits : comm;
+            const commDict = (comm as Record<string, unknown>).traits
+              ? (comm as Record<string, unknown>).traits
+              : comm;
             const overallPassed = (comm as Record<string, unknown>).overall
-              ? ((comm as Record<string, unknown>).overall as { is_passed?: boolean }).is_passed ?? true
+              ? ((
+                  (comm as Record<string, unknown>).overall as {
+                    is_passed?: boolean;
+                  }
+                ).is_passed ?? true)
               : true;
             cScoreText = overallPassed ? "Pass" : "Fail";
-            
-            commItems = Object.entries(commDict as Record<string, unknown>).map(([k, tv]) => {
-              const isPass = typeof tv === "number" ? tv >= 8.0 : (tv as { is_passed?: boolean }).is_passed;
-              return {
-                label: k.replace("_", " "),
-                status: isPass ? "Pass" : "Failed",
-                type: isPass ? "pass" : "fail",
-              };
-            });
+
+            commItems = Object.entries(commDict as Record<string, unknown>).map(
+              ([k, tv]) => {
+                const isPass =
+                  typeof tv === "number"
+                    ? tv >= 8.0
+                    : (tv as { is_passed?: boolean }).is_passed;
+                return {
+                  label: k.replace("_", " "),
+                  status: isPass ? "Pass" : "Failed",
+                  type: isPass ? "pass" : "fail",
+                };
+              },
+            );
           }
 
           const fullName = candidateInfo?.first_name
@@ -234,7 +314,12 @@ export default function CandidateReportView({
             communicationScore: {
               score: cScoreText,
               items: commItems,
-              note: ((comm as Record<string, unknown>)?.overall as { rationale?: string })?.rationale || "Detailed communication evaluation",
+              note:
+                (
+                  (comm as Record<string, unknown>)?.overall as {
+                    rationale?: string;
+                  }
+                )?.rationale || "Detailed communication evaluation",
             },
             interactions: mappedInteractions,
           });
@@ -248,7 +333,7 @@ export default function CandidateReportView({
   }, [candidateId, interviewId]);
 
   return (
-    <div className="max-w-350 mx-auto px-6 py-6 pb-20 font-sans">
+    <div className="max-w-350 mx-auto px-6 pb-20 font-sans">
       {/* Top 2-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
         {/* Left Card: Candidate Info & Short Summary */}
@@ -307,7 +392,9 @@ export default function CandidateReportView({
                   Status
                 </span>
                 <div className="flex items-center gap-2.5 mb-2.5">
-                  <div className={`w-2.5 h-7 ${candidateData.statusColor} rounded-full shrink-0`} />
+                  <div
+                    className={`w-2.5 h-7 ${candidateData.statusColor} rounded-full shrink-0`}
+                  />
                   <span className="text-2xl font-semibold text-[#272727]">
                     {candidateData.status}
                   </span>

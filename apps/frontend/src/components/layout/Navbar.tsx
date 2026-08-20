@@ -16,7 +16,8 @@ import {
   LogOut,
   User,
 } from "lucide-react";
-import UserAvatar from "../common/UserAvatar";
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { logoutAction } from "@/features/auth/actions";
 
@@ -39,10 +40,10 @@ export default function Navbar() {
     <header className="w-full py-6">
       <div className="max-w-350 mx-auto px-12 flex items-center justify-between">
         {/* Brand identity */}
-        <div className="flex items-center gap-1 text-black">
-          <FileCode2 className="w-8 h-8" strokeWidth={2.5} />
+        <Link href="/" className="flex items-center gap-1 text-black">
+          <Image src="/logo.svg" alt="Company Logo" width={40} height={40} />
           <span className="font-light text-3xl tracking-tight">auto-rec</span>
-        </div>
+        </Link>
 
         {/* Action items & user profile */}
         <div className="flex items-center gap-4">
@@ -65,7 +66,15 @@ export default function Navbar() {
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="flex items-center gap-3 px-3 py-2.5 bg-white rounded-full hover:bg-gray-50 transition-colors text-left cursor-pointer"
             >
-              <UserAvatar className="w-10 h-10" />
+              <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative shrink-0">
+                <Image
+                  src="https://i.pravatar.cc/150?u=dhiya"
+                  alt="User Avatar"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
               <div className="flex flex-col">
                 <span className="text-base font-semibold text-[#272727] leading-tight">
                   Dhiya Adli Hidayat

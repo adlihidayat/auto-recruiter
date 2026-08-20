@@ -133,7 +133,7 @@ export default function CreateInterviewModal({
               type="text"
               value={formData.job_name}
               onChange={(e) => setFormData({ ...formData, job_name: e.target.value })}
-              className="w-full px-4 py-3 bg-white border border-[#E9E9E9] rounded-xl text-sm text-[#272727] font-medium placeholder:text-[#616161] focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
+              className="w-full px-4 py-3 bg-white border border-[#E9E9E9] rounded-xl text-sm text-black font-medium placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
               placeholder="e.g. Senior Frontend Engineer"
             />
           </div>
@@ -144,7 +144,7 @@ export default function CreateInterviewModal({
             <textarea
               value={formData.job_description}
               onChange={(e) => setFormData({ ...formData, job_description: e.target.value })}
-              className="w-full h-32 px-4 py-3 bg-white border border-[#E9E9E9] rounded-xl text-sm text-[#272727] font-medium placeholder:text-[#616161] focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all resize-none"
+              className="w-full h-32 px-4 py-3 bg-white border border-[#E9E9E9] rounded-xl text-sm text-black font-medium placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all resize-none"
               placeholder="Paste the job description here..."
             />
           </div>
@@ -157,13 +157,13 @@ export default function CreateInterviewModal({
                 <select
                   value={formData.difficulty}
                   onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
-                  className="w-full px-4 py-3 bg-white border border-[#E9E9E9] rounded-xl text-sm text-[#272727] font-medium focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all appearance-none cursor-pointer"
+                  className="w-full px-4 py-3 bg-white border border-[#E9E9E9] rounded-xl text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all appearance-none cursor-pointer"
                 >
-                  <option value="junior" className="text-[#272727] bg-white">Junior</option>
-                  <option value="mid" className="text-[#272727] bg-white">Mid</option>
-                  <option value="senior" className="text-[#272727] bg-white">Senior</option>
+                  <option value="junior" className="text-black bg-white">Junior</option>
+                  <option value="mid" className="text-black bg-white">Mid</option>
+                  <option value="senior" className="text-black bg-white">Senior</option>
                 </select>
-                <ChevronDown className="w-4 h-4 text-[#616161] absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-4 h-4 text-gray-500 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
@@ -174,7 +174,7 @@ export default function CreateInterviewModal({
                 type="text"
                 value={formData.domain_hint}
                 onChange={(e) => setFormData({ ...formData, domain_hint: e.target.value })}
-                className="w-full px-4 py-3 bg-white border border-[#E9E9E9] rounded-xl text-sm text-[#272727] font-medium placeholder:text-[#616161] focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
+                className="w-full px-4 py-3 bg-white border border-[#E9E9E9] rounded-xl text-sm text-black font-medium placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
                 placeholder="e.g. React & TypeScript"
               />
             </div>
@@ -190,7 +190,7 @@ export default function CreateInterviewModal({
                 max="10"
                 value={formData.num_goals}
                 onChange={(e) => setFormData({ ...formData, num_goals: parseInt(e.target.value) })}
-                className="w-full px-4 py-3 bg-white border border-[#E9E9E9] rounded-xl text-sm text-[#272727] font-medium placeholder:text-[#616161] focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
+                className="w-full px-4 py-3 bg-white border border-[#E9E9E9] rounded-xl text-sm text-black font-medium placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
               />
             </div>
 
@@ -204,7 +204,7 @@ export default function CreateInterviewModal({
                 step="5"
                 value={formData.total_duration_minutes}
                 onChange={(e) => setFormData({ ...formData, total_duration_minutes: parseInt(e.target.value) })}
-                className="w-full px-4 py-3 bg-white border border-[#E9E9E9] rounded-xl text-sm text-[#272727] font-medium placeholder:text-[#616161] focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
+                className="w-full px-4 py-3 bg-white border border-[#E9E9E9] rounded-xl text-sm text-black font-medium placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
               />
             </div>
           </div>
@@ -265,7 +265,7 @@ export default function CreateInterviewModal({
                       placeholder="Email address"
                       value={candidate.email}
                       onChange={(e) => handleCandidateChange(index, "email", e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-[#d9d9d9] rounded-lg text-sm text-[#272727] font-medium placeholder:text-[#616161] focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
+                      className="w-full px-3 py-2 bg-white border border-[#d9d9d9] rounded-lg text-sm text-black font-medium placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
                       required
                     />
                     <input
@@ -273,14 +273,14 @@ export default function CreateInterviewModal({
                       placeholder="First name"
                       value={candidate.first_name}
                       onChange={(e) => handleCandidateChange(index, "first_name", e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-[#d9d9d9] rounded-lg text-sm text-[#272727] font-medium placeholder:text-[#616161] focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
+                      className="w-full px-3 py-2 bg-white border border-[#d9d9d9] rounded-lg text-sm text-black font-medium placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
                     />
                     <input
                       type="text"
                       placeholder="Last name"
                       value={candidate.last_name}
                       onChange={(e) => handleCandidateChange(index, "last_name", e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-[#d9d9d9] rounded-lg text-sm text-[#272727] font-medium placeholder:text-[#616161] focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
+                      className="w-full px-3 py-2 bg-white border border-[#d9d9d9] rounded-lg text-sm text-black font-medium placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
                     />
                   </div>
                 </div>
