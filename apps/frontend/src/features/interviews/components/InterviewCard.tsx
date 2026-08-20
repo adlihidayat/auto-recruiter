@@ -11,6 +11,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Users, CalendarDays, Clock } from "lucide-react";
 import { InterviewCampaign } from "../types";
 
+import UserAvatar from "@/components/common/UserAvatar";
+
 interface InterviewCardProps {
   campaign: InterviewCampaign;
 }
@@ -68,19 +70,42 @@ export default function InterviewCard({ campaign }: InterviewCardProps) {
         </div>
 
         {/* Candidates Avatars */}
-        <div className="flex items-center gap-2 mb-4.5">
-          <div className="px-2.5 py-2 bg-[#F4F4F4] rounded-lg text-xs font-medium text-[#272727] flex items-center gap-1.5">
-            <Users className="w-3 h-3" />
-            <span>Candidates</span>
-          </div>
-          <div className="h-5 w-px bg-[#F1F1F1]"></div>
-          <div className="flex -space-x-2">
-            <div className="w-6.5 h-6.5 rounded-lg bg-emerald-400 border-2 border-white z-30" />
-            <div className="w-6.5 h-6.5 rounded-lg bg-blue-400 border-2 border-white z-20" />
-            <div className="w-6.5 h-6.5 rounded-lg bg-amber-400 border-2 border-white z-10" />
-            <div className="w-6.5 h-6.5 rounded-lg bg-purple-400 border-2 border-white z-0" />
-          </div>
-        </div>
+        {(() => {
+          const candidateCount =
+            campaign.activeCandidateCount ||
+            campaign.candidatesList?.length ||
+            0;
+          const displayCount = Math.min(candidateCount, 4);
+          const extraCount = candidateCount > 4 ? candidateCount - 4 : 0;
+
+          return (
+            <div className="flex items-center gap-2 mb-4.5 min-h-[30px]">
+              <div className="px-2.5 py-2 bg-[#F4F4F4] rounded-lg text-xs font-medium text-[#272727] flex items-center gap-1.5">
+                <Users className="w-3 h-3" />
+                <span>Candidates</span>
+              </div>
+              {candidateCount > 0 && (
+                <>
+                  <div className="h-5 w-px bg-[#F1F1F1]"></div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex -space-x-2">
+                      {Array.from({ length: displayCount }).map((_, idx) => (
+                        <div key={idx} style={{ zIndex: 40 - idx * 10 }}>
+                          <UserAvatar className="w-6.5 h-6.5 border-2 border-white rounded-lg" />
+                        </div>
+                      ))}
+                    </div>
+                    {extraCount > 0 && (
+                      <span className="text-xs font-semibold text-[#616161] ml-0.5">
+                        {extraCount}+
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Footer Info & Actions */}

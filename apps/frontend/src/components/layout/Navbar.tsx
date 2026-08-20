@@ -16,7 +16,7 @@ import {
   LogOut,
   User,
 } from "lucide-react";
-import Image from "next/image";
+import UserAvatar from "../common/UserAvatar";
 import { useRouter } from "next/navigation";
 import { logoutAction } from "@/features/auth/actions";
 
@@ -65,15 +65,7 @@ export default function Navbar() {
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="flex items-center gap-3 px-3 py-2.5 bg-white rounded-full hover:bg-gray-50 transition-colors text-left cursor-pointer"
             >
-              <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative shrink-0">
-                <Image
-                  src="https://i.pravatar.cc/150?u=dhiya"
-                  alt="User Avatar"
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              </div>
+              <UserAvatar className="w-10 h-10" />
               <div className="flex flex-col">
                 <span className="text-base font-semibold text-[#272727] leading-tight">
                   Dhiya Adli Hidayat

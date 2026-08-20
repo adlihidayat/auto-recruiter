@@ -8,7 +8,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
+import UserAvatar from "@/components/common/UserAvatar";
 import {
   CalendarDays,
   User,
@@ -466,15 +466,7 @@ export default function InterviewDetailDialog({
                 className={`px-2.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-gray-50/80 transition-colors ${idx !== candidatesListState.length - 1 ? "border-b border-[#F1F1F1]" : ""}`}
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9.5 h-9.5 rounded-full bg-gray-200 overflow-hidden shrink-0 relative">
-                    <Image
-                      src={candidate.img}
-                      alt={candidate.name}
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
-                  </div>
+                  <UserAvatar className="w-9.5 h-9.5" />
                   <div>
                     <div className="text-sm font-medium text-[#272727]">
                       {candidate.name}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import UserAvatar from "@/components/common/UserAvatar";
 import { Info, FileText } from "lucide-react";
 import {
   getCandidateReportApi,
@@ -255,7 +256,7 @@ export default function CandidateReportView({
           <div>
             {/* Profile Header */}
             <div className="flex items-center gap-4 pb-5 border-b border-[#F1F1F1]">
-              <div className="w-10 h-10 rounded-full bg-[#EFEFEF] shrink-0" />
+              <UserAvatar className="w-10 h-10" />
               <div>
                 <h2 className="text-base font-semibold text-[#272727] leading-snug">
                   {candidateData.name}
