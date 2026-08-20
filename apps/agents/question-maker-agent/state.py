@@ -45,7 +45,7 @@ class QuestionItem(BaseModel):
     goal_id: str = Field(description="Unique identifier for the evaluation goal.")
     goal: str = Field(description="Description of what this question is testing/evaluating.")
     topic: str = Field(description="Subject matter area of the question.")
-    references: List[ReferenceSource] = Field(default_factory=list, description="Verified sources for this question.")
+    grounding_theory: Optional[str] = Field(default=None, description="The complete grounding theory text generated from web search.")
     interview_time_in_minute: int = Field(default=15, description="Allotted time for this section of the interview.")
     suggested_opening: str = Field(description="Recommended opening prompt to start the question thread.")
     passing_criteria: List[str] = Field(default_factory=list, description="List of criteria required to pass.")

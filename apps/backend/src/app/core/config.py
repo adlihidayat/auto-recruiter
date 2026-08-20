@@ -38,6 +38,9 @@ class ApplicationSettings(BaseSettings):
     LIVEKIT_API_KEY: str = "devkey"
     LIVEKIT_API_SECRET: str = "secret"
 
+    # Agents Microservice
+    AGENTS_SERVICE_URL: str = "http://localhost:8001"
+
 
 # Global singleton instance for settings
 application_settings = ApplicationSettings()

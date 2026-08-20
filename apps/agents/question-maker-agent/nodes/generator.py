@@ -81,7 +81,7 @@ def generateQuestionItemFromGoal(state: GeneratorState) -> Dict[str, Any]:
         passing_criteria=generatedContent.passing_criteria,
         pushback_triggers=generatedContent.pushback_triggers,
         wrong_answer_signals=generatedContent.wrong_answer_signals,
-        references=theory.references if theory else []
+        grounding_theory=theory.theory if theory else None
     )
     
     return {"generated_questions": [generatedQuestionItem]}

@@ -34,16 +34,7 @@ When generating code for `state.py` or writing structured output prompts, the ta
   "goal_id": "g_02",
   "goal": "Evaluate whether candidate can diagnose and resolve real PostgreSQL performance problems, not just describe them.",
   "topic": "Database Performance Optimization",
-  "references": [
-    {
-      "url": "https://.../cache-coherence-notes.pdf",
-      "title": "Computer Architecture Lecture Notes Ch.7",
-      "excerpt": "The MESI protocol defines four states: Modified, Exclusive, Shared, and Invalid...",
-      "matched_query": "MESI protocol cache states explained",
-      "credibility_tier": "A",
-      "corroborated": true
-    }
-  ],
+  "grounding_theory": "PostgreSQL uses Multi-Version Concurrency Control (MVCC) to provide transactional isolation. Dead tuples accumulate and require VACUUMing...",
   "interview_time_in_minute": 15,
   "suggested_opening": "Walk me through the specific changes you made that reduced DB latency by 60% at your last role.",
   "passing_criteria": [

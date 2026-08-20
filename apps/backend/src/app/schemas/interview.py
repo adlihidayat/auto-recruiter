@@ -2,14 +2,22 @@ from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
+class CandidateCreate(BaseModel):
+    email: str
+    first_name: str | None = None
+    last_name: str | None = None
+
 class InterviewBase(BaseModel):
     job_name: str
     job_description: str
-    difficulty: str
-    num_goals: int
-    total_duration_minutes: int
+    difficulty: str = "mid"
+    num_goals: int = 4
+    total_duration_minutes: int = 30
     domain_hint: str | None = None
     communication_weight: float = 0.0
+
+class InterviewCreate(InterviewBase):
+    candidates: list[CandidateCreate] = []
 
 class InterviewResponse(InterviewBase):
     id: UUID

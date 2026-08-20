@@ -971,8 +971,9 @@ def evaluate_generator_target(inputs: dict) -> dict:
             previous_generation_data["topic"] = goal.topic
         if "goal" not in previous_generation_data:
             previous_generation_data["goal"] = goal.goal
-        if "references" not in previous_generation_data:
-            previous_generation_data["references"] = []
+        if "grounding_theory" not in previous_generation_data:
+            previous_generation_data["grounding_theory"] = theory.theory if theory else None
+        previous_generation_data.pop("references", None)
         if "interview_time_in_minute" not in previous_generation_data:
             previous_generation_data["interview_time_in_minute"] = goal.interview_time_in_minute
             

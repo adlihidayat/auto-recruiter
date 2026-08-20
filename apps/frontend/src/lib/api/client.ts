@@ -230,3 +230,45 @@ export async function getCandidateTranscriptsApi(
 
   return response.json();
 }
+
+export interface CreateCandidatePayload {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+export interface CreateInterviewPayload {
+  job_name: string;
+  job_description: string;
+  difficulty?: string;
+  num_goals?: number;
+  total_duration_minutes?: number;
+  domain_hint?: string;
+  communication_weight?: number;
+  candidates?: CreateCandidatePayload[];
+}
+
+/**
+ * Submit a new interview position and initial candidates to the backend.
+ */
+export async function createInterviewApi(
+  payload: CreateInterviewPayload,
+  token: string
+): Promise<BackendInterviewResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/interviews`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    handleAuthError(response.status);
+    const errorData = await response.json().catch(() => ({ detail: "Failed to create interview" }));
+    throw new Error(`Failed to create interview (${response.status}): ${errorData.detail || "Bad Request"}`);
+  }
+
+  return response.json();
+}

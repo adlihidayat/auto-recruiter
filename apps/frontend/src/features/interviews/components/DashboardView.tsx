@@ -103,10 +103,6 @@ export default function DashboardView() {
     loadBackendInterviews();
   }, []);
 
-  const handleCampaignCreated = (newCampaign: InterviewCampaign) => {
-    setCampaignsList((prevCampaigns) => [newCampaign, ...prevCampaigns]);
-  };
-
   const totalInterviews = campaignsList.length;
   const finishedInterviews = campaignsList.filter(
     (c) =>
@@ -275,11 +271,14 @@ export default function DashboardView() {
         <InterviewDetailDialog interviewCampaignsList={campaignsList} />
 
         {/* Campaign Creation Modal */}
-        <CreateInterviewModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          onCampaignCreated={handleCampaignCreated}
-        />
+        {/* Render Create Interview Modal */}
+        {isCreateModalOpen && (
+          <CreateInterviewModal
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            onCampaignCreated={() => window.location.reload()}
+          />
+        )}
       </div>
     </main>
   );
