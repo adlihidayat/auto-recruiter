@@ -15,6 +15,7 @@ class InterviewBase(BaseModel):
     total_duration_minutes: int = 30
     domain_hint: str | None = None
     communication_weight: float = 0.0
+    scheduled_at: datetime | None = None
 
 class InterviewCreate(InterviewBase):
     candidates: list[CandidateCreate] = []

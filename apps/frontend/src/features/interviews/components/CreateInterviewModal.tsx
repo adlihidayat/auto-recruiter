@@ -26,6 +26,7 @@ export default function CreateInterviewModal({
     total_duration_minutes: 30,
     domain_hint: "",
     communication_weight: 0.2,
+    scheduled_at: "",
   });
 
   const [candidates, setCandidates] = useState([
@@ -83,6 +84,7 @@ export default function CreateInterviewModal({
 
       const payload: CreateInterviewPayload = {
         ...formData,
+        scheduled_at: formData.scheduled_at ? new Date(formData.scheduled_at).toISOString() : undefined,
         candidates: validCandidates,
       };
 
@@ -146,6 +148,17 @@ export default function CreateInterviewModal({
               onChange={(e) => setFormData({ ...formData, job_description: e.target.value })}
               className="w-full h-32 px-4 py-3 bg-white border border-[#E9E9E9] rounded-xl text-sm text-black font-medium placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all resize-none"
               placeholder="Paste the job description here..."
+            />
+          </div>
+
+          {/* Scheduled Date */}
+          <div>
+            <label className="block text-sm font-semibold text-[#272727] mb-2">Scheduled Date (Optional)</label>
+            <input
+              type="datetime-local"
+              value={formData.scheduled_at}
+              onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
+              className="w-full px-4 py-3 bg-white border border-[#E9E9E9] rounded-xl text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-[#FE6100]/20 focus:border-[#FE6100] transition-all"
             />
           </div>
 

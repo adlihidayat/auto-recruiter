@@ -7,7 +7,8 @@ import { InterviewCampaign, PipelineStage } from "./types";
 export function mapBackendInterviewToCampaign(
   backendInterview: BackendInterviewResponse
 ): InterviewCampaign {
-  const formattedDate = new Date(backendInterview.created_at).toLocaleDateString("en-GB", {
+  const dateToFormat = backendInterview.scheduled_at ? backendInterview.scheduled_at : backendInterview.created_at;
+  const formattedDate = new Date(dateToFormat).toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

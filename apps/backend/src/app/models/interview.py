@@ -24,6 +24,7 @@ class Interview(Base):
     total_duration_minutes: Mapped[int] = mapped_column(Integer, default=30)
     domain_hint: Mapped[str] = mapped_column(String(100), nullable=True)
     communication_weight: Mapped[float] = mapped_column(Float, default=0.0)
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     
     # enum: generating_plan, scheduled, failed_plan_generation
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="generating_plan")

@@ -81,6 +81,7 @@ export interface BackendInterviewResponse {
   communication_weight: number;
   creator_id: string;
   status: string;
+  scheduled_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -245,6 +246,7 @@ export interface CreateInterviewPayload {
   total_duration_minutes?: number;
   domain_hint?: string;
   communication_weight?: number;
+  scheduled_at?: string;
   candidates?: CreateCandidatePayload[];
 }
 
