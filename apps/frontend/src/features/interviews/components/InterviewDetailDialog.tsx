@@ -102,7 +102,9 @@ export default function InterviewDetailDialog({
   const [candidatesListState, setCandidatesListState] = useState(
     defaultMockCandidates,
   );
-  const [candidateNoticeMessage, setCandidateNoticeMessage] = useState<string | null>(null);
+  const [candidateNoticeMessage, setCandidateNoticeMessage] = useState<
+    string | null
+  >(null);
 
   const handleCandidateClick = (candidate: {
     id: string;
@@ -111,9 +113,13 @@ export default function InterviewDetailDialog({
   }) => {
     if (candidate.stageStatus === "Done") {
       setCandidateNoticeMessage(null);
-      router.push(`/interviews/${activeInterviewId}/candidates/${candidate.id}`);
+      router.push(
+        `/interviews/${activeInterviewId}/candidates/${candidate.id}`,
+      );
     } else {
-      setCandidateNoticeMessage(`"${candidate.name}" has not finished their interview yet.`);
+      setCandidateNoticeMessage(
+        `"${candidate.name}" has not finished their interview yet.`,
+      );
       setTimeout(() => {
         setCandidateNoticeMessage(null);
       }, 3500);
@@ -480,17 +486,17 @@ export default function InterviewDetailDialog({
                 <div className="flex items-center gap-4">
                   {!isInterviewFinished ? (
                     <>
-                      {candidate.stageStatus === "Done" && (
+                      {candidate.stageStatus === "finished" && (
                         <span className="px-3 py-1 bg-[#DCFCE7] text-[#16A34A] rounded-full text-xs font-medium">
-                          Done
+                          finished
                         </span>
                       )}
-                      {candidate.stageStatus === "On-Interview" && (
+                      {candidate.stageStatus === "in-progress" && (
                         <span className="px-3 py-1 bg-[#EFF6FF] text-[#2563EB] rounded-full text-xs font-medium">
-                          On-Interview
+                          in-progress
                         </span>
                       )}
-                      {candidate.stageStatus === "Not-started" && (
+                      {candidate.stageStatus === "not-started" && (
                         <span className="px-3 py-1 bg-[#F4F4F4] text-[#616161] rounded-full text-xs font-medium">
                           Not-started
                         </span>

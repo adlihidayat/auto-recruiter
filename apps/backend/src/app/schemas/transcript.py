@@ -15,3 +15,16 @@ class TranscriptResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class TranscriptCreate(BaseModel):
+    goal_id: UUID
+    role: str
+    content: str
+    action: str | None = None
+    reasoning: str | None = None
+    trigger_matched: str | None = None
+    flag_for_human_review: bool = False
+    created_at: datetime | None = None
+
+class CandidateFinishRequest(BaseModel):
+    transcripts: list[TranscriptCreate]

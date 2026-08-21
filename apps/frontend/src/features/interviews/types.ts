@@ -23,7 +23,7 @@ export interface CandidateRecord {
   id: string;
   fullName: string;
   emailAddress: string;
-  status: "Invited" | "In_Progress" | "Evaluated" | "Passed" | "Rejected";
+  status: "not-started" | "on-progress" | "finished" | "Invited" | "In_Progress" | "Evaluated" | "Passed" | "Rejected";
   overallScore?: number;
   technicalDepthScore?: number;
   communicationScore?: number;

@@ -28,6 +28,9 @@ import importlib
 qm_graph_module = importlib.import_module("question-maker-agent.graph")
 question_maker_graph = qm_graph_module.graph
 
+grader_graph_module = importlib.import_module("interview-grader-agent.graph")
+grader_graph = grader_graph_module.create_grader_graph()
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("agents-service")
 
@@ -72,6 +75,16 @@ class QuestionItemSchema(BaseModel):
 
 class QuestionSuiteResponse(BaseModel):
     questions: List[QuestionItemSchema]
+
+grader_state_module = importlib.import_module("interview-grader-agent.state")
+JobContext = grader_state_module.JobContext
+PlanMeta = grader_state_module.PlanMeta
+GoalInput = grader_state_module.GoalInput
+
+class GraderRequest(BaseModel):
+    job_context: JobContext
+    plan_meta: PlanMeta
+    goals: List[GoalInput]
 
 @app.get("/health")
 async def health_check():
@@ -165,6 +178,36 @@ async def generate_question_suite(request: QuestionMakerRequest):
 
     except Exception as exc:
         logger.error(f"Error executing Question-Maker Agent graph: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Agent execution failed: {str(exc)}"
+        )
+
+@app.post("/api/grader/evaluate")
+async def evaluate_candidate(request: GraderRequest):
+    """
+    Invokes the Interview Grader Agent LangGraph workflow.
+    """
+    logger.info(f"Received grading request for job: '{request.job_context.job_name}'")
+    
+    input_state = {
+        "job_context": request.job_context.model_dump(),
+        "plan_meta": request.plan_meta.model_dump(),
+        "goals": [g.model_dump() for g in request.goals]
+    }
+    
+    try:
+        result_state = await grader_graph.ainvoke(input_state)
+        
+        # Return the final report, overall score, and recommendation
+        return {
+            "overall_score": result_state.get("overall_score"),
+            "recommendation": result_state.get("recommendation"),
+            "final_report": result_state.get("final_report"),
+            "injection_findings": result_state.get("injection_findings")
+        }
+    except Exception as exc:
+        logger.error(f"Error executing Grader Agent graph: {exc}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Agent execution failed: {str(exc)}"

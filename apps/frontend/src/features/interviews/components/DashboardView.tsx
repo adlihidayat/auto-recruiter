@@ -77,6 +77,7 @@ export default function DashboardView() {
                     campaign.activeCandidateCount = candidates.length;
                     campaign.evaluatedCandidateCount = candidates.filter(
                       (c) =>
+                        c.status?.toLowerCase() === "finished" ||
                         c.status?.toLowerCase() === "done" ||
                         c.status?.toLowerCase() === "evaluated" ||
                         c.status?.toLowerCase() === "completed" ||

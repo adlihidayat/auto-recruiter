@@ -75,3 +75,59 @@ async def get_candidate_transcripts(
     )
     transcripts = result.scalars().all()
     return list(transcripts)
+
+from fastapi import BackgroundTasks
+from app.schemas.transcript import CandidateFinishRequest
+from app.services.grader_service import process_candidate_grading
+
+@router.post("/{candidate_id}/finish", status_code=status.HTTP_202_ACCEPTED)
+async def finish_candidate_interview(
+    candidate_id: UUID,
+    request: CandidateFinishRequest,
+    background_tasks: BackgroundTasks,
+    session: SessionDep
+):
+    """
+    Called by the Realtime Worker when an interview completes.
+    Saves the full transcript history and dispatches a background task to grade the candidate.
+    Note: Realtime Worker might not pass a user token, so this endpoint might need to be unprotected
+    or protected by a service token in production. For now we assume internal access.
+    """
+    # Fetch candidate
+    result = await session.execute(
+        select(Candidate).where(Candidate.id == candidate_id)
+    )
+    candidate = result.scalar_one_or_none()
+    if not candidate:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Candidate not found"
+        )
+        
+    # Save transcripts
+    for t_data in request.transcripts:
+        transcript = Transcript(
+            candidate_id=candidate.id,
+            goal_id=t_data.goal_id,
+            role=t_data.role,
+            content=t_data.content,
+            action=t_data.action,
+            reasoning=t_data.reasoning,
+            trigger_matched=t_data.trigger_matched,
+            flag_for_human_review=t_data.flag_for_human_review,
+        )
+        # only override created_at if provided
+        if t_data.created_at:
+            transcript.created_at = t_data.created_at
+            
+        session.add(transcript)
+        
+    # Update candidate status to on-progress (since grading takes time)
+    candidate.status = "on-progress"
+    
+    await session.commit()
+    
+    # Dispatch Background Task for grading
+    background_tasks.add_task(process_candidate_grading, candidate.id)
+    
+    return {"status": "accepted", "message": "Interview finished, grading in progress"}
