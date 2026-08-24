@@ -52,57 +52,69 @@ export default function DashboardView() {
   >("ALL");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  useEffect(() => {
-    async function loadBackendInterviews() {
-      try {
-        const rawToken = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("access_token="))
-          ?.split("=")[1];
+  const loadBackendInterviews = React.useCallback(async () => {
+    try {
+      const rawToken = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("access_token="))
+        ?.split("=")[1];
 
-        const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
+      const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
 
-        if (tokenCookie) {
-          const backendInterviews = await getInterviewsApi(tokenCookie);
-          if (backendInterviews && backendInterviews.length > 0) {
-            const mappedCampaigns = await Promise.all(
-              backendInterviews.map(async (bi) => {
-                const campaign = mapBackendInterviewToCampaign(bi);
-                try {
-                  const candidates = await getCandidatesForInterviewApi(
-                    bi.id,
-                    tokenCookie,
-                  );
-                  if (candidates) {
-                    campaign.activeCandidateCount = candidates.length;
-                    campaign.evaluatedCandidateCount = candidates.filter(
-                      (c) =>
-                        c.status?.toLowerCase() === "finished" ||
-                        c.status?.toLowerCase() === "done" ||
-                        c.status?.toLowerCase() === "evaluated" ||
-                        c.status?.toLowerCase() === "completed" ||
-                        c.status?.toLowerCase() === "passed" ||
-                        c.status?.toLowerCase() === "rejected" ||
-                        (c.composite_score !== null &&
-                          c.composite_score !== undefined),
-                    ).length;
-                  }
-                } catch {
-                  // Candidates fetch handles empty list gracefully
+      if (tokenCookie) {
+        const backendInterviews = await getInterviewsApi(tokenCookie);
+        if (backendInterviews) {
+          const mappedCampaigns = await Promise.all(
+            backendInterviews.map(async (bi) => {
+              const campaign = mapBackendInterviewToCampaign(bi);
+              try {
+                const candidates = await getCandidatesForInterviewApi(
+                  bi.id,
+                  tokenCookie,
+                );
+                if (candidates) {
+                  campaign.activeCandidateCount = candidates.length;
+                  campaign.evaluatedCandidateCount = candidates.filter(
+                    (c) =>
+                      c.status?.toLowerCase() === "finished" ||
+                      c.status?.toLowerCase() === "done" ||
+                      c.status?.toLowerCase() === "evaluated" ||
+                      c.status?.toLowerCase() === "completed" ||
+                      c.status?.toLowerCase() === "passed" ||
+                      c.status?.toLowerCase() === "rejected" ||
+                      (c.composite_score !== null &&
+                        c.composite_score !== undefined),
+                  ).length;
                 }
-                return campaign;
-              }),
-            );
-            setCampaignsList(mappedCampaigns);
-          }
+              } catch {
+                // Candidates fetch handles empty list gracefully
+              }
+              return campaign;
+            }),
+          );
+          setCampaignsList(mappedCampaigns);
         }
-      } catch (err) {
-        console.warn("Failed to fetch backend interviews", err);
       }
+    } catch (err) {
+      console.warn("Failed to fetch backend interviews", err);
     }
-
-    loadBackendInterviews();
   }, []);
+
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      await loadBackendInterviews();
+    };
+    fetchCampaigns();
+  }, [loadBackendInterviews]);
+
+  const handleCampaignDeleted = (deletedId: string) => {
+    setCampaignsList((prev) => prev.filter((c) => c.id !== deletedId));
+    loadBackendInterviews();
+  };
+
+  const handleCampaignUpdated = () => {
+    loadBackendInterviews();
+  };
 
   // Helper to strictly classify an interview into exactly ONE status (mutually exclusive)
   const getInterviewStatus = (c: InterviewCampaign): "FINISHED" | "NOT_STARTED" | "IN_PROGRESS" => {
@@ -260,7 +272,11 @@ export default function DashboardView() {
         </div>
 
         {/* Deep-linkable Interview Detail Popup Modal driven by ?interview=<id> searchParam */}
-        <InterviewDetailDialog interviewCampaignsList={campaignsList} />
+        <InterviewDetailDialog
+          interviewCampaignsList={campaignsList}
+          onCampaignDeleted={handleCampaignDeleted}
+          onCampaignUpdated={handleCampaignUpdated}
+        />
 
         {/* Campaign Creation Modal */}
         {/* Render Create Interview Modal */}
@@ -268,7 +284,7 @@ export default function DashboardView() {
           <CreateInterviewModal
             isOpen={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}
-            onCampaignCreated={() => window.location.reload()}
+            onCampaignCreated={loadBackendInterviews}
           />
         )}
       </div>

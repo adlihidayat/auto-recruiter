@@ -36,10 +36,14 @@ import {
 
 interface InterviewDetailDialogProps {
   interviewCampaignsList: InterviewCampaign[];
+  onCampaignDeleted?: (deletedId: string) => void;
+  onCampaignUpdated?: () => void;
 }
 
 export default function InterviewDetailDialog({
   interviewCampaignsList,
+  onCampaignDeleted,
+  onCampaignUpdated,
 }: InterviewDetailDialogProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -306,6 +310,7 @@ export default function InterviewDetailDialog({
 
       await updateInterviewApi(activeInterviewId, payload, tokenCookie);
       setIsEditModalOpen(false);
+      onCampaignUpdated?.();
       router.refresh();
     } catch (err: unknown) {
       setActionError((err as Error).message || "Failed to update interview.");
@@ -334,6 +339,7 @@ export default function InterviewDetailDialog({
 
       await deleteInterviewApi(activeInterviewId, tokenCookie);
       setIsDeleteConfirmOpen(false);
+      onCampaignDeleted?.(activeInterviewId);
       handleCloseDialog();
       router.refresh();
     } catch (err: unknown) {
