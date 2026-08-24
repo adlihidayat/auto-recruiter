@@ -6,15 +6,18 @@ Boundaries: Connects HTTP layer to Database layer without housing complex busine
 
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, status, BackgroundTasks
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from livekit import api
 
 from app.core.config import application_settings
 from app.api.deps import SessionDep, CurrentUser
 from app.models.interview import Interview
 from app.models.candidate import Candidate
+from app.models.goal import Goal
+from app.models.transcript import Transcript
+from app.models.report import CandidateReport
 from app.models.job import Job
-from app.schemas.interview import InterviewCreate, InterviewResponse, InterviewCreationResponse
+from app.schemas.interview import InterviewCreate, InterviewResponse, InterviewCreationResponse, InterviewUpdate
 from app.schemas.candidate import CandidateResponse
 from app.services.plan_service import process_interview_plan_generation
 
@@ -146,3 +149,115 @@ async def list_interview_candidates(
     )
     candidates = candidates_result.scalars().all()
     return list(candidates)
+
+@router.get("/{interview_id}", response_model=InterviewResponse)
+async def get_interview(
+    interview_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUser
+):
+    """
+    Get a single interview by ID. Verifies ownership.
+    """
+    result = await session.execute(
+        select(Interview).where(
+            Interview.id == interview_id,
+            Interview.creator_id == current_user.id
+        )
+    )
+    interview = result.scalar_one_or_none()
+    if not interview:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview not found"
+        )
+    return interview
+
+@router.patch("/{interview_id}", response_model=InterviewResponse)
+async def update_interview(
+    interview_id: UUID,
+    payload: InterviewUpdate,
+    session: SessionDep,
+    current_user: CurrentUser
+):
+    """
+    Update an interview position's details (job_name, job_description, difficulty, scheduled_at, etc.).
+    """
+    result = await session.execute(
+        select(Interview).where(
+            Interview.id == interview_id,
+            Interview.creator_id == current_user.id
+        )
+    )
+    interview = result.scalar_one_or_none()
+    if not interview:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview not found"
+        )
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(interview, field, value)
+
+    await session.commit()
+    await session.refresh(interview)
+    return interview
+
+@router.delete("/{interview_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_interview(
+    interview_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUser
+):
+    """
+    Delete an interview position and all associated candidates, goals, transcripts, reports, and jobs.
+    """
+    result = await session.execute(
+        select(Interview).where(
+            Interview.id == interview_id,
+            Interview.creator_id == current_user.id
+        )
+    )
+    interview = result.scalar_one_or_none()
+    if not interview:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview not found"
+        )
+
+    # 1. Fetch candidate IDs associated with this interview
+    cand_result = await session.execute(
+        select(Candidate.id).where(Candidate.interview_id == interview_id)
+    )
+    candidate_ids = cand_result.scalars().all()
+
+    if candidate_ids:
+        # Delete reports for these candidates
+        await session.execute(
+            delete(CandidateReport).where(CandidateReport.candidate_id.in_(candidate_ids))
+        )
+        # Delete transcripts for these candidates
+        await session.execute(
+            delete(Transcript).where(Transcript.candidate_id.in_(candidate_ids))
+        )
+        # Delete candidates
+        await session.execute(
+            delete(Candidate).where(Candidate.interview_id == interview_id)
+        )
+
+    # 2. Delete goals associated with this interview
+    await session.execute(
+        delete(Goal).where(Goal.interview_id == interview_id)
+    )
+
+    # 3. Delete background jobs associated with this interview
+    # Job.payload is JSONB: payload['interview_id']
+    await session.execute(
+        delete(Job).where(Job.payload["interview_id"].as_string() == str(interview_id))
+    )
+
+    # 4. Delete the interview record itself
+    await session.delete(interview)
+    await session.commit()
+    return None

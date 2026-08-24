@@ -20,6 +20,16 @@ class InterviewBase(BaseModel):
 class InterviewCreate(InterviewBase):
     candidates: list[CandidateCreate] = []
 
+class InterviewUpdate(BaseModel):
+    job_name: str | None = None
+    job_description: str | None = None
+    difficulty: str | None = None
+    num_goals: int | None = None
+    total_duration_minutes: int | None = None
+    domain_hint: str | None = None
+    communication_weight: float | None = None
+    scheduled_at: datetime | None = None
+
 from app.schemas.candidate import CandidateResponse
 
 class InterviewResponse(InterviewBase):

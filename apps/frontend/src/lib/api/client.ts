@@ -279,3 +279,61 @@ export async function createInterviewApi(
 
   return response.json();
 }
+
+export interface UpdateInterviewPayload {
+  job_name?: string;
+  job_description?: string;
+  difficulty?: string;
+  num_goals?: number;
+  total_duration_minutes?: number;
+  domain_hint?: string;
+  communication_weight?: number;
+  scheduled_at?: string | null;
+}
+
+/**
+ * Update an existing interview position.
+ */
+export async function updateInterviewApi(
+  interviewId: string,
+  payload: UpdateInterviewPayload,
+  token: string
+): Promise<BackendInterviewResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/interviews/${interviewId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    handleAuthError(response.status);
+    const errorData = await response.json().catch(() => ({ detail: "Failed to update interview" }));
+    throw new Error(`Failed to update interview (${response.status}): ${errorData.detail || "Bad Request"}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Delete an interview position and all associated records.
+ */
+export async function deleteInterviewApi(
+  interviewId: string,
+  token: string
+): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/interviews/${interviewId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    handleAuthError(response.status);
+    const errorData = await response.json().catch(() => ({ detail: "Failed to delete interview" }));
+    throw new Error(`Failed to delete interview (${response.status}): ${errorData.detail || "Bad Request"}`);
+  }
+}
