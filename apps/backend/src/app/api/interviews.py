@@ -7,18 +7,20 @@ Boundaries: Connects HTTP layer to Database layer without housing complex busine
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, status, BackgroundTasks
 from sqlalchemy import select
+from livekit import api
 
+from app.core.config import application_settings
 from app.api.deps import SessionDep, CurrentUser
 from app.models.interview import Interview
 from app.models.candidate import Candidate
 from app.models.job import Job
-from app.schemas.interview import InterviewCreate, InterviewResponse
+from app.schemas.interview import InterviewCreate, InterviewResponse, InterviewCreationResponse
 from app.schemas.candidate import CandidateResponse
 from app.services.plan_service import process_interview_plan_generation
 
 router = APIRouter()
 
-@router.post("", response_model=InterviewResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=InterviewCreationResponse, status_code=status.HTTP_201_CREATED)
 async def create_interview(
     payload: InterviewCreate,
     session: SessionDep,
@@ -50,9 +52,24 @@ async def create_interview(
             email=cand_data.email,
             first_name=cand_data.first_name,
             last_name=cand_data.last_name,
-            status="not_started"
+            status="not-started"
         )
         session.add(new_candidate)
+        await session.flush() # flush to get candidate ID
+
+        # Generate LiveKit Token
+        token = api.AccessToken(
+            application_settings.LIVEKIT_API_KEY, 
+            application_settings.LIVEKIT_API_SECRET
+        ) \
+            .with_identity(str(new_candidate.id)) \
+            .with_name(f"{cand_data.first_name} {cand_data.last_name}") \
+            .with_grants(api.VideoGrants(
+                room_join=True,
+                room=str(new_candidate.id)
+            ))
+            
+        new_candidate.room_token = token.to_jwt()
 
     # 3. Enqueue background Job to generate evaluation plan via AI agent
     background_job = Job(
@@ -65,10 +82,23 @@ async def create_interview(
     await session.commit()
     await session.refresh(new_interview)
 
-    # 4. Trigger asynchronous background plan generation (calls Agents Service over HTTP)
-    background_tasks.add_task(process_interview_plan_generation, new_interview.id)
+    # 4. Trigger synchronous plan generation (calls Agents Service over HTTP)
+    # The frontend is mocking a loading screen and expects this to block until ready.
+    await process_interview_plan_generation(new_interview.id)
 
-    return new_interview
+    # Re-fetch candidates to ensure their status/info is up to date (though we just created them)
+    candidates_result = await session.execute(
+        select(Candidate).where(Candidate.interview_id == new_interview.id)
+    )
+    final_candidates = candidates_result.scalars().all()
+
+    # Re-fetch the interview since the background job processing updates its status
+    await session.refresh(new_interview)
+
+    return {
+        "interview": new_interview,
+        "candidates": final_candidates
+    }
 
 @router.get("", response_model=list[InterviewResponse])
 async def list_interviews(session: SessionDep, current_user: CurrentUser):

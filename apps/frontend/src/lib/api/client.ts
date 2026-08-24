@@ -250,13 +250,18 @@ export interface CreateInterviewPayload {
   candidates?: CreateCandidatePayload[];
 }
 
+export interface InterviewCreationResponse {
+  interview: BackendInterviewResponse;
+  candidates: BackendCandidateResponse[];
+}
+
 /**
  * Submit a new interview position and initial candidates to the backend.
  */
 export async function createInterviewApi(
   payload: CreateInterviewPayload,
   token: string
-): Promise<BackendInterviewResponse> {
+): Promise<InterviewCreationResponse> {
   const response = await fetch(`${API_BASE_URL}/api/interviews`, {
     method: "POST",
     headers: {

@@ -23,4 +23,5 @@ dependencies = [
     "sqlalchemy>=2.0.52",
     "tavily-python>=0.7.27",
     "uvicorn[standard]>=0.52.3",
+    "livekit-api>=0.7.0",
 ]

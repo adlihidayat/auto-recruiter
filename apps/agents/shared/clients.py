@@ -52,8 +52,7 @@ class RotatingModelWrapper:
 gemini_flash_lite = RotatingModelWrapper(
     "gemini-3.1-flash-lite",
     temperature=0.0,
-    max_retries=0,
-    timeout=60.0
+    max_retries=0
 )
 
 # Gemini 3.5 Flash: Balanced model for general text processing and validation.
@@ -68,42 +67,53 @@ gemini_pro = RotatingModelWrapper(
     temperature=0.0,
 )
 
-# --- HuggingFace Clients ---
-from huggingface_hub import InferenceClient
+# --- Local PromptGuard Client ---
 from langsmith import traceable
+import os
 
-hf_token = os.getenv("HF_TOKEN")
-if hf_token:
-    hf_client = InferenceClient(token=hf_token)
-else:
-    hf_client = None
+try:
+    from transformers import pipeline
+    import warnings
+    # Suppress HuggingFace warnings about tokenization
+    warnings.filterwarnings("ignore", category=UserWarning, module="transformers")
+    
+    hf_token = os.getenv("HF_TOKEN")
+    
+    prompt_guard = pipeline(
+        "text-classification",
+        model="meta-llama/Prompt-Guard-86M",
+        token=hf_token
+    )
+except ImportError:
+    prompt_guard = None
+    print("Warning: transformers or torch library not found. Please install them to use PromptGuard locally.")
 
 @traceable(name="prompt_guard_score")
 def get_prompt_guard_score(text: str) -> float:
     """
-    Calls meta-llama/Prompt-Guard-86M via HuggingFace Inference API.
+    Calls meta-llama/Prompt-Guard-86M locally using transformers pipeline.
     Returns a float 0.0-1.0 representing the likelihood of injection or jailbreak.
     """
-    if not hf_client:
-        raise ValueError("HF_TOKEN is not set.")
+    if prompt_guard is None:
+        raise ValueError("prompt_guard pipeline is not initialized. Ensure transformers and torch are installed.")
         
     try:
-        results = hf_client.text_classification(text, model="meta-llama/Prompt-Guard-86M")
+        # top_k=None returns all scores
+        results = prompt_guard(text, top_k=None)
         
-        # Results is a list of elements like: TextClassificationOutputElement(label='INJECTION', score=0.99)
-        # We consider both INJECTION and JAILBREAK as malicious.
         malicious_score = 0.0
+        if isinstance(results, list) and isinstance(results[0], list):
+            results = results[0]
+            
         for res in results:
-            # Handle if it returns a dict or an object
-            label = res.label if hasattr(res, 'label') else res.get('label', '')
-            score = res.score if hasattr(res, 'score') else res.get('score', 0.0)
+            label = res.get('label', '')
+            score = res.get('score', 0.0)
             
             if label.upper() in ["INJECTION", "JAILBREAK"]:
                 malicious_score += score
                 
-        # Cap at 1.0 just in case
         return min(malicious_score, 1.0)
     except Exception as e:
-        print(f"Error calling PromptGuard: {e}")
-        # Fail open or closed? If API fails, return 0.5 (uncertain) to force LLM review
+        print(f"Error running local PromptGuard: {e}")
+        # Fail open or closed? If inference fails, return 0.5 (uncertain) to force LLM review
         return 0.5

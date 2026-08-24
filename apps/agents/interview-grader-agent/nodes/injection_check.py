@@ -70,15 +70,23 @@ INJECTION_REGEX_PATTERNS = (
     + INJECTION_PATTERNS_SCORE_MANIPULATION
 )
 
+class Layer3Result(BaseModel):
+    goal_id: str
+    turn_id: str
+    is_injection: bool
+    confidence: str
+    rationale: str
+    offending_span: Optional[str] = None
+
 class Layer3Extraction(BaseModel):
-    findings: List[InjectionFinding]
+    results: List[Layer3Result]
 
 @traceable(name="run_injection_check")
 def run_injection_check(state: GraderState) -> Dict[str, Any]:
     """
     Injection check node running 3 layers of defense.
     Layer 1: Regex
-    Layer 2: HF PromptGuard API
+    Layer 2: Local PromptGuard
     Layer 3: LLM Span Classifier (conditional)
     """
     findings: List[InjectionFinding] = []
@@ -151,10 +159,21 @@ def run_injection_check(state: GraderState) -> Dict[str, Any]:
             chain = INJECTION_PROMPT | gemini_flash_lite.with_structured_output(Layer3Extraction)
             result = chain.invoke({"queued_turns": turns_text})
             
-            for f in result.findings:
-                # Add metadata since the LLM might hallucinate it
-                f.layer_detected = "layer_3_llm"
-                findings.append(f)
+            # Map back L2 scores from queued_turns for inclusion in the final finding
+            qt_map = {f"{qt['goal_id']}_{qt['turn_id']}": qt['l2_score'] for qt in queued_turns}
+            
+            for res in result.results:
+                if res.is_injection:
+                    l2_score = qt_map.get(f"{res.goal_id}_{res.turn_id}")
+                    findings.append(InjectionFinding(
+                        goal_id=res.goal_id,
+                        turn_id=res.turn_id,
+                        layer_detected="layer_3_llm",
+                        layer_2_score=l2_score,
+                        confidence=res.confidence,
+                        quote=res.offending_span or "Unknown",
+                        rationale=res.rationale
+                    ))
                 
         except Exception as e:
             print(f"Layer 3 LLM failed: {e}")

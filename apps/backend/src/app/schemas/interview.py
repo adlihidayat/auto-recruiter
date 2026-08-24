@@ -20,6 +20,8 @@ class InterviewBase(BaseModel):
 class InterviewCreate(InterviewBase):
     candidates: list[CandidateCreate] = []
 
+from app.schemas.candidate import CandidateResponse
+
 class InterviewResponse(InterviewBase):
     id: UUID
     creator_id: UUID
@@ -28,3 +30,7 @@ class InterviewResponse(InterviewBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class InterviewCreationResponse(BaseModel):
+    interview: InterviewResponse
+    candidates: list[CandidateResponse]
