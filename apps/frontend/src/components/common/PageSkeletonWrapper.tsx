@@ -50,7 +50,10 @@ function DashboardSkeleton() {
           <div className="flex items-center gap-7 mb-7">
             <div className="flex items-end gap-1 h-5.5">
               {[...Array(17)].map((_, i) => (
-                <div key={i} className="w-1 h-full bg-gray-200 rounded-full animate-pulse" />
+                <div
+                  key={i}
+                  className="w-1 h-full bg-gray-200 rounded-full animate-pulse"
+                />
               ))}
             </div>
             <div className="w-32 h-6 bg-gray-200 rounded animate-pulse" />
@@ -60,18 +63,24 @@ function DashboardSkeleton() {
           {/* Tabs Section */}
           <div className="flex items-center gap-7 border-b border-[#F1F1F1] mb-7">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="pb-4 w-24 h-5 bg-gray-200 rounded animate-pulse" />
+              <div
+                key={i}
+                className="pb-4 w-24 h-5 bg-gray-200 rounded animate-pulse"
+              />
             ))}
           </div>
 
           {/* Campaigns Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div key={i} className="bg-white rounded-[24px] p-6 border border-[#E9E9E9] h-[220px] shadow-sm space-y-4">
-                 <div className="w-32 h-6 bg-gray-200 rounded animate-pulse" />
-                 <div className="w-24 h-4 bg-gray-100 rounded animate-pulse" />
-                 <div className="w-full h-12 bg-gray-100 rounded animate-pulse mt-4" />
-                 <div className="w-full h-8 bg-gray-100 rounded-full animate-pulse mt-4" />
+              <div
+                key={i}
+                className="bg-white rounded-[24px] p-6 border border-[#E9E9E9] h-[220px] shadow-sm space-y-4"
+              >
+                <div className="w-32 h-6 bg-gray-200 rounded animate-pulse" />
+                <div className="w-24 h-4 bg-gray-100 rounded animate-pulse" />
+                <div className="w-full h-12 bg-gray-100 rounded animate-pulse mt-4" />
+                <div className="w-full h-8 bg-gray-100 rounded-full animate-pulse mt-4" />
               </div>
             ))}
           </div>
@@ -85,17 +94,6 @@ function DashboardSkeleton() {
 function CandidateRoomSkeleton() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#272727] font-sans flex flex-col justify-between selection:bg-[#FE6100]/20 animate-in fade-in duration-150">
-      <header className="h-16 border-b border-[#E9E9E9] bg-white px-6 flex items-center justify-between shadow-sm sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gray-200 animate-pulse" />
-          <div className="flex items-center gap-2">
-            <div className="w-32 h-5 bg-gray-200 rounded animate-pulse" />
-            <div className="w-24 h-5 bg-gray-100 rounded-full animate-pulse" />
-          </div>
-        </div>
-        <div className="w-32 h-7 bg-gray-100 rounded-md animate-pulse" />
-      </header>
-
       <main className="flex-1 max-w-5xl w-full mx-auto p-6 flex flex-col justify-center items-center">
         <div className="w-full max-w-xl bg-white rounded-3xl border border-[#E9E9E9] shadow-xl p-8 animate-in fade-in zoom-in-95 duration-200">
           <div className="text-center mb-8 flex flex-col items-center">
@@ -173,8 +171,11 @@ function LoginSkeleton() {
           <div className="mt-8 space-y-3">
             <div className="w-24 h-4 bg-gray-200 rounded animate-pulse" />
             <div className="flex gap-2.5">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="w-9 h-9 rounded-xl bg-gray-100 animate-pulse" />
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="w-9 h-9 rounded-xl bg-gray-100 animate-pulse"
+                />
               ))}
             </div>
           </div>
@@ -208,10 +209,10 @@ function CandidateReportSkeleton() {
               </div>
               <div className="space-y-3">
                 {[1, 2, 3, 4].map((i) => (
-                   <div key={i} className="flex items-center gap-3">
-                     <div className="w-1 h-6 rounded-full bg-gray-200 animate-pulse" />
-                     <div className="w-48 h-4 bg-gray-100 rounded animate-pulse" />
-                   </div>
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="w-1 h-6 rounded-full bg-gray-200 animate-pulse" />
+                    <div className="w-48 h-4 bg-gray-100 rounded animate-pulse" />
+                  </div>
                 ))}
               </div>
             </div>
@@ -241,7 +242,12 @@ function CandidateReportSkeleton() {
                     <div className="w-32 h-4 bg-gray-200 rounded animate-pulse mb-2" />
                     <div className="w-16 h-8 bg-gray-200 rounded animate-pulse mb-6" />
                     <div className="space-y-4">
-                      {[1, 2, 3].map(i => <div key={i} className="w-full h-4 bg-gray-100 rounded animate-pulse" />)}
+                      {[1, 2, 3].map((i) => (
+                        <div
+                          key={i}
+                          className="w-full h-4 bg-gray-100 rounded animate-pulse"
+                        />
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -250,7 +256,12 @@ function CandidateReportSkeleton() {
                     <div className="w-32 h-4 bg-gray-200 rounded animate-pulse mb-2" />
                     <div className="w-16 h-8 bg-gray-200 rounded animate-pulse mb-6" />
                     <div className="space-y-4">
-                      {[1, 2, 3].map(i => <div key={i} className="w-full h-4 bg-gray-100 rounded animate-pulse" />)}
+                      {[1, 2, 3].map((i) => (
+                        <div
+                          key={i}
+                          className="w-full h-4 bg-gray-100 rounded animate-pulse"
+                        />
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -262,7 +273,7 @@ function CandidateReportSkeleton() {
         <div className="bg-white rounded-[28px] border border-[#F1F1F1] p-7 shadow-2xs min-h-[300px]">
           <div className="w-48 h-6 bg-gray-200 rounded animate-pulse pb-4 mb-6" />
           <div className="space-y-6">
-            {[1, 2, 3, 4].map(i => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="flex gap-4">
                 <div className="w-6 h-4 bg-gray-200 rounded animate-pulse" />
                 <div className="w-2 h-2 rounded-full bg-gray-200 animate-pulse mt-1" />
@@ -295,7 +306,7 @@ function InnerSkeletonLoader({ children }: { children: React.ReactNode }) {
     if (pathname.startsWith("/login")) {
       return <LoginSkeleton />;
     }
-    if (pathname.startsWith("/interview/")) {
+    if (pathname === "/interview" || pathname.startsWith("/interview/")) {
       return <CandidateRoomSkeleton />;
     }
     if (pathname.includes("/candidates/")) {
@@ -314,9 +325,5 @@ export default function PageSkeletonWrapper({
 }) {
   const pathname = usePathname();
 
-  return (
-    <InnerSkeletonLoader key={pathname}>
-      {children}
-    </InnerSkeletonLoader>
-  );
+  return <InnerSkeletonLoader key={pathname}>{children}</InnerSkeletonLoader>;
 }

@@ -44,9 +44,20 @@ export default function CandidateInterviewPage({
   // Unwrap params
   useEffect(() => {
     params.then((res) => {
-      if (res.token) setToken(res.token);
+      if (res.token) {
+        setToken(res.token);
+      }
     });
   }, [params]);
+
+  // Log active candidate room token
+  useEffect(() => {
+    if (token) {
+      console.log("Candidate room token initialized:", token);
+    }
+  }, [token]);
+
+  const [activeMicLabel, setActiveMicLabel] = useState<string>("");
 
   // Request real Microphone stream & setup Web Audio API Analyser
   const initMicrophone = React.useCallback(
@@ -67,6 +78,18 @@ export default function CandidateInterviewPage({
         streamRef.current = stream;
         setHasMicPermission(true);
 
+        // Read active audio track properties from the actual stream
+        const track = stream.getAudioTracks()[0];
+        if (track) {
+          if (track.label) {
+            setActiveMicLabel(track.label);
+          }
+          const settings = track.getSettings();
+          if (settings.deviceId) {
+            setSelectedInput(settings.deviceId);
+          }
+        }
+
         // Refresh device list now that permissions are granted
         const devices = await navigator.mediaDevices.enumerateDevices();
         const inputs = devices.filter((d) => d.kind === "audioinput");
@@ -74,8 +97,8 @@ export default function CandidateInterviewPage({
         setAudioInputs(inputs);
         setAudioOutputs(outputs);
 
-        if (!selectedInput && inputs.length > 0) {
-          setSelectedInput(inputs[0].deviceId);
+        if (!selectedOutput && outputs.length > 0) {
+          setSelectedOutput(outputs[0].deviceId);
         }
 
         // Audio Context setup
@@ -109,10 +132,26 @@ export default function CandidateInterviewPage({
         updateLevel();
       } catch (err: unknown) {
         console.error("Microphone access error:", err);
-        setHasMicPermission(false);
+        // Fallback to default audio stream if exact deviceId constraints failed
+        if (deviceId) {
+          console.warn("Exact mic constraint failed, falling back to default stream");
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
+          if (fallbackStream) {
+            streamRef.current = fallbackStream;
+            setHasMicPermission(true);
+            const fallbackTrack = fallbackStream.getAudioTracks()[0];
+            if (fallbackTrack?.label) {
+              setActiveMicLabel(fallbackTrack.label);
+            }
+          } else {
+            setHasMicPermission(false);
+          }
+        } else {
+          setHasMicPermission(false);
+        }
       }
     },
-    [selectedInput],
+    [selectedOutput],
   );
 
   // Handle Mute / Unmute stream tracks
@@ -195,8 +234,10 @@ export default function CandidateInterviewPage({
                       Microphone
                     </p>
                     <p className="text-xs text-[#616161]">
-                      {audioInputs.find((d) => d.deviceId === selectedInput)
-                        ?.label || "Default Microphone"}
+                      {activeMicLabel ||
+                        audioInputs.find((d) => d.deviceId === selectedInput)
+                          ?.label ||
+                        "Default Microphone"}
                     </p>
                   </div>
                 </div>
@@ -351,7 +392,11 @@ export default function CandidateInterviewPage({
                     <div className="relative">
                       <select
                         value={selectedInput}
-                        onChange={(e) => setSelectedInput(e.target.value)}
+                        onChange={(e) => {
+                          const newDeviceId = e.target.value;
+                          setSelectedInput(newDeviceId);
+                          initMicrophone(newDeviceId);
+                        }}
                         className="w-full bg-[#18181B] border border-gray-600 rounded-xl px-3 py-2 text-white appearance-none focus:outline-none focus:border-[#FE6100]"
                       >
                         {audioInputs.map((d) => (
