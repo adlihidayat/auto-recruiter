@@ -46,14 +46,20 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = async () => {
-    // Clear document cookie on client
-    document.cookie =
-      "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
-    // Call server action to delete cookie
-    await logoutAction();
     setIsDropdownOpen(false);
-    router.push("/login");
-    router.refresh();
+    try {
+      // 1. Server Action clears server cookie
+      await logoutAction();
+    } catch (err) {
+      console.warn("Logout action warning:", err);
+    } finally {
+      // 2. Clear document cookie on client with max-age=0
+      document.cookie =
+        "access_token=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
+      // 3. Client navigation to /login
+      router.push("/login");
+      router.refresh();
+    }
   };
 
   // Format display name from email (e.g. admin@example.com -> Admin)

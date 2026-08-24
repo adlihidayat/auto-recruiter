@@ -17,6 +17,11 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/interviews") ||
     pathname.startsWith("/settings");
 
+  // Bypass redirection for Next.js Server Actions
+  if (request.headers.has("next-action")) {
+    return NextResponse.next();
+  }
+
   // Redirect unauthenticated user trying to access dashboard to /login
   if (isDashboardRoute && !token) {
     const loginUrl = new URL("/login", request.url);

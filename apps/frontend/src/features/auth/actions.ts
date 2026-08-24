@@ -36,7 +36,19 @@ export async function loginAction(
 /**
  * Server action to log out the user by deleting the access token cookie.
  */
-export async function logoutAction(): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.delete("access_token");
+export async function logoutAction(): Promise<{ success: boolean }> {
+  try {
+    const cookieStore = await cookies();
+    cookieStore.set("access_token", "", {
+      path: "/",
+      maxAge: 0,
+      expires: new Date(0),
+    });
+    cookieStore.delete("access_token");
+    return { success: true };
+  } catch (err: unknown) {
+    console.error("Error in logoutAction:", err);
+    return { success: false };
+  }
 }
+
