@@ -45,6 +45,8 @@ export default function CreateInterviewModal({
 }: CreateInterviewModalProps) {
   const [modalStep, setModalStep] = useState<ModalStep>("form");
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
+  const [loadingProgressPercent, setLoadingProgressPercent] = useState(0);
+  const [isBackendDone, setIsBackendDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -76,6 +78,8 @@ export default function CreateInterviewModal({
     setModalStep("form");
     setError(null);
     setLoadingStepIndex(0);
+    setLoadingProgressPercent(0);
+    setIsBackendDone(false);
     setCreatedInterview(null);
     setCreatedCandidates([]);
     setCopiedCandidateId(null);
@@ -149,6 +153,8 @@ export default function CreateInterviewModal({
       // Transition to loading step without closing modal
       setModalStep("loading");
       setLoadingStepIndex(0);
+      setLoadingProgressPercent(0);
+      setIsBackendDone(false);
 
       const rawToken = document.cookie
         .split("; ")
@@ -160,10 +166,25 @@ export default function CreateInterviewModal({
         throw new Error("You must be logged in to create an interview.");
       }
 
-      // Start mock progress sequence interval
+      // Timer tick: 4 steps over ~30 seconds (7.5s / step)
+      // Progress caps at 85% until backend promise completes
+      const startTime = Date.now();
+      const TOTAL_STEPS_TIME_MS = 30000; // 30 seconds for 4 steps
+
       const progressTimer = setInterval(() => {
-        setLoadingStepIndex((prev) => (prev < 3 ? prev + 1 : prev));
-      }, 650);
+        const elapsed = Date.now() - startTime;
+        const currentStep = Math.min(
+          3,
+          Math.floor((elapsed / TOTAL_STEPS_TIME_MS) * 4)
+        );
+        setLoadingStepIndex(currentStep);
+
+        const targetPercent = Math.min(
+          85,
+          Math.floor((elapsed / TOTAL_STEPS_TIME_MS) * 85)
+        );
+        setLoadingProgressPercent(targetPercent);
+      }, 250);
 
       const payload: CreateInterviewPayload = {
         ...formData,
@@ -180,7 +201,7 @@ export default function CreateInterviewModal({
       let fetchedCandidates: BackendCandidateResponse[] =
         creationResult.candidates || [];
 
-      // If candidates list wasn't populated directly, fetch via candidates endpoint with valid interview ID
+      // Fallback if candidates list wasn't directly populated
       if (fetchedCandidates.length === 0 && creationResult.interview?.id) {
         try {
           fetchedCandidates = await getCandidatesForInterviewApi(
@@ -192,14 +213,17 @@ export default function CreateInterviewModal({
         }
       }
 
+      // Backend finished: clear timer, mark backend done, set 100% progress and check all steps
       clearInterval(progressTimer);
-      setLoadingStepIndex(3);
+      setIsBackendDone(true);
+      setLoadingStepIndex(4);
+      setLoadingProgressPercent(100);
 
-      // Brief pause for step completion UX before transitioning to success
+      // Pause briefly so user sees 100% completion before transitioning to success
       setTimeout(() => {
         setCreatedCandidates(fetchedCandidates);
         setModalStep("success");
-      }, 400);
+      }, 600);
     } catch (err: unknown) {
       setModalStep("form");
       setError(
@@ -558,7 +582,11 @@ export default function CreateInterviewModal({
               <div className="absolute w-24 h-24 rounded-full bg-[#FE6100]/20 animate-ping opacity-75" />
               <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[#FE6100] to-amber-400 p-1 shadow-lg relative z-10 flex items-center justify-center">
                 <div className="w-full h-full bg-white rounded-full flex items-center justify-center">
-                  <Sparkles className="w-8 h-8 text-[#FE6100] animate-spin" />
+                  <Sparkles
+                    className={`w-8 h-8 text-[#FE6100] ${
+                      isBackendDone ? "" : "animate-spin"
+                    }`}
+                  />
                 </div>
               </div>
             </div>
@@ -569,7 +597,9 @@ export default function CreateInterviewModal({
                 Synthesizing AI Recruiting Pipeline
               </h3>
               <p className="text-sm font-medium text-[#FE6100] animate-pulse">
-                {AI_PROGRESS_STEPS[loadingStepIndex]}
+                {isBackendDone
+                  ? "Interview Plan & LiveKit Tokens Ready!"
+                  : AI_PROGRESS_STEPS[Math.min(3, loadingStepIndex)]}
               </p>
             </div>
 
@@ -577,7 +607,7 @@ export default function CreateInterviewModal({
             <div className="w-full max-w-md bg-gray-50 border border-[#E9E9E9] rounded-2xl p-5 text-left space-y-3.5">
               {AI_PROGRESS_STEPS.map((stepText, idx) => {
                 const isCompleted = idx < loadingStepIndex;
-                const isCurrent = idx === loadingStepIndex;
+                const isCurrent = idx === loadingStepIndex && !isBackendDone;
 
                 return (
                   <div
@@ -613,14 +643,22 @@ export default function CreateInterviewModal({
               })}
             </div>
 
-            {/* Progress Bar */}
-            <div className="w-full max-w-md h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[#FE6100] to-amber-500 transition-all duration-500 ease-out"
-                style={{
-                  width: `${((loadingStepIndex + 1) / AI_PROGRESS_STEPS.length) * 100}%`,
-                }}
-              />
+            {/* Progress Bar & Percentage Label */}
+            <div className="w-full max-w-md space-y-2">
+              <div className="flex justify-between items-center text-xs font-semibold text-[#616161]">
+                <span>Pipeline Generation Progress</span>
+                <span className="text-[#FE6100] font-mono font-bold">
+                  {loadingProgressPercent}%
+                </span>
+              </div>
+              <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#FE6100] to-amber-500 transition-all duration-300 ease-out rounded-full"
+                  style={{
+                    width: `${loadingProgressPercent}%`,
+                  }}
+                />
+              </div>
             </div>
           </div>
         )}
