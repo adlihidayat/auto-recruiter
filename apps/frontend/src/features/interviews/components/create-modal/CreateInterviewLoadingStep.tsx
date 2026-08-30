@@ -33,18 +33,20 @@ export const CreateInterviewLoadingStep: React.FC<CreateInterviewLoadingStepProp
   onContinue,
 }) => {
   return (
-    <div className="animate-in fade-in zoom-in-95 duration-200">
-      <div className="bg-[#f9fafb] rounded-[2rem] p-6 sm:p-8 w-full shadow-sm border border-gray-100">
+    <div className="animate-in fade-in zoom-in-95 duration-200 w-130 h-full">
+      <div className="bg-white rounded-[2rem] w-full">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6 px-4 pt-2">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-gray-900">Agent Handoff</h2>
-            <span className="bg-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-semibold">
+            <h2 className="text-base font-semibold text-gray-900">
+              Creating interview Plan
+            </h2>
+            <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-md text-xs font-semibold">
               4 agents
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-mono text-gray-500">
+            <span className="text-xs font-mono text-gray-500">
               {(elapsedTime / 1000).toFixed(1)}s
             </span>
             <div
@@ -55,109 +57,114 @@ export const CreateInterviewLoadingStep: React.FC<CreateInterviewLoadingStepProp
           </div>
         </div>
 
-        {/* Task Row */}
-        <div className="flex items-center justify-between border-b border-dashed border-gray-300 pb-5 mb-8">
-          <div className="flex items-center gap-4">
-            <span className="text-xs font-bold text-gray-400 tracking-wider">
-              TASK
-            </span>
-            <span className="text-[15px] font-medium text-gray-800">
-              {formData.job_description.substring(0, 50) ||
-                "Analyze and create interview plan"}
-              {formData.job_description.length > 50 ? "..." : ""}
+        <div className=" bg-[#f4f4f581] pt-4 pb-6 rounded-xl">
+          {/* Task Row */}
+          <div className="flex items-center justify-between border-b border-dashed border-gray-200 pb-5 mb-6 px-4">
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-semibold text-gray-600 tracking-wider">
+                Task :
+              </span>
+              <span className="text-xs font-medium text-gray-800">
+                {formData.job_description.substring(0, 50) ||
+                  "Analyze and create interview plan"}
+                {formData.job_description.length > 50 ? "..." : ""}
+              </span>
+            </div>
+            <span className="text-xs font-mono text-gray-600">
+              #12f157dds
             </span>
           </div>
-          <span className="text-xs font-mono text-gray-400">run_mock</span>
-        </div>
 
-        {/* Agents Progress */}
-        <div className="relative mb-12">
-          <div className="flex justify-between relative z-10 px-2 sm:px-6">
-            {AGENT_STEPS.map((step, idx) => {
-              const isActive = activeAgentIndex === idx && !isBackendDone;
-              const isPast = activeAgentIndex > idx || isBackendDone;
-              return (
-                <div
-                  key={idx}
-                  className="flex flex-col items-center gap-3 bg-[#f9fafb]"
-                >
+          {/* Agents Progress */}
+          <div className="relative">
+            <div className="flex justify-between relative z-10 px-2 sm:px-6">
+              {AGENT_STEPS.map((step, idx) => {
+                const isActive =
+                  activeAgentIndex === idx && !isBackendDone;
+                const isPast = activeAgentIndex > idx || isBackendDone;
+                return (
                   <div
-                    className={`relative w-16 h-16 rounded-2xl flex items-center justify-center transition-colors duration-500 ${
-                      isPast || isActive
-                        ? step.bg + " " + step.color
-                        : "bg-gray-100 text-gray-400"
-                    }`}
+                    key={idx}
+                    className="flex flex-col items-center gap-3 "
                   >
-                    {step.icon}
-                    {(isPast || isActive) && (
-                      <div
-                        className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full border-[3px] border-[#f9fafb] flex items-center justify-center ${step.badgeBg}`}
-                      >
-                        <Check
-                          className="w-3 h-3 text-white"
-                          strokeWidth={3}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-center">
                     <div
-                      className={`text-[15px] font-bold ${
-                        isActive ? "text-gray-900" : "text-gray-500"
+                      className={`relative w-12 h-12 rounded-2xl flex items-center justify-center transition-colors duration-500 ${
+                        isPast || isActive
+                          ? `${step.bg + " " + step.color} border border-[${step.color}]`
+                          : "bg-white text-gray-400"
                       }`}
                     >
-                      {step.name}
+                      {step.icon}
+                      {isPast && (
+                        <div
+                          className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full border-[3px] border-[#f9fafb] flex items-center justify-center ${step.badgeBg}`}
+                        >
+                          <Check
+                            className="w-3 h-3 text-white"
+                            strokeWidth={3}
+                          />
+                        </div>
+                      )}
                     </div>
-                    <div className="text-[10px] font-bold text-gray-400 tracking-wider uppercase mt-0.5">
-                      {step.role}
+                    <div className="text-center">
+                      <div
+                        className={`text-sm font-medium ${
+                          isActive ? "text-gray-900" : "text-gray-600"
+                        }`}
+                      >
+                        {step.name}
+                      </div>
+                      <div className="text-[10px] font-medium text-gray-600  mt-0.5">
+                        {step.role}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-          {/* Progress bar line */}
-          <div className="absolute top-8 left-10 right-10 -z-0">
-            <div className="w-full relative h-1 bg-gray-200 rounded-full">
-              <div
-                className="absolute top-0 left-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-orange-500 rounded-full transition-all duration-300 ease-linear"
-                style={{ width: `${mockProgressPercent}%` }}
-              />
-              <div
-                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white shadow-sm transition-all duration-300 ease-linear"
-                style={{
-                  left: `calc(${mockProgressPercent}% - 8px)`,
-                  display: mockProgressPercent > 0 ? "block" : "none",
-                }}
-              />
+                );
+              })}
+            </div>
+            {/* Progress bar line */}
+            <div className="absolute top-6 left-10 right-10 -z-0">
+              <div className="w-full relative h-1 bg-gray-200 rounded-full">
+                <div
+                  className="absolute top-0 left-0 h-0.5 bg-gradient-to-r from-blue-700 via-purple-700 to-orange-700 rounded-full transition-all duration-300 ease-linear"
+                  style={{ width: `${mockProgressPercent}%` }}
+                />
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-orange-400 rounded-full shadow-sm transition-all duration-300 ease-linear"
+                  style={{
+                    left: `calc(${mockProgressPercent}% - 8px)`,
+                    display: mockProgressPercent > 0 ? "block" : "none",
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
 
         {/* HANDOFF LOG */}
-        <div className="border-t border-dashed border-gray-300 pt-6">
-          <div className="flex justify-between items-center mb-6">
-            <span className="text-xs font-bold text-gray-400 tracking-wider">
-              HANDOFF LOG
+        <div className=" px-4">
+          <div className="flex justify-between items-center py-3">
+            <span className="text-sm font-medium text-gray-600 tracking-wider ">
+              Agent Log
             </span>
             <span className="text-xs font-mono text-gray-400">
               {visibleLogs.length} / {MOCK_LOGS.length}
             </span>
           </div>
 
-          <div className="space-y-4 h-48 overflow-y-auto custom-scrollbar pr-2 flex flex-col justify-end">
+          <div className="space-y-3 h-44 overflow-y-auto custom-scrollbar pr-2 flex flex-col justify-end bg-amber-40">
             {visibleLogs.map((log, i) => (
               <div
                 key={i}
                 className="flex items-start gap-5 animate-in fade-in slide-in-from-bottom-2 duration-300"
               >
-                <span className="text-[13px] font-mono text-gray-400 w-12 shrink-0">
+                <span className="text-[13px] font-mono text-gray-600 w-12 shrink-0">
                   {(log.time / 1000).toFixed(1)}s
                 </span>
                 <div className="flex items-center gap-3 mt-1.5 shrink-0">
                   <div className={`w-2 h-2 rounded-full ${log.dot}`} />
                 </div>
-                <div className="text-[15px] text-gray-600 leading-snug">
+                <div className="text-sm text-gray-600 leading-snug">
                   {log.text}
                 </div>
               </div>
@@ -166,31 +173,32 @@ export const CreateInterviewLoadingStep: React.FC<CreateInterviewLoadingStepProp
         </div>
 
         {/* Bottom Actions */}
-        <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+        <div className="pt-3 mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 border-t border-gray-200">
+          <div className="flex items-center gap-1">
             <span
-              className={`text-[15px] font-bold ${
+              className={`text-sm font-medium ${
                 isBackendDone ? "text-emerald-600" : "text-gray-900"
               }`}
             >
               {isBackendDone
                 ? "Success"
                 : AGENT_STEPS[activeAgentIndex].name}
+              {"  "}·
             </span>
-            <span className="text-[15px] text-gray-500">
-              · {isBackendDone ? "mock complete" : "running processes"}
+            <span className="text-xs text-gray-500">
+              {isBackendDone ? "mock complete" : "running processes"}
             </span>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={onReset}
-              className="px-5 py-2.5 bg-gray-200/80 text-gray-700 rounded-full text-[15px] font-semibold hover:bg-gray-300 transition-colors flex-1 sm:flex-none cursor-pointer"
+              className="px-3 py-1.5 border border-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors flex-1 sm:flex-none cursor-pointer"
             >
-              Reset
+              Cancel
             </button>
             <button
               onClick={onContinue}
-              className="px-6 py-2.5 bg-[#191919] text-white rounded-full text-[15px] font-semibold flex items-center justify-center gap-2 hover:bg-black transition-colors flex-1 sm:flex-none shadow-md shadow-black/10 cursor-pointer"
+              className="px-3 py-1.5 bg-[#191919] text-white rounded-md text-sm font-medium flex items-center justify-center gap-2 hover:bg-black transition-colors flex-1 sm:flex-none shadow-md shadow-black/10 cursor-pointer"
             >
               {isBackendDone ? (
                 <>

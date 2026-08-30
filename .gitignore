@@ -14,3 +14,8 @@ __pycache__/
 *.pyo
 *.pyd
 .pytest_cache/
+
+# Binary Executables & Archives
+lk
+*.tar.gz
+

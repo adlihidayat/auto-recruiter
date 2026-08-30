@@ -30,6 +30,12 @@ import { mapBackendInterviewToCampaign } from "../utils";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { RowActionPopover } from "./dashboard-popups/RowActionPopover";
+import { StatusFilterPopover, StatusFilterType } from "./dashboard-popups/StatusFilterPopover";
+import { ViewFilterPopover, ViewFilterType } from "./dashboard-popups/ViewFilterPopover";
+import { DepartmentFilterPopover } from "./dashboard-popups/DepartmentFilterPopover";
+import { CompareFilterPopover } from "./dashboard-popups/CompareFilterPopover";
+import { MetricsFilterPopover } from "./dashboard-popups/MetricsFilterPopover";
 
 const INITIAL_MOCK_CAMPAIGNS: InterviewCampaign[] = Array(12)
   .fill(null)
@@ -185,6 +191,26 @@ export default function DashboardView() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const router = useRouter();
 
+  // Popovers & Filter States
+  const [activeRowActionId, setActiveRowActionId] = useState<string | null>(null);
+  const [activePopup, setActivePopup] = useState<"status" | "view" | "dept" | "compare" | "metrics" | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<StatusFilterType>("ALL");
+  const [selectedView, setSelectedView] = useState<ViewFilterType>("all");
+  const [selectedDept, setSelectedDept] = useState("All departments");
+  const [selectedCompare, setSelectedCompare] = useState("This month");
+  const [showChart, setShowChart] = useState(true);
+  const [showStats, setShowStats] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      setActiveRowActionId(null);
+      setActivePopup(null);
+    };
+    window.addEventListener("click", handleGlobalClick);
+    return () => window.removeEventListener("click", handleGlobalClick);
+  }, []);
+
   const toggleSelectAll = () => {
     if (
       selectedIds.length === campaignsList.length &&
@@ -310,24 +336,54 @@ export default function DashboardView() {
           </div>
 
           {/* Filters Row */}
-          <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-2 py-1 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50">
-              <Calendar className="w-3.5 h-3.5 text-gray-600" /> Last 30 days{" "}
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setActivePopup(activePopup === "compare" ? null : "compare");
+              }}
+              className="flex items-center gap-2 px-2.5 py-1 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50 transition-all cursor-pointer"
+            >
+              <Calendar className="w-3.5 h-3.5 text-gray-600" /> {selectedCompare}{" "}
               <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
             </button>
-            <button className="flex items-center gap-2 px-2 py-1 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50">
-              <Calendar className="w-3.5 h-3.5 text-gray-600" /> Compare{" "}
+            <CompareFilterPopover
+              isOpen={activePopup === "compare"}
+              selectedRange={selectedCompare}
+              onSelect={(range) => {
+                setSelectedCompare(range);
+                setActivePopup(null);
+              }}
+            />
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setActivePopup(activePopup === "dept" ? null : "dept");
+              }}
+              className="flex items-center gap-2 px-2.5 py-1 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50 transition-all cursor-pointer"
+            >
+              <Layers className="w-3.5 h-3.5 text-gray-600" /> {selectedDept}{" "}
               <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
             </button>
-            <button className="flex items-center gap-2 px-2 py-1 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50">
-              <Layers className="w-3.5 h-3.5 text-gray-600" /> All departments{" "}
-              <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-            </button>
+            <DepartmentFilterPopover
+              isOpen={activePopup === "dept"}
+              selectedDepartment={selectedDept}
+              onSelect={(dept) => {
+                setSelectedDept(dept);
+                setActivePopup(null);
+              }}
+            />
           </div>
         </div>
+      </div>
 
-        {/* Metrics Overview Card */}
-        <div className="border border-gray-200 rounded-[20px] overflow-hidden  mb-6 bg-white">
+      {/* Metrics Overview Card */}
+      {showStats && (
+        <div className="border border-gray-200 rounded-[20px] overflow-hidden mb-6 bg-white shadow-2xs">
           <div className="grid grid-cols-4 border-b border-gray-200 bg-[#FAFAFA]">
             <div className="border-r border-gray-200 p-4">
               <div className="text-xs font-medium text-gray-600 mb-3 flex items-center gap-x-2">
@@ -385,95 +441,166 @@ export default function DashboardView() {
             </div>
           </div>
 
-          {/* 24-Bar Striped Chart with Jan-Dec Month Axis */}
-          <ChartSection />
+          {/* 24-Bar Striped Chart */}
+          {showChart && <ChartSection />}
         </div>
+      )}
 
-        {/* Main Data Table Card */}
-        <div className="border border-gray-200 rounded-[20px] bg-white overflow-hidden">
-          {/* Table Header Tabs */}
-          {/* <div className="flex items-center gap-6 px-6 pt-4 border-b border-gray-200">
-            <button className="pb-3 text-sm font-medium text-gray-900 border-b-2 border-gray-900 flex items-center gap-2">
-              Interviews{" "}
-              <span className="bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs font-medium">
-                {totalInterviews}
-              </span>
-            </button>
-            <button className="pb-3 text-sm font-medium text-gray-600 hover:text-gray-700 flex items-center gap-2">
-              Candidates{" "}
-              <span className="bg-gray-50 text-gray-400 py-0.5 px-2 rounded-full text-xs font-medium">
-                --
-              </span>
-            </button>
-          </div> */}
-
-          {/* Table Toolbar */}
-          <div className="flex items-center justify-between py-3 px-4 border-b border-gray-200">
-            <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 px-2 py-1 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50">
-                <Layers className="w-4 h-4 text-gray-600 font-medium" /> All
-                view <ChevronDown className="w-3.5 h-3.5 text-gray-600" />
+      {/* Main Data Table Card */}
+      <div className="border border-gray-200 rounded-[20px] bg-white overflow-hidden shadow-2xs">
+        {/* Table Toolbar */}
+        <div className="flex items-center justify-between py-3 px-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActivePopup(activePopup === "view" ? null : "view");
+                }}
+                className="flex items-center gap-2 px-2.5 py-1 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50 transition-all cursor-pointer"
+              >
+                <Layers className="w-4 h-4 text-gray-600 font-medium" />{" "}
+                {selectedView === "all"
+                  ? "All view"
+                  : selectedView === "active"
+                  ? "Active view"
+                  : "Archived view"}{" "}
+                <ChevronDown className="w-3.5 h-3.5 text-gray-600" />
               </button>
-              <div className="relative">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search interviews"
-                  className="pl-9 pr-4 py-1 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 w-64 transition-colors"
-                />
-              </div>
+              <ViewFilterPopover
+                isOpen={activePopup === "view"}
+                selectedView={selectedView}
+                onSelect={(view) => {
+                  setSelectedView(view);
+                  setActivePopup(null);
+                }}
+              />
             </div>
-            <div className="flex items-center gap-3">
-              <button className="px-2 py-1 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50">
-                Status{" "}
-                <ChevronDown className="w-3.5 h-3.5 inline ml-1 text-gray-400" />
-              </button>
-              <button className="px-2 py-1 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50">
-                <Calendar className="w-3.5 h-3.5 inline mr-1 text-gray-600" />{" "}
-                Metrics
-              </button>
+
+            <div className="relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search interviews"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-4 py-1 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 w-64 transition-colors"
+              />
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200 bg-[#FAFAFA]">
-                  <th className="py-2.5 px-4 w-0">
-                    <div
-                      onClick={toggleSelectAll}
-                      className={`w-4 h-4 rounded-md border flex items-center justify-center cursor-pointer transition-all ${
-                        selectedIds.length > 0 &&
-                        selectedIds.length === campaignsList.length
-                          ? "bg-[#18181B] border-[#18181B] text-white"
-                          : "bg-white border-gray-300 hover:border-gray-400"
-                      }`}
-                    >
-                      {selectedIds.length > 0 &&
-                        selectedIds.length === campaignsList.length && (
-                          <Check className="w-3 h-3 stroke-[3]" />
-                        )}
-                    </div>
-                  </th>
-                  <th className="py-2.5 px-2 text-sm font-medium text-gray-600 tracking-wider">
-                    Interview Name
-                  </th>
-                  <th className="py-2.5 px-4 text-sm font-medium text-gray-600 tracking-wider text-right">
-                    Status
-                  </th>
-                  <th className="py-2.5 px-4 text-sm font-medium text-gray-600 tracking-wider text-right">
-                    Progress
-                  </th>
-                  <th className="py-2.5 px-4 text-sm font-medium text-gray-600 tracking-wider text-right">
-                    Creator
-                  </th>
-                  <th className="py-2.5 px-4 text-sm font-medium text-gray-600 tracking-wider text-right"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {campaignsList.map((campaign) => {
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActivePopup(activePopup === "status" ? null : "status");
+                }}
+                className="px-2.5 py-1 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50 transition-all cursor-pointer flex items-center"
+              >
+                Status{" "}
+                <ChevronDown className="w-3.5 h-3.5 inline ml-1.5 text-gray-400" />
+              </button>
+              <StatusFilterPopover
+                isOpen={activePopup === "status"}
+                selectedStatus={selectedStatus}
+                totalCount={totalInterviews}
+                finishedCount={finishedInterviews}
+                inProgressCount={inProgressInterviews}
+                notStartedCount={notStartedInterviews}
+                onSelect={(status) => {
+                  setSelectedStatus(status);
+                  setActivePopup(null);
+                }}
+              />
+            </div>
+
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActivePopup(activePopup === "metrics" ? null : "metrics");
+                }}
+                className="px-2.5 py-1 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50 transition-all cursor-pointer flex items-center"
+              >
+                <Calendar className="w-3.5 h-3.5 inline mr-1.5 text-gray-600" />{" "}
+                Metrics
+              </button>
+              <MetricsFilterPopover
+                isOpen={activePopup === "metrics"}
+                showChart={showChart}
+                onToggleChart={() => setShowChart(!showChart)}
+                showStats={showStats}
+                onToggleStats={() => setShowStats(!showStats)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-gray-200 bg-[#FAFAFA]">
+                <th className="py-2.5 px-4 w-0">
+                  <div
+                    onClick={toggleSelectAll}
+                    className={`w-4 h-4 rounded-md border flex items-center justify-center cursor-pointer transition-all ${
+                      selectedIds.length > 0 &&
+                      selectedIds.length === campaignsList.length
+                        ? "bg-[#18181B] border-[#18181B] text-white"
+                        : "bg-white border-gray-300 hover:border-gray-400"
+                    }`}
+                  >
+                    {selectedIds.length > 0 &&
+                      selectedIds.length === campaignsList.length && (
+                        <Check className="w-3 h-3 stroke-[3]" />
+                      )}
+                  </div>
+                </th>
+                <th className="py-2.5 px-2 text-sm font-medium text-gray-600 tracking-wider">
+                  Interview Name
+                </th>
+                <th className="py-2.5 px-4 text-sm font-medium text-gray-600 tracking-wider text-right">
+                  Status
+                </th>
+                <th className="py-2.5 px-4 text-sm font-medium text-gray-600 tracking-wider text-right">
+                  Progress
+                </th>
+                <th className="py-2.5 px-4 text-sm font-medium text-gray-600 tracking-wider text-right">
+                  Creator
+                </th>
+                <th className="py-2.5 px-4 text-sm font-medium text-gray-600 tracking-wider text-right"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {campaignsList
+                .filter((c) => {
+                  const status = getInterviewStatus(c);
+                  if (selectedStatus !== "ALL" && status !== selectedStatus)
+                    return false;
+                  if (
+                    selectedDept !== "All departments" &&
+                    c.departmentName !== selectedDept
+                  )
+                    return false;
+                  if (selectedView === "active" && c.activeCandidateCount === 0)
+                    return false;
+                  if (searchQuery.trim().length > 0) {
+                    const q = searchQuery.toLowerCase();
+                    const titleMatch = c.jobTitle.toLowerCase().includes(q);
+                    const deptMatch = c.departmentName
+                      .toLowerCase()
+                      .includes(q);
+                    const senMatch = c.targetSeniority.toLowerCase().includes(q);
+                    if (!titleMatch && !deptMatch && !senMatch) return false;
+                  }
+                  return true;
+                })
+                .map((campaign) => {
                   const status = getInterviewStatus(campaign);
+                  const isActionOpen = activeRowActionId === campaign.id;
+
                   return (
                     <tr
                       key={campaign.id}
@@ -499,11 +626,6 @@ export default function DashboardView() {
                       </td>
                       <td className="pl-2 pr-6 py-0">
                         <div className="flex items-center gap-3">
-                          {/* <div
-                            className={`w-8 h-4 rounded-full flex items-center p-0.5 ${status === "FINISHED" ? "bg-blue-500 justify-end" : "bg-gray-200 justify-start"}`}
-                          >
-                            <div className="w-3 h-3 bg-white rounded-full" />
-                          </div> */}
                           <div className="w-6 rounded text-lg items-center justify-center h-8">
                             😀️
                           </div>
@@ -566,21 +688,55 @@ export default function DashboardView() {
                         </div>
                       </td>
                       <td
-                        className="px-2 py-2.5 text-right"
+                        className="px-2 py-2.5 text-right relative"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <button className="p-1.5 text-gray-400 hover:text-gray-900 rounded-md hover:bg-gray-100 transition-colors">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActiveRowActionId(
+                              isActionOpen ? null : campaign.id,
+                            )
+                          }
+                          className="p-1.5 text-gray-400 hover:text-gray-900 rounded-md hover:bg-gray-100 transition-colors cursor-pointer"
+                        >
                           <MoreVertical className="w-4 h-4" />
                         </button>
+                        <RowActionPopover
+                          isOpen={isActionOpen}
+                          onClose={() => setActiveRowActionId(null)}
+                          onViewDetail={() => {
+                            setActiveRowActionId(null);
+                            router.push(`/interviews/${campaign.id}`);
+                          }}
+                          onCopyLink={() => {
+                            setActiveRowActionId(null);
+                            navigator.clipboard.writeText(
+                              `${window.location.origin}/interview/mock_room_token_1`,
+                            );
+                          }}
+                          onArchive={() => {
+                            setActiveRowActionId(null);
+                            setCampaignsList((prev) =>
+                              prev.filter((item) => item.id !== campaign.id),
+                            );
+                          }}
+                          onDelete={() => {
+                            setActiveRowActionId(null);
+                            setCampaignsList((prev) =>
+                              prev.filter((item) => item.id !== campaign.id),
+                            );
+                          }}
+                        />
                       </td>
                     </tr>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

@@ -1,13 +1,13 @@
 /**
  * What: Step 1 Form View for interview creation.
- * Why: Renders interview job parameters, custom duration/goals chevrons, orange range slider, candidate entries list, and emoji picker.
+ * Why: Renders exact original interview form layout from single-file commit.
  * Boundaries: Emits submit event to trigger loading simulation.
  */
 
 import React from "react";
-import { Plus, Trash2, ChevronDown, ChevronUp, Globe } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronUp, Globe, X } from "lucide-react";
 import { CandidateInput, InterviewFormData } from "./types";
-import { EmojiPickerPopover } from "./EmojiPickerPopover";
+import { EMOJIS } from "./constants";
 
 interface CreateInterviewFormStepProps {
   formData: InterviewFormData;
@@ -22,12 +22,14 @@ interface CreateInterviewFormStepProps {
   onRemoveCandidate: (index: number) => void;
   onCandidateChange: (
     index: number,
-    field: keyof CandidateInput,
-    value: string
+    field: "email" | "first_name" | "last_name",
+    value: string,
   ) => void;
 }
 
-export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = ({
+export const CreateInterviewFormStep: React.FC<
+  CreateInterviewFormStepProps
+> = ({
   formData,
   setFormData,
   candidates,
@@ -42,109 +44,134 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
 }) => {
   return (
     <>
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Create Interview</h2>
-          <p className="text-sm text-gray-500 font-medium">
-            Set up role details and candidate access links.
-          </p>
-        </div>
+      <div className="mb-4 pb-4 border-b border-gray-200 pr-8">
+        <h2 className="text-base font-semibold text-gray-900 tracking-tight mb-0">
+          Create interview
+        </h2>
+        <p className="text-sm text-gray-500 font-medium">
+          Set up a new AI interview campaign and configure evaluation goals.
+        </p>
       </div>
 
       {error && (
-        <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-semibold text-red-600 animate-in fade-in duration-150">
+        <div className="mb-6 p-4 rounded-xl bg-red-50 text-sm font-medium text-red-600 border border-red-100">
           {error}
         </div>
       )}
 
       <form onSubmit={onSubmit} className="space-y-6">
-        {/* Interview Icon (Notion Emoji Picker) */}
-        <div className="relative group w-fit" ref={emojiPickerRef}>
-          <button
-            type="button"
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className="absolute hidden group-hover:flex items-center gap-1 bg-gray-[#FAFAFA] border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-500 font-medium z-10 cursor-pointer shadow-sm hover:bg-gray-100 transition-all top-2 left-12"
-          >
-            Change
-          </button>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 flex items-center justify-center text-4xl">
-              <span className="-translate-y-0.5">{formData.icon}</span>
+        <div className="flex gap-x-2.5">
+          {/* Interview Icon (Emoji Picker) */}
+          <div className=" relative group w-fit" ref={emojiPickerRef}>
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className=" absolute hidden z-10 group-hover:flex text-center font-semibold text-xs items-center justify-center w-full h-full bg-black/40 text-white rounded-lg transition-all ease-in-out duration-600"
+            >
+              change icon
+            </button>
+            <div className="w-16 h-16 flex items-center justify-center text-4xl cursor-pointer bg-gray-100 rounded-lg">
+              <span className=" -translate-y-1 z-0">{formData.icon}</span>
             </div>
-            <p className="text-sm font-semibold text-gray-900">
-              Interview Icon
-            </p>
+            {showEmojiPicker && (
+              <div className="absolute left-0 top-full mt-2 w-52 bg-white border border-gray-200 rounded-2xl shadow-md p-2 z-50">
+                <div className=" mb-2 flex justify-between items-center px-2 pt-2">
+                  <span className=" text-xs  font-semibold">
+                    Interview Icon
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(false)}
+                    className=" text-gray-600 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-100 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className=" grid grid-cols-4 gap-1 animate-in fade-in zoom-in-95 duration-150">
+                  {EMOJIS.map((e) => (
+                    <button
+                      key={e}
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, icon: e });
+                        setShowEmojiPicker(false);
+                      }}
+                      className="w-11 h-11 flex items-center justify-center text-2xl hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          <EmojiPickerPopover
-            isOpen={showEmojiPicker}
-            onSelect={(emoji) => {
-              setFormData((prev) => ({ ...prev, icon: emoji }));
-              setShowEmojiPicker(false);
-            }}
-            containerRef={emojiPickerRef}
-          />
-        </div>
 
-        {/* Job Title */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
-            Job Title <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. Senior Backend Engineer"
-            value={formData.job_name}
-            onChange={(e) =>
-              setFormData({ ...formData, job_name: e.target.value })
-            }
-            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
-            required
-          />
-        </div>
-
-        {/* Job Description */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
-            Job Description <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            rows={4}
-            placeholder="Describe key responsibilities and expectations for this candidate..."
-            value={formData.job_description}
-            onChange={(e) =>
-              setFormData({ ...formData, job_description: e.target.value })
-            }
-            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all resize-none"
-            required
-          />
-        </div>
-
-        {/* Domain Hint */}
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
-            Domain Focus Hint <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
+          {/* Job Name */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Job Name
+            </label>
             <input
               type="text"
-              placeholder="e.g. Distributed Systems & High Concurrency"
-              value={formData.domain_hint}
+              value={formData.job_name}
               onChange={(e) =>
-                setFormData({ ...formData, domain_hint: e.target.value })
+                setFormData({ ...formData, job_name: e.target.value })
               }
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
-              required
+              className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
+              placeholder="e.g. Senior Frontend Engineer"
             />
-            <Globe className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
 
-        {/* Form Controls Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-2.5">
+          {/* Scheduled Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Scheduled (Optional)
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.scheduled_at}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  scheduled_at: e.target.value,
+                })
+              }
+              className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
+            />
+          </div>
+
+          {/* Domain Hint */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Domain Hint
+            </label>
+            <div className="relative flex items-center">
+              <div className="absolute left-3 text-gray-900 pointer-events-none">
+                <Globe className="w-3.5 h-3.5" />
+              </div>
+              <input
+                type="text"
+                value={formData.domain_hint}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    domain_hint: e.target.value,
+                  })
+                }
+                className="w-full pl-8.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
+                placeholder="e.g. React & TypeScript"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2.5">
           {/* Total Duration */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Total Duration (mins)
+              Duration (Minutes)
             </label>
             <div className="relative">
               <input
@@ -159,7 +186,7 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
                     total_duration_minutes: parseInt(e.target.value) || 5,
                   })
                 }
-                className="w-full px-3 py-2 pr-8 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full px-3 py-1.5 pr-8 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center text-gray-400 pointer-events-auto">
                 <button
@@ -169,7 +196,7 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
                       ...prev,
                       total_duration_minutes: Math.min(
                         120,
-                        (prev.total_duration_minutes || 0) + 5
+                        (prev.total_duration_minutes || 0) + 5,
                       ),
                     }))
                   }
@@ -184,7 +211,7 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
                       ...prev,
                       total_duration_minutes: Math.max(
                         5,
-                        (prev.total_duration_minutes || 5) - 5
+                        (prev.total_duration_minutes || 5) - 5,
                       ),
                     }))
                   }
@@ -205,9 +232,12 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
               <select
                 value={formData.difficulty}
                 onChange={(e) =>
-                  setFormData({ ...formData, difficulty: e.target.value })
+                  setFormData({
+                    ...formData,
+                    difficulty: e.target.value,
+                  })
                 }
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all appearance-none cursor-pointer"
+                className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all appearance-none cursor-pointer"
               >
                 <option value="junior">Junior</option>
                 <option value="mid">Mid-Level</option>
@@ -234,7 +264,7 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
                     num_goals: parseInt(e.target.value) || 1,
                   })
                 }
-                className="w-full px-3 py-2 pr-8 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full px-3 py-1.5 pr-8 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center text-gray-400 pointer-events-auto">
                 <button
@@ -266,8 +296,8 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
           </div>
         </div>
 
-        {/* Communication Weight Slider (Custom Orange Track) */}
-        <div>
+        {/* Communication Weight Slider */}
+        <div className="">
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-gray-900">
               Communication vs Knowledge
@@ -295,7 +325,7 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
                 formData.communication_weight * 100
               }%, #E5E7EB 100%)`,
             }}
-            className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-[#191919]"
+            className="w-full h-1 rounded-full appearance-none cursor-pointer accent-[#191919]"
           />
           <div className="flex items-center justify-between mt-1 text-xs font-semibold text-gray-500">
             <span>Knowledge Focus</span>
@@ -303,8 +333,26 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
           </div>
         </div>
 
-        {/* Candidates Section */}
+        {/* Job Description */}
         <div>
+          <label className="block text-sm font-medium text-gray-900 mb-2">
+            Job Description
+          </label>
+          <textarea
+            value={formData.job_description}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                job_description: e.target.value,
+              })
+            }
+            className="w-full h-28 px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all resize-none"
+            placeholder="Paste the job description here..."
+          />
+        </div>
+
+        {/* Candidates Section */}
+        <div className="">
           <div className="flex items-center justify-between mb-4">
             <label className="block text-sm font-medium text-gray-900">
               Candidates <span className="text-red-500">*</span>
@@ -318,10 +366,13 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
             </button>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {candidates.map((candidate, index) => (
-              <div key={index} className="flex items-start gap-3 relative group">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+              <div
+                key={index}
+                className="flex items-start gap-3 relative group"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 w-full">
                   <input
                     type="email"
                     placeholder="Email address"
@@ -329,7 +380,7 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
                     onChange={(e) =>
                       onCandidateChange(index, "email", e.target.value)
                     }
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
+                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
                     required
                   />
                   <input
@@ -339,7 +390,7 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
                     onChange={(e) =>
                       onCandidateChange(index, "first_name", e.target.value)
                     }
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
+                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
                   />
                   <input
                     type="text"
@@ -348,14 +399,14 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
                     onChange={(e) =>
                       onCandidateChange(index, "last_name", e.target.value)
                     }
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
+                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
                   />
                 </div>
                 {candidates.length > 1 && (
                   <button
                     type="button"
                     onClick={() => onRemoveCandidate(index)}
-                    className="w-10 h-[42px] bg-red-500 border border-gray-200 rounded-xl flex items-center justify-center text-white hover:text-red-100 hover:border-red-200 hover:bg-red-700 transition-all cursor-pointer shrink-0"
+                    className="w-8.5 h-8.5 bg-red-500 border border-gray-200 rounded-lg flex items-center justify-center text-white hover:text-red-100 hover:border-red-200 hover:bg-red-700 transition-all cursor-pointer shrink-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -365,7 +416,7 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
           </div>
         </div>
 
-        <div>
+        <div className="">
           <p className="text-[13px] text-gray-500 font-medium mb-8 leading-relaxed">
             The candidates will receive LiveKit voice access tokens. Make sure
             the difficulty and duration accurately reflect your expectations for
@@ -374,7 +425,7 @@ export const CreateInterviewFormStep: React.FC<CreateInterviewFormStepProps> = (
 
           <button
             type="submit"
-            className="w-full bg-[#191919] hover:bg-black text-white rounded-xl py-2.5 text-base font-medium transition-all shadow-lg shadow-black/10 cursor-pointer flex items-center justify-center"
+            className="w-full bg-[#191919] text-sm hover:bg-black text-white rounded-xl py-2.5 font-medium transition-all shadow-lg shadow-black/10 cursor-pointer flex items-center justify-center"
           >
             Continue
           </button>

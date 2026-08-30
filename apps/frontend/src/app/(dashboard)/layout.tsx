@@ -47,7 +47,7 @@ export default function DashboardLayout({
 
           {/* Search Bar */}
           <div className="px-2 mb-2">
-            <div className="flex items-center gap-2 px-3 py-1 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600  cursor-text">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600  cursor-text">
               <Search className="w-4 h-4" />
               <span className="flex-1">Quick actions</span>
               <kbd className="text-xs bg-gray-100 px-1.5 rounded text-gray-500 font-mono">

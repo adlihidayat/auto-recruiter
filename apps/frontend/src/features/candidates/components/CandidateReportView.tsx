@@ -530,7 +530,6 @@ export default function CandidateReportView({
         {/* Transcript Section - Separated by Goal with Connecting Line */}
         <div className="mb-10">
           <div className="flex items-center gap-2 mb-4">
-            <MessageCircle className="w-4 h-4 text-gray-600" />
             <h2 className="text-sm font-semibold text-gray-600">
               Interview Transcript
             </h2>
@@ -582,7 +581,7 @@ export default function CandidateReportView({
                               {/* Avatar */}
                               <div className="w-5 h-5 rounded-full shrink-0 z-10 flex items-center justify-center">
                                 {isCandidate ? (
-                                  <div className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-bold text-[10px]">
+                                  <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-[10px]">
                                     {fullName.charAt(0)}
                                   </div>
                                 ) : (
@@ -594,7 +593,7 @@ export default function CandidateReportView({
 
                               {/* Fluid Vertical Line - Expands to fill item height automatically */}
                               {!isLastInGoal && (
-                                <div className="w-0.5 flex-1 bg-gray-200" />
+                                <div className="w-px flex-1 bg-gray-300" />
                               )}
                             </div>
 

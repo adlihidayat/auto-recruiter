@@ -92,7 +92,7 @@ export default function CreateInterviewModal({
 
   const handleCandidateChange = (
     index: number,
-    field: keyof CandidateInput,
+    field: "email" | "first_name" | "last_name",
     value: string
   ) => {
     setCandidates((prev) =>
@@ -122,12 +122,12 @@ export default function CreateInterviewModal({
   const handleSubmitForm = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.job_name || !formData.job_description || !formData.domain_hint) {
-      setError("Please fill in all required fields.");
+      setError("Please fill in all required fields (Job Name, Description, Domain Hint).");
       return;
     }
     const validCandidates = candidates.filter((c) => c.email.trim().length > 0);
     if (validCandidates.length === 0) {
-      setError("Please add at least one candidate email.");
+      setError("At least one candidate with a valid email is required.");
       return;
     }
 
@@ -138,7 +138,7 @@ export default function CreateInterviewModal({
   };
 
   const handleCopyLink = (candidateId: string, token: string) => {
-    const link = `${window.location.origin}/interview/${token}`;
+    const link = `${window.location.origin}/interview?token=${token}`;
     navigator.clipboard.writeText(link);
     setCopiedCandidateId(candidateId);
     setTimeout(() => setCopiedCandidateId(null), 2000);
@@ -191,72 +191,99 @@ export default function CreateInterviewModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center ${modalStep === "loading" && ""}`}>
       {/* Canvas Confetti Layer */}
       <CanvasConfettiOverlay isActive={modalStep === "success"} />
 
+      {/* Backdrop */}
       <div
-        className={`relative w-full bg-white border border-gray-200/80 rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 ${
-          modalStep === "loading"
-            ? "max-w-2xl p-6 sm:p-8"
-            : modalStep === "success"
-            ? "max-w-xl p-6 sm:p-8"
-            : "max-w-xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto custom-scrollbar"
-        }`}
-      >
-        {/* Close Button */}
-        <button
-          onClick={() => {
-            onClose();
-            handleResetModal();
-          }}
-          className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all cursor-pointer z-20"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+        onClick={modalStep === "loading" ? undefined : handleResetModal}
+      />
+
+      <div className="rounded-3xl overflow-hidden z-10">
+        {/* Modal Content Card */}
+        <div
+          className={`relative w-full max-h-[90vh] overflow-y-scroll bg-white rounded-3xl shadow-2xl ${
+            modalStep === "form" && "p-8 max-w-xl"
+          } ${modalStep === "loading" && "p-4"} ${
+            modalStep === "success" && "p-8"
+          } custom-scrollbar`}
         >
-          <X className="w-5 h-5" />
-        </button>
+          {/* Close Button */}
+          {modalStep !== "loading" && (
+            <button
+              onClick={() => {
+                onClose();
+                handleResetModal();
+              }}
+              className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-100 cursor-pointer z-20"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
 
-        {/* Modal Step Routing */}
-        {modalStep === "form" && (
-          <CreateInterviewFormStep
-            formData={formData}
-            setFormData={setFormData}
-            candidates={candidates}
-            showEmojiPicker={showEmojiPicker}
-            setShowEmojiPicker={setShowEmojiPicker}
-            emojiPickerRef={emojiPickerRef}
-            error={error}
-            onSubmit={handleSubmitForm}
-            onAddCandidate={handleAddCandidate}
-            onRemoveCandidate={handleRemoveCandidate}
-            onCandidateChange={handleCandidateChange}
-          />
-        )}
+          {/* Modal Step Routing */}
+          {modalStep === "form" && (
+            <CreateInterviewFormStep
+              formData={formData}
+              setFormData={setFormData}
+              candidates={candidates}
+              showEmojiPicker={showEmojiPicker}
+              setShowEmojiPicker={setShowEmojiPicker}
+              emojiPickerRef={emojiPickerRef}
+              error={error}
+              onSubmit={handleSubmitForm}
+              onAddCandidate={handleAddCandidate}
+              onRemoveCandidate={handleRemoveCandidate}
+              onCandidateChange={handleCandidateChange}
+            />
+          )}
 
-        {modalStep === "loading" && (
-          <CreateInterviewLoadingStep
-            formData={formData}
-            elapsedTime={elapsedTime}
-            isPaused={isPaused}
-            isBackendDone={isBackendDone}
-            activeAgentIndex={activeAgentIndex}
-            mockProgressPercent={mockProgressPercent}
-            visibleLogs={visibleLogs}
-            onReset={handleResetModal}
-            onContinue={handleContinueToSuccess}
-          />
-        )}
+          {modalStep === "loading" && (
+            <CreateInterviewLoadingStep
+              formData={formData}
+              elapsedTime={elapsedTime}
+              isPaused={isPaused}
+              isBackendDone={isBackendDone}
+              activeAgentIndex={activeAgentIndex}
+              mockProgressPercent={mockProgressPercent}
+              visibleLogs={visibleLogs}
+              onReset={handleResetModal}
+              onContinue={handleContinueToSuccess}
+            />
+          )}
 
-        {modalStep === "success" && (
-          <CreateInterviewSuccessStep
-            formData={formData}
-            displayCandidates={displayCandidates}
-            copiedCandidateId={copiedCandidateId}
-            onCopyLink={handleCopyLink}
-            onSeeDetail={handleSeeDetail}
-            onDone={handleDone}
-          />
-        )}
+          {modalStep === "success" && (
+            <CreateInterviewSuccessStep
+              formData={formData}
+              displayCandidates={displayCandidates}
+              copiedCandidateId={copiedCandidateId}
+              onCopyLink={handleCopyLink}
+              onSeeDetail={handleSeeDetail}
+              onDone={handleDone}
+            />
+          )}
+        </div>
       </div>
+
+      {/* Custom Scrollbar Styles for the modal content */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: #E9E9E9;
+          border-radius: 20px;
+        }
+      `,
+        }}
+      />
     </div>
   );
 }
