@@ -13,7 +13,9 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import CreateInterviewModal from "@/features/interviews/components/CreateInterviewModal";
+import { QuickActionModal } from "@/features/interviews/components/QuickActionModal";
 import { useCreateModalStore } from "@/lib/store/useCreateModalStore";
 
 export default function DashboardLayout({
@@ -23,6 +25,28 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const { isOpen, openModal, closeModal } = useCreateModalStore();
+  const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInput =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable;
+
+      if (
+        (e.key === "k" || e.key === "K") &&
+        (!isInput || e.metaKey || e.ctrlKey)
+      ) {
+        e.preventDefault();
+        setIsQuickActionOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handleCampaignCreated = () => {
     router.refresh();
@@ -45,15 +69,19 @@ export default function DashboardLayout({
             <ChevronDown className="w-4 h-4 text-gray-400" />
           </div>
 
-          {/* Search Bar */}
+          {/* Search Bar (Triggers Quick Action Popup) */}
           <div className="px-2 mb-2">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600  cursor-text">
-              <Search className="w-4 h-4" />
-              <span className="flex-1">Quick actions</span>
-              <kbd className="text-xs bg-gray-100 px-1.5 rounded text-gray-500 font-mono">
+            <button
+              type="button"
+              onClick={() => setIsQuickActionOpen(true)}
+              className="w-full flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer text-left"
+            >
+              <Search className="w-4 h-4 text-gray-400" />
+              <span className="flex-1 text-gray-500">Quick actions</span>
+              <kbd className="text-xs bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded text-gray-500 font-mono">
                 K
               </kbd>
-            </div>
+            </button>
           </div>
 
           {/* Scrollable Nav */}
@@ -164,6 +192,12 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+
+      {/* Global Quick Action Command Palette */}
+      <QuickActionModal
+        isOpen={isQuickActionOpen}
+        onClose={() => setIsQuickActionOpen(false)}
+      />
 
       {/* Global Create Interview Modal */}
       {isOpen && (

@@ -15,6 +15,9 @@ __pycache__/
 *.pyd
 .pytest_cache/
 
+# Node Dependencies
+node_modules/
+
 # Binary Executables & Archives
 lk
 *.tar.gz
