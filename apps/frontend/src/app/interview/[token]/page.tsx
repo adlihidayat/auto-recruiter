@@ -15,6 +15,7 @@ import {
   LiveKitRoom,
   RoomAudioRenderer,
   useVoiceAssistant,
+  useLocalParticipant,
   BarVisualizer,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
@@ -96,7 +97,6 @@ export default function CandidateInterviewPage({
         const inputs = devices.filter((d) => d.kind === "audioinput");
         const outputs = devices.filter((d) => d.kind === "audiooutput");
         setAudioInputs(inputs);
-        setAudioOutputs(outputs);
 
         if (!selectedOutput && outputs.length > 0) {
           setSelectedOutput(outputs[0].deviceId);
@@ -201,6 +201,7 @@ export default function CandidateInterviewPage({
                   alt="Company Logo"
                   width={50}
                   height={50}
+                  style={{ width: "auto", height: "auto" }}
                 />
               </div>
               <h1 className="text-2xl font-extrabold text-[#272727] tracking-tight">
@@ -264,7 +265,7 @@ export default function CandidateInterviewPage({
                       ? "Mic Access Required"
                       : isMuted
                         ? "Muted"
-                        : realAudioLevel > 5
+                        : realAudioLevel > 15
                           ? "Receiving Sound"
                           : "Listening..."}
                   </span>
@@ -338,7 +339,12 @@ export default function CandidateInterviewPage({
             {/* RoomAudioRenderer MUST be included so you can hear the interviewer's voice */}
             <RoomAudioRenderer />
             {/* Custom LiveKit Voice Assistant Stage */}
-            <LiveKitVoiceStage onLeave={() => setPhase("completed")} />
+            <LiveKitVoiceStage
+              onLeave={() => setPhase("completed")}
+              realAudioLevel={realAudioLevel}
+              isMuted={isMuted}
+              onToggleMute={() => setIsMuted(!isMuted)}
+            />
           </LiveKitRoom>
         )}
 
@@ -373,13 +379,31 @@ export default function CandidateInterviewPage({
   );
 }
 
-function LiveKitVoiceStage({ onLeave }: { onLeave: () => void }) {
+interface LiveKitVoiceStageProps {
+  onLeave: () => void;
+  realAudioLevel: number;
+  isMuted: boolean;
+  onToggleMute: () => void;
+}
+
+function LiveKitVoiceStage({
+  onLeave,
+  realAudioLevel,
+  isMuted,
+  onToggleMute,
+}: LiveKitVoiceStageProps) {
   const { state, audioTrack, agentTranscriptions } = useVoiceAssistant();
+  const { localParticipant } = useLocalParticipant();
+
+  const handleToggleMute = () => {
+    onToggleMute();
+    localParticipant?.setMicrophoneEnabled(isMuted);
+  };
+
   return (
     <div className="w-full max-w-3xl flex flex-col gap-6">
       {/* Main Stage View */}
       <div className="relative w-full bg-[#18181B] rounded-3xl border border-gray-800 shadow-2xl p-8 min-h-[420px] flex flex-col items-center justify-center overflow-hidden">
-        
         {/* Agent Avatar */}
         <div className="relative flex flex-col items-center z-10">
           <div className="relative mb-6">
@@ -388,17 +412,23 @@ function LiveKitVoiceStage({ onLeave }: { onLeave: () => void }) {
             )}
             <div className="w-28 h-28 rounded-full bg-gradient-to-tr from-[#FE6100] to-amber-400 p-1 shadow-xl flex items-center justify-center">
               <div className="w-full h-full bg-[#18181B] rounded-full flex items-center justify-center">
-                <Sparkles className={`w-12 h-12 ${state === "speaking" ? "text-[#FE6100]" : "text-gray-400"}`} />
+                <Sparkles
+                  className={`w-12 h-12 ${state === "speaking" ? "text-[#FE6100]" : "text-gray-400"}`}
+                />
               </div>
             </div>
           </div>
           <h2 className="text-xl font-bold text-white tracking-tight">
-            AI Interviewer <span className="text-xs font-normal text-gray-400">({state})</span>
+            AI Interviewer{" "}
+            <span className="text-xs font-normal text-gray-400">
+              ({state})
+            </span>
           </h2>
           {/* Dynamic Spoken Transcript from Realtime Worker */}
           {agentTranscriptions.length > 0 && (
             <p className="text-sm text-gray-300 max-w-md text-center mt-6 bg-white/5 border border-white/10 p-4 rounded-2xl backdrop-blur-sm">
-              &ldquo;{agentTranscriptions[agentTranscriptions.length - 1].text}&rdquo;
+              &ldquo;
+              {agentTranscriptions[agentTranscriptions.length - 1].text}&rdquo;
             </p>
           )}
           {/* Audio Visualizer */}
@@ -407,11 +437,60 @@ function LiveKitVoiceStage({ onLeave }: { onLeave: () => void }) {
           </div>
         </div>
       </div>
-      {/* Control Bar */}
-      <div className="bg-white rounded-2xl border border-[#E9E9E9] p-4 shadow-lg flex items-center justify-between px-8">
+
+      {/* Control Bar with Real-time Microphone Input Meter */}
+      <div className="bg-white rounded-2xl border border-[#E9E9E9] p-4 shadow-lg flex items-center justify-between px-6 gap-6">
+        {/* Mic Controls & Volume Meter */}
+        <div className="flex items-center gap-4 flex-1 max-w-md">
+          <button
+            onClick={handleToggleMute}
+            className={`p-3 rounded-xl transition-colors cursor-pointer flex items-center justify-center ${
+              isMuted
+                ? "bg-red-50 text-red-600 hover:bg-red-100"
+                : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+            }`}
+            title={isMuted ? "Unmute Mic" : "Mute Mic"}
+          >
+            {isMuted ? (
+              <MicOff className="w-5 h-5" />
+            ) : (
+              <Mic className="w-5 h-5" />
+            )}
+          </button>
+
+          {/* Volume Indicator Bar matching lobby preparation exactly */}
+          <div className="flex-1 space-y-1">
+            <div className="flex justify-between text-xs font-medium text-[#616161]">
+              <span>Your Mic Input</span>
+              <span className="font-semibold text-xs text-[#272727]">
+                {isMuted
+                  ? "Muted"
+                  : realAudioLevel > 15
+                    ? "Receiving Sound"
+                    : "Listening..."}
+              </span>
+            </div>
+            <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
+              <div
+                className={`h-full transition-all duration-75 ${
+                  isMuted
+                    ? "w-0"
+                    : realAudioLevel > 20
+                      ? "bg-emerald-500"
+                      : "bg-emerald-400"
+                }`}
+                style={{
+                  width: isMuted ? "0%" : `${realAudioLevel}%`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Leave Action Button */}
         <button
           onClick={onLeave}
-          className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl text-sm font-bold flex items-center gap-2"
+          className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl text-sm font-bold flex items-center gap-2 cursor-pointer shrink-0"
         >
           <PhoneOff className="w-4 h-4" />
           <span>Leave Interview</span>

@@ -1,0 +1,74 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Mock Interview Test</title>
+        <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.js"></script>
+        <style>
+            body { font-family: sans-serif; padding: 2rem; max-width: 600px; margin: 0 auto; }
+            button { padding: 10px 20px; font-size: 16px; background: #FE6100; color: white; border: none; border-radius: 8px; cursor: pointer; }
+            button:disabled { background: #ccc; }
+            #log { background: #f4f4f4; padding: 1rem; border-radius: 8px; font-family: monospace; height: 300px; overflow-y: scroll; margin-top: 1rem; }
+        </style>
+    </head>
+    <body>
+        <h1>Mock Interview Test</h1>
+        <p>This bypasses your Next.js frontend entirely.</p>
+        <button id="connectBtn">Connect to Interview</button>
+        <button id="disconnectBtn" disabled>Disconnect</button>
+        
+        <div id="log">Waiting to connect...</div>
+        
+        <!-- Audio elements will be attached here -->
+        <div id="audio-container"></div>
+        
+        <script>
+            const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiTW9jayBDYW5kaWRhdGUiLCJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6Im1vY2tfcm9vbV81NWFiM2U2NSIsImNhblB1Ymxpc2giOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWV9LCJzdWIiOiJjYW5kaWRhdGVfbW9jayIsImlzcyI6ImRldmtleSIsIm5iZiI6MTc4NzY2MjU4NCwiZXhwIjoxNzg3Njg0MTg0fQ.i6CwkBdlOq77I12KqH2LCeT8h7-IV4_iPnqk0chr7Hs";
+            const url = "ws://localhost:7880";
+            let room;
+            
+            function log(msg) {
+                const el = document.getElementById('log');
+                el.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + msg + '</div>';
+                el.scrollTop = el.scrollHeight;
+            }
+            
+            document.getElementById('connectBtn').onclick = async () => {
+                document.getElementById('connectBtn').disabled = true;
+                log('Connecting to LiveKit...');
+                
+                room = new LivekitClient.Room();
+                
+                room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+                    log('Subscribed to agent audio track!');
+                    const el = track.attach();
+                    document.getElementById('audio-container').appendChild(el);
+                });
+                
+                room.on(LivekitClient.RoomEvent.Disconnected, () => {
+                    log('Room disconnected!');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('disconnectBtn').disabled = true;
+                });
+                
+                try {
+                    await room.connect(url, token);
+                    log('Connected successfully!');
+                    document.getElementById('disconnectBtn').disabled = false;
+                    
+                    log('Publishing microphone...');
+                    await room.localParticipant.enableCameraAndMicrophone();
+                    log('Microphone published. Start speaking!');
+                } catch (e) {
+                    log('Connection error: ' + e.message);
+                    document.getElementById('connectBtn').disabled = false;
+                }
+            };
+            
+            document.getElementById('disconnectBtn').onclick = () => {
+                if (room) room.disconnect();
+            };
+        </script>
+    </body>
+    </html>
+    

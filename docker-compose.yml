@@ -22,6 +22,16 @@ services:
       MP_MAX_MESSAGES: 5000
     restart: unless-stopped
 
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: livekit-server
+    command: --dev --bind 0.0.0.0 --node-ip 127.0.0.1
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+    restart: unless-stopped
+
   adminer:
     image: adminer
     container_name: adminer

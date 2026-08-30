@@ -2,6 +2,9 @@
 
 @theme {
   --font-sans: var(--font-plus-jakarta-sans), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --color-gray-900: #191919;
+  --color-gray-600: #646464;
+  --color-gray-500: #646464;
 }
 
 @layer base {

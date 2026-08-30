@@ -72,7 +72,26 @@ async def create_interview(
                 room=str(new_candidate.id)
             ))
             
-        new_candidate.room_token = token.to_jwt()
+        new_candidate.room_token = token.tojwt() if hasattr(token, 'tojwt') else token.to_jwt()
+
+        # Explicitly dispatch the interviewer agent for this room
+        try:
+            livekit_api = api.LiveKitAPI(
+                application_settings.LIVEKIT_URL,
+                application_settings.LIVEKIT_API_KEY,
+                application_settings.LIVEKIT_API_SECRET
+            )
+            await livekit_api.agent_dispatch.create_dispatch(
+                api.CreateAgentDispatchRequest(
+                    agent_name="interviewer-agent",
+                    room=str(new_candidate.id)
+                )
+            )
+            await livekit_api.aclose()
+        except Exception as e:
+            # We log it but do not fail interview creation if dispatch fails
+            import logging
+            logging.error(f"Failed to explicitly dispatch agent: {e}")
 
     # 3. Enqueue background Job to generate evaluation plan via AI agent
     background_job = Job(

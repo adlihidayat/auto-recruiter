@@ -1,0 +1,12 @@
+[project]
+name = "auto-recruiter"
+version = "0.1.0"
+description = "Auto Recruiter Monorepo"
+requires-python = ">=3.12"
+
+[tool.uv.workspace]
+members = [
+    "apps/backend",
+    "apps/realtime-worker",
+    "apps/agents"
+]

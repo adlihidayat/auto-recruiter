@@ -46,8 +46,8 @@ def run_citations_test():
     print("=======================================================================")
 
     job = JobContext(
-        job_name="Senior Distributed Systems Engineer",
-        job_description="Design and optimize high-throughput microservices using Go and gRPC."
+        job_name="Retail Sales Associate",
+        job_description="We are hiring a Retail Sales Associate to work on the floor of our clothing store, helping customers find what they're looking for and providing a friendly shopping experience. Your day-to-day tasks include greeting customers as they walk in, answering questions about sizing, materials, and current promotions, and helping customers find items either on the sales floor or in the stockroom. You will operate the point-of-sale (POS) register to process purchases, returns, and exchanges, and help keep the store tidy by folding and restocking clothing racks and shelves throughout your shift. You'll also help set up seasonal window displays and promotional signage as directed by the store manager. No prior retail experience is required, but you should be comfortable standing for most of your shift, working weekends, and staying friendly and patient even when the store is busy. Basic math skills, for handling cash and calculating discounts, and a positive attitude are required."
     )
 
     plan_meta = PlanMeta(communication_weight="low", difficulty="senior")
@@ -57,10 +57,10 @@ def run_citations_test():
         # g_01: Strong performance (Score 8, High confidence) -> Should NOT get citations
         GoalInput(
             goal_id="g_01",
-            topic="gRPC Load Balancing",
-            goal="Evaluate gRPC L4 vs L7 balancing knowledge",
-            passing_criteria=["Identifies HTTP/2 connection pinning issue with L4"],
-            wrong_answer_signals=[],
+            topic="POS Transaction Management",
+            goal="Evaluate the candidate's ability to independently handle complex POS scenarios, including processing returns, applying multiple discounts, and resolving common register errors while maintaining accuracy.",
+            passing_criteria=["Prioritizes verifying the item via SKU/serial number scan to ensure accurate identification", "Mentions checking for alternative proof of purchase like loyalty account or email lookup before proceeding", "Identifies the need to follow company policy for non-receipted returns, such as issuing store credit rather than cash", "Acknowledges the inventory mismatch and suggests flagging the item for a manual stock count or system sync check", "States that manager approval or specific user permissions are required for non-receipted or high-value returns"],
+            wrong_answer_signals=["Suggests processing the return as a cash refund without any proof of purchase or manager oversight", "Ignores the inventory discrepancy entirely, failing to mention the need to reconcile the physical stock with the system", "Claims that POS errors like inventory mismatches should always be escalated to IT support immediately without attempting basic verification", "Suggests overriding system rules or bypassing the return workflow to 'make the customer happy' without documentation"],
             pushback_triggers=[],
             grounding_theory="gRPC multiplexes streams over long-lived HTTP/2 TCP connections...",
             weight=1.0,
@@ -75,8 +75,8 @@ def run_citations_test():
             goal_id="g_02",
             topic="Schema Migration Strategy",
             goal="Evaluate zero-downtime database schema migration strategy",
-            passing_criteria=["Uses expand-contract pattern for non-null column additions"],
-            wrong_answer_signals=["Adds NOT NULL column directly without default on large table"],
+            passing_criteria=["Demonstrates active listening by acknowledging the customer's frustration without immediately interrupting", "States the need to verify the transaction or price discrepancy using store records or physical shelf tags", "Explains how to communicate store policy clearly and calmly if the request cannot be met exactly as demanded", "Prioritizes de-escalation techniques to maintain a professional environment for other customers", "Offers a compromise or alternative solution if the policy allows for flexibility"],
+            wrong_answer_signals=["Immediately agrees to the customer's demand without verifying the facts", "Becomes defensive or argumentative when the customer raises their voice", "States that the customer is always right regardless of store policy or evidence", "ismisses the customer's concern as unimportant or invalid"],
             pushback_triggers=[],
             grounding_theory="Large table alterations require adding nullable column first, backfilling, then adding constraint...",
             weight=1.0,
@@ -86,24 +86,6 @@ def run_citations_test():
                 Interaction(role="candidate", content="I'd probably just run ALTER TABLE ADD COLUMN NOT NULL DEFAULT 'active' during off-peak hours."),
                 Interaction(role="interviewer", content="That locks the table for a full rewrite. Is there a zero-downtime way?"),
                 Interaction(role="candidate", content="Oh, right. I guess I'd add it as nullable first, backfill rows in batches, and then set NOT NULL later."),
-            ]
-        ),
-        # g_03: Low confidence performance (Score 7, Low confidence) -> SHOULD get citations
-        GoalInput(
-            goal_id="g_03",
-            topic="Idempotency in Payment Processing",
-            goal="Evaluate idempotency key mechanics in distributed payment retries",
-            passing_criteria=["Uses atomic DB transaction with request hash"],
-            wrong_answer_signals=[],
-            pushback_triggers=[],
-            grounding_theory="Idempotency keys prevent double charge on retries...",
-            weight=1.0,
-            gating=False,
-            interaction_history=[
-                Interaction(role="interviewer", content="How do you handle retries in payments without double charging?"),
-                Interaction(role="candidate", content="We use idempotency keys. I think we store them in Redis or Postgres for a few hours."),
-                Interaction(role="interviewer", content="What happens if the Redis write succeeds but the charge fails?"),
-                Interaction(role="candidate", content="Yeah, that would be tricky. I'm not totally sure how our payment gateway handles that edge case."),
             ]
         ),
     ]

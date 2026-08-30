@@ -1,8 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useEffect } from "react";
-import UserAvatar from "@/components/common/UserAvatar";
-import { Info, FileText } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Triangle,
+  MessageCircle,
+  Bot,
+  AudioLines,
+  Brain,
+} from "lucide-react";
+import Link from "next/link";
 import {
   getCandidateReportApi,
   getCandidateTranscriptsApi,
@@ -14,67 +23,39 @@ interface CandidateReportViewProps {
   candidateId?: string;
 }
 
-interface HighlightBar {
-  text: string;
-  type: "pass" | "fail";
-}
-interface ScoreItem {
-  label: string;
-  status: string;
-  type: "pass" | "fail";
-}
-interface Interaction {
-  turn: string;
-  speaker: string;
-  role: string;
-  text: string;
-}
-
-const INITIAL_MOCK_DATA = {
-  name: "Loading...",
-  email: "loading@example.com",
-  status: "Hold",
-  statusColor: "bg-[#DC2626]",
-  statusReason: "Did not meet core requirements",
-  overallScore: 0,
-  overallScoreSubtext: "Under average",
-  shortSummaryParagraphs: ["Loading candidate report..."],
-  highlightBars: [
-    { text: "Loading traits...", type: "pass" },
-  ] as HighlightBar[],
-  knowledgeScore: {
-    score: "0%",
-    items: [] as ScoreItem[],
-    note: "Loading...",
-  },
-  communicationScore: {
-    score: "0%",
-    items: [] as ScoreItem[],
-    note: "Loading...",
-  },
-  interactions: [] as Interaction[],
-};
-
 export default function CandidateReportView({
   interviewId,
   candidateId,
 }: CandidateReportViewProps) {
-  const [candidateData, setCandidateData] = useState(INITIAL_MOCK_DATA);
+  const [report, setReport] = useState<any>(null);
+  const [transcripts, setTranscripts] = useState<any[]>([]);
+  const [candidateInfo, setCandidateInfo] = useState<any>(null);
+
+  const [expandedGoalId, setExpandedGoalId] = useState<string | null>("g_01");
+  const [expandedTraitId, setExpandedTraitId] = useState<string | null>(
+    "clarity",
+  );
+
+  const toggleGoal = (id: string) => {
+    setExpandedGoalId((prev) => (prev === id ? null : id));
+  };
+
+  const toggleTrait = (trait: string) => {
+    setExpandedTraitId((prev) => (prev === trait ? null : trait));
+  };
 
   useEffect(() => {
-    async function loadReportAndTranscripts() {
+    async function loadData() {
       if (!candidateId) return;
-
       try {
         const rawToken = document.cookie
           .split("; ")
           .find((row) => row.startsWith("access_token="))
           ?.split("=")[1];
         const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
-
         if (!tokenCookie) return;
 
-        const promises: Promise<unknown>[] = [
+        const promises = [
           getCandidateReportApi(candidateId, tokenCookie).catch(() => null),
           getCandidateTranscriptsApi(candidateId, tokenCookie).catch(
             () => null,
@@ -87,483 +68,557 @@ export default function CandidateReportView({
               () => null,
             ),
           );
-        } else {
-          promises.push(Promise.resolve(null));
         }
 
-        const [reportRes, transcriptsRes, candidatesRes] = (await Promise.all(
-          promises,
-        )) as [
-          {
-            raw_report?: Record<string, unknown>;
-            reasoning?: string;
-            overall_confidence?: string;
-          } | null,
-          Array<{ role: string; content: string }> | null,
-          Array<{
-            id: string;
-            first_name?: string;
-            last_name?: string;
-            email?: string;
-            recommendation?: string;
-            composite_score?: number;
-          }> | null,
-        ];
+        const [reportRes, transcriptsRes, candidatesRes] =
+          await Promise.all(promises);
 
-        const candidateInfo = candidatesRes?.find((c) => c.id === candidateId);
+        if (reportRes?.raw_report) setReport(reportRes.raw_report);
+        if (transcriptsRes && transcriptsRes.length > 0)
+          setTranscripts(transcriptsRes);
 
-        if (reportRes || transcriptsRes || candidateInfo) {
-          const raw = reportRes?.raw_report || {};
-
-          // Map transcripts to interaction turns
-          const mappedInteractions =
-            transcriptsRes && transcriptsRes.length > 0
-              ? transcriptsRes.map(
-                  (t: { role: string; content: string }, idx: number) => ({
-                    turn: `[T${idx + 1}]`,
-                    speaker:
-                      t.role === "candidate" ? "Candidate" : "Interviewer",
-                    role: t.role === "candidate" ? "candidate" : "interviewer",
-                    text: t.content,
-                  }),
-                )
-              : [];
-
-          const recStr = candidateInfo?.recommendation || "Hold";
-          let statusColor = "bg-[#DC2626]";
-          let statusReason = "Did not meet core requirements";
-          if (
-            recStr.includes("Advance with follow-up") ||
-            recStr.includes("follow-up")
-          ) {
-            statusColor = "bg-[#828282]"; // Grey
-            statusReason = "Passed with minor concerns";
-          } else if (
-            recStr.includes("Advance") ||
-            recStr.includes("Pass") ||
-            recStr.includes("Accept")
-          ) {
-            statusColor = "bg-[#00C835]"; // Green
-            statusReason = "Passed all criteria needed";
-          }
-
-          const oScore = candidateInfo?.composite_score ?? 0;
-          let scoreSubtext = "Under average";
-          if (oScore > 70 || oScore > 7) {
-            scoreSubtext = "Pretty high";
-          } else if (oScore >= 60 || oScore >= 6) {
-            scoreSubtext = "Average";
-          }
-
-          const allGoodTraits: HighlightBar[] = [];
-          const allBadTraits: HighlightBar[] = [];
-
-          const goals = (raw?.goals || raw?.goal_breakdown || []) as Array<{
-            score?: number;
-            rationale?: string;
-            key_observations?: string;
-          }>;
-          const comm = raw?.communication || raw?.communication_traits || null;
-
-          // Parse goals for good and bad traits
-          for (const goal of goals) {
-            const gScore = goal.score ?? 0;
-            const gText =
-              goal.rationale ||
-              goal.key_observations ||
-              "No rationale provided.";
-            if (gScore >= 8.0) {
-              allGoodTraits.push({ text: gText, type: "pass" });
-            } else {
-              allBadTraits.push({ text: gText, type: "fail" });
-            }
-          }
-
-          // Supplement bad traits from communication if needed
-          if (comm) {
-            // Check if it's the { traits: {} } structure or flat { clarity: 9.0 } structure
-            const commDict = (comm as Record<string, unknown>).traits
-              ? (comm as Record<string, unknown>).traits
-              : comm;
-            for (const [tName, tData] of Object.entries(
-              commDict as Record<string, unknown>,
-            )) {
-              if (typeof tData === "object" && tData !== null) {
-                const td = tData as { is_passed?: boolean; rationale?: string };
-                if (td.is_passed === false) {
-                  allBadTraits.push({
-                    text:
-                      td.rationale || `Failed communication trait: ${tName}`,
-                    type: "fail",
-                  });
-                } else if (td.is_passed === true) {
-                  allGoodTraits.push({
-                    text:
-                      td.rationale || `Passed communication trait: ${tName}`,
-                    type: "pass",
-                  });
-                }
-              } else if (typeof tData === "number") {
-                // Flat structure fallback e.g. "clarity": 9.0
-                if (tData < 8.0) {
-                  allBadTraits.push({
-                    text: `Needs improvement in ${tName.replace("_", " ")}`,
-                    type: "fail",
-                  });
-                } else if (tData >= 8.0) {
-                  allGoodTraits.push({
-                    text: `Strong ${tName.replace("_", " ")} skills`,
-                    type: "pass",
-                  });
-                }
-              }
-            }
-          }
-
-          let finalBadTraits: HighlightBar[] = [];
-          let finalGoodTraits: HighlightBar[] = [];
-
-          if (allGoodTraits.length === 0) {
-            finalBadTraits = allBadTraits.slice(0, 4);
-          } else if (allBadTraits.length === 0) {
-            finalGoodTraits = allGoodTraits.slice(0, 4);
-          } else {
-            finalBadTraits = allBadTraits.slice(0, 2);
-            finalGoodTraits = allGoodTraits.slice(0, 4 - finalBadTraits.length);
-          }
-
-          const combinedTraits = [...finalGoodTraits, ...finalBadTraits];
-          const highlightBars =
-            combinedTraits.length > 0
-              ? combinedTraits
-              : INITIAL_MOCK_DATA.highlightBars;
-
-          const summaryText = reportRes?.reasoning || "";
-          const paragraphs = summaryText
-            ? summaryText.split("\n").filter((p: string) => p.trim().length > 0)
-            : ["No summary available."];
-
-          // Parse knowledge & communication for matrix (mock structure with real data)
-          let knowledgeItems: ScoreItem[] = [];
-          let commItems: ScoreItem[] = [];
-          let kScoreText = "0%";
-          let cScoreText = "0%";
-
-          if (goals.length > 0) {
-            const sumScore = goals.reduce(
-              (acc: number, g: { score?: number }) => acc + (g.score || 0),
-              0,
-            );
-            kScoreText = `${Math.round((sumScore / (goals.length * 10)) * 100)}%`;
-            knowledgeItems = goals.map(
-              (g: { score?: number; topic?: string }, i: number) => ({
-                label: `Goal ${i + 1}`,
-                status: (g.score || 0) >= 8.0 ? "Pass" : "Failed",
-                type: (g.score || 0) >= 8.0 ? "pass" : "fail",
-              }),
-            );
-          }
-
-          if (comm) {
-            const commDict = (comm as Record<string, unknown>).traits
-              ? (comm as Record<string, unknown>).traits
-              : comm;
-            const overallPassed = (comm as Record<string, unknown>).overall
-              ? ((
-                  (comm as Record<string, unknown>).overall as {
-                    is_passed?: boolean;
-                  }
-                ).is_passed ?? true)
-              : true;
-            cScoreText = overallPassed ? "Pass" : "Fail";
-
-            commItems = Object.entries(commDict as Record<string, unknown>).map(
-              ([k, tv]) => {
-                const isPass =
-                  typeof tv === "number"
-                    ? tv >= 8.0
-                    : (tv as { is_passed?: boolean }).is_passed;
-                return {
-                  label: k.replace("_", " "),
-                  status: isPass ? "Pass" : "Failed",
-                  type: isPass ? "pass" : "fail",
-                };
-              },
-            );
-          }
-
-          const fullName = candidateInfo?.first_name
-            ? `${candidateInfo.first_name} ${candidateInfo.last_name || ""}`.trim()
-            : "Unknown Candidate";
-
-          setCandidateData({
-            name: fullName,
-            email: candidateInfo?.email || "Unknown Email",
-            status: recStr,
-            statusColor,
-            statusReason,
-            overallScore: Math.round(oScore * 10) / 10,
-            overallScoreSubtext: scoreSubtext,
-            shortSummaryParagraphs: paragraphs,
-            highlightBars,
-            knowledgeScore: {
-              score: kScoreText,
-              items: knowledgeItems,
-              note: "Detailed knowledge evaluation",
-            },
-            communicationScore: {
-              score: cScoreText,
-              items: commItems,
-              note:
-                (
-                  (comm as Record<string, unknown>)?.overall as {
-                    rationale?: string;
-                  }
-                )?.rationale || "Detailed communication evaluation",
-            },
-            interactions: mappedInteractions,
-          });
-        }
+        const cInfo = (candidatesRes as any[])?.find(
+          (c: any) => c.id === candidateId,
+        );
+        if (cInfo) setCandidateInfo(cInfo);
       } catch (err) {
-        console.warn("Failed to load candidate report or transcripts", err);
+        console.warn("Failed to load candidate data", err);
       }
     }
-
-    loadReportAndTranscripts();
+    loadData();
   }, [candidateId, interviewId]);
 
+  // Fallbacks for loading state or missing API
+  const recommendation = report?.recommendation || "Advance with follow-up";
+  const reasoning =
+    report?.reasoning ||
+    "lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+
+  const communication = report?.communication || {
+    overall: {
+      is_passed: true,
+      confidence: "high",
+      rationale:
+        "Candidate exhibited clear, structured communication across all traits.",
+    },
+    traits: {
+      clarity: {
+        is_passed: true,
+        score: 10.0,
+        rationale:
+          "Clear and direct explanations without filler words or ambiguity.",
+        criteria_match: {
+          passing_met: [
+            {
+              quote:
+                "I prefer sync.RWMutex over channels when guarding simple in-memory maps.",
+            },
+            {
+              quote:
+                "We implement client-side load balancing to avoid connection multiplexing issues.",
+            },
+          ],
+        },
+      },
+      structure: {
+        is_passed: true,
+        score: 9.0,
+        rationale: "Maintained logical flow throughout answers.",
+        criteria_match: {
+          passing_met: [
+            {
+              quote:
+                "First I'll address L4 load balancing, then transition to client-side balancing.",
+            },
+          ],
+        },
+      },
+    },
+  };
+
+  const goals = report?.goals || [
+    {
+      goal_id: "g_01",
+      topic: "Go Performance & Concurrency",
+      score: 10.0,
+      confidence: "high",
+      rationale:
+        "The candidate correctly identified the use case for sync.RWMutex and mentioned the -race flag for detecting race conditions.",
+      criteria_match: {
+        passing_met: [
+          {
+            quote:
+              "I prefer sync.RWMutex over channels when guarding simple in-memory maps.",
+          },
+          {
+            quote:
+              "I always run tests with the -race detector flag enabled in CI/CD.",
+          },
+        ],
+      },
+      interaction_history: [
+        {
+          turn_id: "t_01",
+          role: "interviewer",
+          content:
+            "How do you handle race conditions in Go services? How do you handle race conditions in Go services? How do you handle race conditions in Go services?",
+        },
+        {
+          turn_id: "t_02",
+          role: "candidate",
+          content:
+            "I always run tests with the -race detector flag enabled in CI/CD. For shared state, I prefer sync.RWMutex over channels when guarding simple in-memory maps.",
+        },
+        {
+          turn_id: "t_01",
+          role: "interviewer",
+          content: "How do you handle race conditions in Go services?",
+        },
+        {
+          turn_id: "t_02",
+          role: "candidate",
+          content:
+            "I always run tests with the -race detector flag enabled in CI/CD. For shared state, I prefer sync.RWMutex over channels when guarding simple in-memory maps.",
+        },
+      ],
+    },
+    {
+      goal_id: "g_02",
+      topic: "System Architecture & Database Indexing",
+      score: 9.0,
+      confidence: "high",
+      rationale:
+        "The candidate correctly identified the use of EXPLAIN ANALYZE and specific index types like B-tree and partial indexes.",
+      criteria_match: {
+        passing_met: [
+          { quote: "I run EXPLAIN ANALYZE to inspect the query plan" },
+        ],
+      },
+      interaction_history: [
+        {
+          turn_id: "t_03",
+          role: "interviewer",
+          content:
+            "What steps do you take when a query is running slowly in production?",
+        },
+        {
+          turn_id: "t_04",
+          role: "candidate",
+          content:
+            "I run EXPLAIN ANALYZE to inspect the query plan and look for sequential scans. Then I add targeted B-tree indexes or partial indexes where appropriate.",
+        },
+        {
+          turn_id: "t_01",
+          role: "interviewer",
+          content:
+            "How do you handle race conditions in Go services? How do you handle race conditions in Go services? How do you handle race conditions in Go services?",
+        },
+        {
+          turn_id: "t_02",
+          role: "candidate",
+          content:
+            "I always run tests with the -race detector flag enabled in CI/CD. For shared state, I prefer sync.RWMutex over channels when guarding simple in-memory maps.",
+        },
+        {
+          turn_id: "t_01",
+          role: "interviewer",
+          content: "How do you handle race conditions in Go services?",
+        },
+      ],
+    },
+  ];
+
+  const fullName = candidateInfo?.first_name
+    ? `${candidateInfo.first_name} ${candidateInfo.last_name || ""}`.trim()
+    : "Alice Johnson";
+
+  const email = candidateInfo?.email || "alice.j@example.com";
+
+  const defaultTranscripts = [
+    {
+      role: "interviewer",
+      time: "11:23 AM",
+      content:
+        "Hi Alice, let's start with a distributed systems question. How would you handle load balancing for a gRPC microservice?",
+    },
+    {
+      role: "candidate",
+      time: "11:24 AM",
+      content:
+        "For gRPC, standard L4 load balancing like a simple ClusterIP won't work well because of HTTP/2 connection multiplexing. I would propose an L7 solution like Envoy or Istio, or implement client-side load balancing.",
+    },
+    {
+      role: "interviewer",
+      time: "11:25 AM",
+      content:
+        "Great point. What about managing goroutines safely if a client suddenly disconnects?",
+    },
+    {
+      role: "candidate",
+      time: "11:26 AM",
+      content:
+        "I would use context propagation. By passing the request context down to all goroutines, we can listen for ctx.Done() and cleanly tear down resources if the deadline is exceeded or the client cancels.",
+    },
+  ];
+
   return (
-    <div className="max-w-350 mx-auto px-6 pb-20 font-sans">
-      {/* Top 2-Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
-        {/* Left Card: Candidate Info & Short Summary */}
-        <div className="lg:col-span-6 bg-white rounded-[28px] border border-[#F1F1F1] p-7 shadow-2xs flex flex-col justify-between">
-          <div>
-            {/* Profile Header */}
-            <div className="flex items-center gap-4 pb-5 border-b border-[#F1F1F1]">
-              <UserAvatar className="w-10 h-10" />
-              <div>
-                <h2 className="text-base font-semibold text-[#272727] leading-snug">
-                  {candidateData.name}
-                </h2>
-                <p className="text-sm text-[#616161]">{candidateData.email}</p>
-              </div>
-            </div>
+    <div className="flex flex-col h-full bg-white overflow-y-auto">
+      <div className="px-8 py-10 max-w-200 w-full mx-auto font-sans">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm font-medium text-gray-400 mb-10">
+          <Link href="/" className="hover:text-gray-900 transition-colors">
+            Home
+          </Link>
+          <span>/</span>
+          <Link href="/" className="hover:text-gray-900 transition-colors">
+            Interview List
+          </Link>
+          <span>/</span>
+          <Link
+            href="/"
+            className="hover:text-gray-900 transition-colors cursor-pointer"
+          >
+            Backend Engineer
+          </Link>
+          <span>/</span>
+          <span className="text-gray-900">{fullName}</span>
+        </div>
 
-            {/* Short Summary Section */}
-            <div className="pt-5 mb-6">
-              <h3 className="text-base font-semibold text-[#272727] mb-3">
-                Short Summary
-              </h3>
-              <div className="space-y-3 text-sm font-medium text-[#616161] leading-relaxed">
-                {candidateData.shortSummaryParagraphs.map((para, idx) => (
-                  <p key={idx}>{para}</p>
-                ))}
-              </div>
+        {/* Minimalist Header */}
+        <div className="mb-10">
+          <div className="flex items-center gap-4 mb-0">
+            <h1 className="text-[28px] font-bold text-gray-900 leading-tight mb-2 tracking-tight">
+              {fullName}
+            </h1>
+            <div
+              className={`px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded-md ${recommendation.includes("Advance") ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-700"}`}
+            >
+              {recommendation.includes("Advance") ? "Advance" : "Hold / Reject"}
             </div>
+          </div>
+          <p className="text-sm font-medium text-gray-600">{email}</p>
+        </div>
 
-            {/* Vertical Highlight Bars */}
-            <div className="space-y-2.5">
-              {candidateData.highlightBars.map((bar, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-3 text-sm text-[#616161] font-medium"
-                >
-                  <div
-                    className={`w-1 h-6 rounded-full shrink-0 ${
-                      bar.type === "pass" ? "bg-[#00C835]" : "bg-[#D30609]"
-                    }`}
-                  />
-                  <span className="truncate">{bar.text}</span>
-                </div>
-              ))}
+        <p className="text-[14px] text-gray-600 leading-relaxed font-medium mb-8">
+          {reasoning}
+        </p>
+        {/* General Summary (Clean white card) */}
+        {/* <div className="bg-white border border-gray-200 rounded-xl p-6 mb-8">
+          <div className="flex items-start justify-between mb-4">
+            <h2 className="text-sm font-semibold text-gray-900">
+              General Summary
+            </h2>
+            <div
+              className={`px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded-md ${recommendation.includes("Advance") ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-700"}`}
+            >
+              Status:{" "}
+              {recommendation.includes("Advance") ? "Advance" : "Hold / Reject"}
+            </div>
+          </div>
+        </div> */}
+
+        {/* Core Analysis Breakdown */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            {/* <Target className="w-4 h-4 text-gray-600" /> */}
+            <h2 className="text-sm font-semibold text-gray-600">
+              Core Analysis Breakdown
+            </h2>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="divide-y divide-gray-100">
+              {goals.map((goal: any, idx: number) => {
+                const goalKey = goal.goal_id || `g_${idx}`;
+                const isExpanded = expandedGoalId === goalKey;
+                const isPassed = goal.score >= 7;
+
+                return (
+                  <div key={idx} className="transition-colors">
+                    {/* Header Row */}
+                    <button
+                      type="button"
+                      onClick={() => toggleGoal(goalKey)}
+                      className="w-full flex items-center justify-between py-4 px-5 hover:bg-gray-50 text-left cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-5 h-5 shrink-0 flex items-center justify-center bg-[#6affe4] rounded">
+                          <Brain
+                            className="w-3 h-3 text-gray-600"
+                            strokeWidth={3}
+                          />
+                        </div>
+                        <span className="text-[14px] font-semibold text-gray-900 capitalize">
+                          {goal.goal_id}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                            isPassed
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {isPassed ? "PASS" : "FAIL"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-semibold text-gray-600">
+                          {goal.score}/10
+                        </span>
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4 text-gray-400" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-gray-400" />
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Dropdown Details (matching Shopify tool permissions gray box style) */}
+                    {isExpanded && (
+                      <div className="px-5 pb-5 pt-1 bg-white ">
+                        <div className="p-4 bg-[#FAFAFA]  border border-gray-100 rounded-xl space-y-3">
+                          <div className="mb-4">
+                            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-1">
+                              Rationale & Analysis
+                            </h4>
+                            <p className="text-[13px] font-medium text-gray-600 leading-relaxed">
+                              {goal.rationale}
+                            </p>
+                          </div>
+
+                          {goal.criteria_match?.passing_met?.length > 0 && (
+                            <div>
+                              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-2">
+                                Evidence
+                              </h4>
+                              <div className="space-y-1.5">
+                                {goal.criteria_match.passing_met.map(
+                                  (match: any, i: number) => (
+                                    <div
+                                      key={i}
+                                      className="flex items-center gap-2"
+                                    >
+                                      <Triangle
+                                        fill="true"
+                                        color=""
+                                        className="w-2 h-2 rotate-90"
+                                      />
+                                      <p className="text-[12px] font-medium text-gray-600 italic">
+                                        &quot;{match.quote}&quot;
+                                      </p>
+                                    </div>
+                                  ),
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        {/* Right Card: Status & Score Matrix */}
-        <div className="lg:col-span-6 bg-white rounded-[28px] border border-[#F1F1F1] p-7 shadow-2xs flex flex-col justify-between">
-          <div>
-            {/* Top Status & Overall Score Header */}
-            <div className="flex items-start justify-between pb-6 border-b border-[#F1F1F1]">
-              {/* Left Status Block */}
-              <div className="">
-                <span className="text-sm font-medium text-[#272727] uppercase tracking-wider block mb-2.5">
-                  Status
-                </span>
-                <div className="flex items-center gap-2.5 mb-2.5">
-                  <div
-                    className={`w-2.5 h-7 ${candidateData.statusColor} rounded-full shrink-0`}
-                  />
-                  <span className="text-2xl font-semibold text-[#272727]">
-                    {candidateData.status}
-                  </span>
-                </div>
-                <p className="text-sm font-medium text-[#616161]">
-                  {candidateData.statusReason}
-                </p>
-              </div>
+        {/* Communication & Traits breakdown */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            {/* <TrendingDown className="w-4 h-4 text-gray-600" /> */}
+            <h2 className="text-sm font-semibold text-gray-600">
+              Communication & Traits breakdown
+            </h2>
+          </div>
 
-              {/* Right Overall Score Block */}
-              <div className="text-right">
-                <span className="text-sm font-medium text-[#272727] uppercase tracking-wider block mb-2.5">
-                  Overall Score
-                </span>
-                <span className="text-2xl font-semibold text-[#272727] block leading-none mb-2.5">
-                  {candidateData.overallScore}
-                </span>
-                <p className="text-sm font-medium text-[#616161]">
-                  {candidateData.overallScoreSubtext}
-                </p>
-              </div>
-            </div>
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="divide-y divide-gray-100">
+              {Object.entries(communication.traits || {}).map(
+                ([trait, data]: [string, any]) => {
+                  const isExpanded = expandedTraitId === trait;
+                  const isPassed = data.is_passed ?? data.score >= 7;
+                  const evidenceList =
+                    data.criteria_match?.passing_met || data.evidence || [];
 
-            {/* Dual Score Columns */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-              {/* Column 1: Knowledge Score */}
-              <div className="flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-2.5">
-                    <span className="text-sm font-medium text-[#272727]">
-                      Knowledge Score
-                    </span>
-                    <Info className="w-3.5 h-3.5 text-[#616161] cursor-pointer" />
-                  </div>
-                  <div className="text-2xl font-semibold text-[#272727] mb-4.5">
-                    {candidateData.knowledgeScore.score}
-                  </div>
-
-                  {/* Goal List */}
-                  <div className="space-y-2.5 mb-4.5">
-                    {candidateData.knowledgeScore.items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between text-sm"
+                  return (
+                    <div key={trait} className="transition-colors">
+                      <button
+                        type="button"
+                        onClick={() => toggleTrait(trait)}
+                        className="w-full flex items-center justify-between py-4 px-5 hover:bg-gray-50 text-left cursor-pointer transition-colors"
                       >
-                        <div className="flex items-center gap-2 text-[#272727] font-medium">
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#FE6100] shrink-0" />
-                          <span>{item.label}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-5 h-5 shrink-0 flex items-center justify-center bg-[#6affe4] rounded">
+                            <AudioLines
+                              className="w-4 h-4 text-gray-600"
+                              strokeWidth={3}
+                            />
+                          </div>
+                          <span className="text-[14px] font-semibold text-gray-900 capitalize">
+                            {trait.replace("_", " ")}
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                              isPassed
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {isPassed ? "PASS" : "FAIL"}
+                          </span>
                         </div>
-                        <div className="flex-1 border-b border-dotted border-[#D9D9D9] mx-2" />
-                        <span
-                          className={`font-medium ${
-                            item.type === "pass"
-                              ? "text-[#22C55E]"
-                              : "text-[#DC2626]"
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs font-medium text-[#FE6100] leading-snug mb-4.5">
-                    {candidateData.knowledgeScore.note}
-                  </p>
-                  <button className="w-full flex items-center justify-end gap-1.5 text-sm font-semibold text-[#272727] underline hover:text-black transition-colors cursor-pointer">
-                    <FileText className="w-3.5 h-3.5" />
-                    See Detail
-                  </button>
-                </div>
-              </div>
-
-              {/* Column 2: Communication Score */}
-              <div className="flex flex-col justify-between md:border-l md:border-[#F1F1F1] md:pl-6">
-                <div>
-                  <div className="flex items-center justify-between mb-2.5">
-                    <span className="text-sm font-medium text-[#272727]">
-                      Communication Score
-                    </span>
-                    <Info className="w-3.5 h-3.5 text-[#616161] cursor-pointer" />
-                  </div>
-                  <div className="text-2xl font-semibold text-[#272727] mb-4.5">
-                    {candidateData.communicationScore.score}
-                  </div>
-
-                  {/* Signal List */}
-                  <div className="space-y-2.5 mb-4.5">
-                    {candidateData.communicationScore.items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between text-sm"
-                      >
-                        <div className="flex items-center gap-2 text-[#272727] font-medium">
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#FE6100] shrink-0" />
-                          <span>{item.label}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-semibold text-gray-600">
+                            {data.score}/10
+                          </span>
+                          {isExpanded ? (
+                            <ChevronUp className="w-4 h-4 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                          )}
                         </div>
-                        <div className="flex-1 border-b border-dotted border-[#D9D9D9] mx-2" />
-                        <span
-                          className={`font-medium ${
-                            item.type === "pass"
-                              ? "text-[#22C55E]"
-                              : "text-[#DC2626]"
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                      </button>
 
-                <div>
-                  <p className="text-[11px] font-medium text-[#FE6100] leading-snug mb-4.5">
-                    {candidateData.communicationScore.note}
-                  </p>
-                  <button className="w-full flex items-center justify-end gap-1.5 text-sm font-semibold text-[#272727] underline hover:text-black transition-colors cursor-pointer">
-                    <FileText className="w-3.5 h-3.5" />
-                    See Detail
-                  </button>
-                </div>
-              </div>
+                      {/* Dropdown Details (matching Core Analysis style) */}
+                      {isExpanded && (
+                        <div className="px-5 pb-5 pt-1 bg-white ">
+                          <div className="p-4 bg-[#FAFAFA] border border-gray-100 rounded-xl space-y-3">
+                            <div className="mb-4">
+                              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-1">
+                                Rationale & Analysis
+                              </h4>
+                              <p className="text-[13px] font-medium text-gray-600 leading-relaxed">
+                                {data.rationale}
+                              </p>
+                            </div>
+
+                            {evidenceList.length > 0 && (
+                              <div>
+                                <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-2">
+                                  Evidence
+                                </h4>
+                                <div className="space-y-1.5">
+                                  {evidenceList.map((match: any, i: number) => (
+                                    <div
+                                      key={i}
+                                      className="flex items-center gap-2"
+                                    >
+                                      <Triangle
+                                        fill="true"
+                                        color=""
+                                        className="w-2 h-2 rotate-90"
+                                      />
+                                      <p className="text-[12px] font-medium text-gray-600 italic">
+                                        &quot;{match.quote}&quot;
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                },
+              )}
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Bottom Card: Interview Interaction */}
-      <div className="bg-white rounded-[28px] border border-[#F1F1F1] p-7 shadow-2xs">
-        <h3 className="text-base font-semibold text-[#272727] pb-4 mb-6 border-b border-[#F1F1F1]">
-          Interview Interaction
-        </h3>
+        {/* Transcript Section - Separated by Goal with Connecting Line */}
+        <div className="mb-10">
+          <div className="flex items-center gap-2 mb-4">
+            <MessageCircle className="w-4 h-4 text-gray-600" />
+            <h2 className="text-sm font-semibold text-gray-600">
+              Interview Transcript
+            </h2>
+          </div>
 
-        <div className="relative pl-1">
-          {/* Continuous vertical timeline line */}
-          <div className="absolute top-2.5 bottom-6 left-12 w-px bg-[#D9D9D9]" />
+          <div className="border border-gray-200 rounded-xl bg-white p-6 h-125 overflow-y-scroll">
+            <div className="space-y-8">
+              {goals.map((goalItem: any, goalIdx: number) => {
+                const interactions =
+                  goalItem.interaction_history ||
+                  (transcripts.length > 0
+                    ? transcripts.filter(
+                        (t: any) => t.goal_id === goalItem.goal_id,
+                      )
+                    : goalIdx === 0
+                      ? defaultTranscripts.slice(0, 2)
+                      : defaultTranscripts.slice(2));
 
-          <div className="space-y-6">
-            {candidateData.interactions.map((interaction, idx) => (
-              <div key={idx} className="relative flex items-start gap-4">
-                {/* Turn Label */}
-                <span className="w-6 shrink-0 font-semibold text-base text-[#272727] pt-0.5">
-                  {interaction.turn}
-                </span>
+                if (!interactions || interactions.length === 0) return null;
 
-                {/* Timeline Bullet Dot */}
-                <div className="relative z-10 flex items-center justify-center pt-1 shrink-0">
-                  <div
-                    className={`w-2.5 h-2.5 rounded-full ${
-                      interaction.role === "candidate"
-                        ? "bg-[#FE6100]"
-                        : "bg-[#B8B8B8]"
-                    }`}
-                  />
-                </div>
+                return (
+                  <div key={goalIdx} className="mb-8 last:mb-0">
+                    {/* Goal Group Header / Label */}
+                    <div className="flex items-center gap-2 mb-5">
+                      <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">
+                        {goalItem.goal_id}:{" "}
+                        {goalItem.topic || "Goal Evaluation"}
+                      </span>
+                      <div className="flex-1 h-px bg-gray-100" />
+                    </div>
 
-                {/* Speaker & Transcript Content */}
-                <div className="flex-1">
-                  <span className="font-semibold text-base text-[#272727]">
-                    {interaction.speaker}
-                  </span>
-                  <p className="text-sm font-medium text-[#616161] leading-relaxed mt-1">
-                    {interaction.text}
-                  </p>
-                </div>
-              </div>
-            ))}
+                    {/* Interactions Thread with Fluid Connecting Line */}
+                    <div>
+                      {interactions.map((interaction: any, turnIdx: number) => {
+                        const isCandidate = interaction.role === "candidate";
+                        const speakerName = isCandidate
+                          ? fullName
+                          : "AI Interviewer";
+                        const isLastInGoal =
+                          turnIdx === interactions.length - 1;
+
+                        return (
+                          <div
+                            key={turnIdx}
+                            className="flex items-stretch gap-3.5"
+                          >
+                            {/* Fluid Connecting Line Column */}
+                            <div className="w-5 shrink-0 flex flex-col items-center">
+                              {/* Avatar */}
+                              <div className="w-5 h-5 rounded-full shrink-0 z-10 flex items-center justify-center">
+                                {isCandidate ? (
+                                  <div className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-bold text-[10px]">
+                                    {fullName.charAt(0)}
+                                  </div>
+                                ) : (
+                                  <div className="w-5 h-5 rounded-full bg-[#b7ddff] flex items-center justify-center text-gray-900 font-bold text-xs shadow-xs">
+                                    <Bot className="w-3 h-3 text-gray-900" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Fluid Vertical Line - Expands to fill item height automatically */}
+                              {!isLastInGoal && (
+                                <div className="w-0.5 flex-1 bg-gray-200" />
+                              )}
+                            </div>
+
+                            {/* Message Content */}
+                            <div
+                              className={`flex-1 ${!isLastInGoal ? "pb-6" : "pb-1"}`}
+                            >
+                              <div className="flex items-baseline gap-2 mb-1">
+                                <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+                                  {speakerName}
+                                </span>
+                              </div>
+                              <p className="text-xs font-medium text-gray-600 leading-relaxed">
+                                {interaction.content}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
