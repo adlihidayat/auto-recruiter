@@ -11,6 +11,7 @@ from app.models.goal import Goal
 from app.models.transcript import Transcript
 from app.models.report import CandidateReport
 from app.models.job import Job
+from app.models.user_recent import UserRecentInterview
 
 __all__ = [
     "Base",
@@ -21,4 +22,5 @@ __all__ = [
     "Transcript",
     "CandidateReport",
     "Job",
+    "UserRecentInterview",
 ]

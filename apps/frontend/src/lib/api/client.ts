@@ -137,6 +137,7 @@ export interface BackendInterviewResponse {
   id: string;
   job_name: string;
   job_description: string;
+  icon?: string | null;
   difficulty: string;
   num_goals: number;
   total_duration_minutes: number;
@@ -480,6 +481,45 @@ export async function batchDeleteInterviewsApi(
   if (!response.ok) {
     handleAuthError(response.status);
     throw new Error("Failed to batch delete interviews");
+  }
+  return response.json();
+}
+
+/**
+ * Fetch top 5 recent interviews for current authenticated user.
+ */
+export async function getRecentInterviewsApi(
+  token: string
+): Promise<BackendInterviewResponse[]> {
+  const response = await fetch(`${API_BASE_URL}/api/interviews/recents`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    handleAuthError(response.status);
+    throw new Error("Failed to fetch recent interviews");
+  }
+  return response.json();
+}
+
+/**
+ * Explicitly record an interview view and return updated recents.
+ */
+export async function recordInterviewViewApi(
+  interviewId: string,
+  token: string
+): Promise<BackendInterviewResponse[]> {
+  const response = await fetch(`${API_BASE_URL}/api/interviews/${interviewId}/view`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    handleAuthError(response.status);
+    throw new Error("Failed to record interview view");
   }
   return response.json();
 }

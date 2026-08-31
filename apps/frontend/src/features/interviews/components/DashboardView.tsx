@@ -302,6 +302,9 @@ export default function DashboardView() {
       );
       setSelectedIds([]);
       setShowBatchDeleteModal(false);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("recentsUpdated"));
+      }
       await loadBackendInterviews();
     } catch (err) {
       console.error("Failed to batch delete selected interviews", err);
@@ -594,9 +597,9 @@ export default function DashboardView() {
         )}
 
         {/* Main Data Table Card */}
-        <div className="border border-gray-200 rounded-[20px] bg-white overflow-hidden shadow-2xs">
+        <div className="border border-gray-200 rounded-[20px] bg-white shadow-2xs relative">
           {/* Table Toolbar */}
-          <div className="flex items-center justify-between py-3 px-4 border-b border-gray-200">
+          <div className="flex items-center justify-between py-3 px-4 border-b border-gray-200 rounded-t-[20px] relative z-20">
             <div className="flex items-center gap-3">
               <div className="relative">
                 <button
@@ -699,7 +702,7 @@ export default function DashboardView() {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-b-[20px]">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-gray-200 bg-[#FAFAFA]">
@@ -795,7 +798,7 @@ export default function DashboardView() {
                         <td className="pl-2 pr-6 py-0">
                           <div className="flex items-center gap-3">
                             <div className="w-6 rounded text-lg items-center justify-center h-8">
-                              😀️
+                              {campaign.icon || "💼"}
                             </div>
                             <span className="text-sm font-medium text-gray-900 truncate w-[400px]">
                               {campaign.jobTitle}{" "}

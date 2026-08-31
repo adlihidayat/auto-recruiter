@@ -34,18 +34,27 @@ export const CompareFilterPopover: React.FC<CompareFilterPopoverProps> = ({
       <div className="space-y-1">
         {ranges.map((range) => {
           const isSelected = selectedRange === range;
+          const isDisabled = range !== "This Year";
           return (
             <div
               key={range}
-              onClick={() => onSelect(range)}
-              className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer transition-all ${
-                isSelected
-                  ? "bg-gray-100/90 font-bold"
-                  : "hover:bg-gray-50 text-gray-700"
+              onClick={() => !isDisabled && onSelect(range)}
+              className={`flex items-center justify-between px-3 py-2 rounded-md transition-all ${
+                isDisabled
+                  ? "opacity-40 cursor-not-allowed text-gray-400 select-none"
+                  : isSelected
+                    ? "bg-gray-100/90 font-bold cursor-pointer"
+                    : "hover:bg-gray-50 text-gray-700 cursor-pointer"
               }`}
             >
-              <span className="text-sm font-medium text-gray-900">{range}</span>
-              {isSelected && (
+              <span
+                className={`text-sm font-medium ${
+                  isDisabled ? "text-gray-400" : "text-gray-900"
+                }`}
+              >
+                {range}
+              </span>
+              {isSelected && !isDisabled && (
                 <Check className="w-3.5 h-3.5 text-orange-500 stroke-[2.5]" />
               )}
             </div>

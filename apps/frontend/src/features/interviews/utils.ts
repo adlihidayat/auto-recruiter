@@ -55,5 +55,6 @@ export function mapBackendInterviewToCampaign(
     questionSuite: [],
     candidatesList: [],
     creatorName,
+    icon: backendInterview.icon || "💼",
   };
 }

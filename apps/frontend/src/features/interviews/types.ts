@@ -43,4 +43,5 @@ export interface InterviewCampaign {
   candidatesList: CandidateRecord[];
   agentSummary?: string;
   creatorName?: string;
+  icon?: string;
 }

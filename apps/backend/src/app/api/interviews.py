@@ -4,9 +4,11 @@ Why: Exposes endpoints for the frontend to create and list interviews and their 
 Boundaries: Connects HTTP layer to Database layer without housing complex business logic.
 """
 
+from datetime import datetime, UTC
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, status, BackgroundTasks
 from sqlalchemy import select, delete
+from sqlalchemy.orm import selectinload
 from livekit import api
 
 from app.core.config import application_settings
@@ -17,6 +19,7 @@ from app.models.goal import Goal
 from app.models.transcript import Transcript
 from app.models.report import CandidateReport
 from app.models.job import Job
+from app.models.user_recent import UserRecentInterview
 from app.schemas.interview import InterviewCreate, InterviewResponse, InterviewCreationResponse, InterviewUpdate, GoalResponse, BatchDeleteInterviewsRequest
 from app.schemas.candidate import CandidateResponse
 from app.services.plan_service import process_interview_plan_generation
@@ -192,6 +195,64 @@ async def list_interview_goals(
     goals = goals_result.scalars().all()
     return list(goals)
 
+async def _record_user_recent_view(session, user_id: UUID, interview_id: UUID):
+    result = await session.execute(
+        select(UserRecentInterview).where(
+            UserRecentInterview.user_id == user_id,
+            UserRecentInterview.interview_id == interview_id
+        )
+    )
+    recent = result.scalar_one_or_none()
+    if recent:
+        recent.viewed_at = datetime.now(UTC)
+    else:
+        recent = UserRecentInterview(
+            user_id=user_id,
+            interview_id=interview_id,
+            viewed_at=datetime.now(UTC)
+        )
+        session.add(recent)
+    await session.commit()
+
+@router.get("/recents", response_model=list[InterviewResponse])
+async def get_recent_interviews(
+    session: SessionDep,
+    current_user: CurrentUser
+):
+    """
+    Get current user's top 5 recently viewed interviews, sorted by viewed_at DESC.
+    """
+    result = await session.execute(
+        select(Interview)
+        .join(UserRecentInterview, Interview.id == UserRecentInterview.interview_id)
+        .options(selectinload(Interview.creator))
+        .where(UserRecentInterview.user_id == current_user.id)
+        .order_by(UserRecentInterview.viewed_at.desc())
+        .limit(5)
+    )
+    return list(result.scalars().all())
+
+@router.post("/{interview_id}/view", response_model=list[InterviewResponse])
+async def record_interview_view(
+    interview_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUser
+):
+    """
+    Record/update a user's recent view for an interview and return updated top 5 recents.
+    """
+    interview_res = await session.execute(
+        select(Interview).where(Interview.id == interview_id)
+    )
+    if not interview_res.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview not found"
+        )
+
+    await _record_user_recent_view(session, current_user.id, interview_id)
+    return await get_recent_interviews(session, current_user)
+
 @router.get("/{interview_id}", response_model=InterviewResponse)
 async def get_interview(
     interview_id: UUID,
@@ -199,7 +260,7 @@ async def get_interview(
     current_user: CurrentUser
 ):
     """
-    Get a single interview by ID across workspace accounts.
+    Get a single interview by ID across workspace accounts and record recent view.
     """
     result = await session.execute(
         select(Interview)
@@ -212,6 +273,10 @@ async def get_interview(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Interview not found"
         )
+
+    # Automatically record view for current user
+    await _record_user_recent_view(session, current_user.id, interview_id)
+
     return interview
 
 @router.patch("/{interview_id}", response_model=InterviewResponse)
@@ -294,7 +359,12 @@ async def delete_interview(
         delete(Job).where(Job.payload["interview_id"].as_string() == str(interview_id))
     )
 
-    # 4. Delete the interview record itself
+    # 4. Delete user recents for this interview
+    await session.execute(
+        delete(UserRecentInterview).where(UserRecentInterview.interview_id == interview_id)
+    )
+
+    # 5. Delete the interview record itself
     await session.delete(interview)
     await session.commit()
     return None
@@ -342,7 +412,12 @@ async def batch_delete_interviews(
             delete(Job).where(Job.payload["interview_id"].as_string() == str(i_id))
         )
 
-    # 4. Delete interviews
+    # 4. Delete user recents
+    await session.execute(
+        delete(UserRecentInterview).where(UserRecentInterview.interview_id.in_(payload.interview_ids))
+    )
+
+    # 5. Delete interviews
     result = await session.execute(
         delete(Interview).where(Interview.id.in_(payload.interview_ids))
     )

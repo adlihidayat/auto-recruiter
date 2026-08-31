@@ -12,10 +12,14 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { logoutAction } from "@/features/auth/actions";
-import { getMeApi } from "@/lib/api/client";
+import {
+  getMeApi,
+  getRecentInterviewsApi,
+  BackendInterviewResponse,
+} from "@/lib/api/client";
 import CreateInterviewModal from "@/features/interviews/components/CreateInterviewModal";
 import { QuickActionModal } from "@/features/interviews/components/QuickActionModal";
 import { useCreateModalStore } from "@/lib/store/useCreateModalStore";
@@ -26,13 +30,18 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { isOpen, openModal, closeModal } = useCreateModalStore();
   const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [userName, setUserName] = useState<string>("User");
+  const [recentInterviews, setRecentInterviews] = useState<
+    BackendInterviewResponse[]
+  >([]);
 
   useEffect(() => {
-    async function fetchUserInfo() {
+    let active = true;
+    async function loadData() {
       try {
         const rawToken = document.cookie
           .split("; ")
@@ -40,16 +49,54 @@ export default function DashboardLayout({
           ?.split("=")[1];
         const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
         if (tokenCookie) {
-          const me = await getMeApi(tokenCookie);
-          if (me) {
-            setUserName(me.username || me.email.split("@")[0] || "User");
+          const [me, recents] = await Promise.all([
+            getMeApi(tokenCookie).catch(() => null),
+            getRecentInterviewsApi(tokenCookie).catch(() => null),
+          ]);
+          if (active) {
+            if (me) {
+              setUserName(me.username || me.email.split("@")[0] || "User");
+            }
+            if (recents) {
+              setRecentInterviews(recents);
+            }
           }
         }
       } catch {
         // Fallback
       }
     }
-    fetchUserInfo();
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleRecentsUpdate = async () => {
+      try {
+        const rawToken = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("access_token="))
+          ?.split("=")[1];
+        const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
+        if (tokenCookie) {
+          const recents = await getRecentInterviewsApi(tokenCookie);
+          if (recents) {
+            setRecentInterviews(recents);
+          }
+        }
+      } catch {
+        // Fallback
+      }
+    };
+
+    window.addEventListener("recentsUpdated", handleRecentsUpdate);
+    window.addEventListener("campaignCreated", handleRecentsUpdate);
+    return () => {
+      window.removeEventListener("recentsUpdated", handleRecentsUpdate);
+      window.removeEventListener("campaignCreated", handleRecentsUpdate);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -142,73 +189,46 @@ export default function DashboardLayout({
               </button>
               <button
                 disabled
-                className="flex w-full disabled:opacity-30 disabled:text-gray-600 disabled:bg-transparent items-center gap-3 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100 transition-colors"
+                className="flex w-full items-center gap-3 px-3 py-1.5 text-sm font-medium text-gray-400 opacity-40 cursor-not-allowed select-none rounded-md"
               >
                 <Bell className="w-4 h-4" strokeWidth={2} /> Notifications
               </button>
               <button
                 disabled
-                className="flex w-full disabled:opacity-30 disabled:text-gray-600 disabled:bg-transparent items-center gap-3 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100 transition-colors"
+                className="flex w-full items-center gap-3 px-3 py-1.5 text-sm font-medium text-gray-400 opacity-40 cursor-not-allowed select-none rounded-md"
               >
                 <Settings className="w-4 h-4" strokeWidth={2} /> Settings
               </button>
               <button
                 disabled
-                className="flex w-full disabled:opacity-30 disabled:text-gray-600 disabled:bg-transparent items-center gap-3 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100 transition-colors"
+                className="flex w-full items-center gap-3 px-3 py-1.5 text-sm font-medium text-gray-400 opacity-40 cursor-not-allowed select-none rounded-md"
               >
                 <Info className="w-4 h-4" strokeWidth={2} /> App Information
               </button>
             </div>
 
             <div className="space-y-0.5">
-              <h3 className="px-3 text-xs font-semibold text-gray-400 mb-2">
+              <h3 className="px-3 text-xs font-medium text-gray-600 mb-2">
                 Recents
               </h3>
-              <a
-                href="#"
-                className="flex capitalize items-center gap-3 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100"
-              >
-                <span>😀️</span>
-                <span className="truncate max-w-56">
-                  Retail sales associate
-                </span>
-              </a>
-              <a
-                href="#"
-                className="flex capitalize items-center gap-3 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100"
-              >
-                <span>📈️</span>
-                <span className="truncate max-w-56">
-                  lead frontend engineer
-                </span>
-              </a>
-              <a
-                href="#"
-                className="flex capitalize items-center gap-3 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100"
-              >
-                <span>🚗️</span>
-                <span className="truncate max-w-56">
-                  Retail sales associate
-                </span>
-              </a>
-              <a
-                href="#"
-                className="flex capitalize items-center gap-3 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100"
-              >
-                <span>🧑‍🍳️</span>
-                <span className="truncate max-w-56">
-                  lead frontend engineer
-                </span>
-              </a>
-              <a
-                href="#"
-                className="flex capitalize items-center gap-3 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100"
-              >
-                <span>🫁️</span>
-                <span className="truncate max-w-56">
-                  Retail sales associate
-                </span>
-              </a>
+              {recentInterviews.length > 0 ? (
+                recentInterviews.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/interviews/${item.id}`}
+                    className="flex capitalize items-center gap-3 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100 transition-colors"
+                  >
+                    <span>{item.icon || "💼"}</span>
+                    <span className="truncate max-w-44">
+                      {item.job_name}
+                    </span>
+                  </Link>
+                ))
+              ) : (
+                <div className="px-3 py-1.5 text-xs text-gray-400 font-normal">
+                  No recent interviews
+                </div>
+              )}
             </div>
           </div>
 

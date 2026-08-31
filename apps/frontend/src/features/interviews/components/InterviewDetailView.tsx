@@ -69,7 +69,12 @@ export default function InterviewDetailView({
         ]);
 
         if (!isCancelled) {
-          if (detailRes) setInterview(detailRes);
+          if (detailRes) {
+            setInterview(detailRes);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new Event("recentsUpdated"));
+            }
+          }
           if (goalsRes) setGoals(goalsRes);
           if (candRes) setCandidates(candRes);
           setIsLoading(false);
@@ -99,6 +104,9 @@ export default function InterviewDetailView({
       const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
       if (tokenCookie) {
         await deleteInterviewApi(interviewId, tokenCookie);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("recentsUpdated"));
+        }
         router.push("/");
         router.refresh();
       }
@@ -146,7 +154,7 @@ export default function InterviewDetailView({
         {/* Header Section */}
         <div className="flex flex-col gap-2 mb-8">
           <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center border border-orange-100 text-xl">
-            😀️
+            {interview?.icon || "💼"}
           </div>
           <div className="flex justify-between gap-1 items-start">
             <div>
@@ -191,7 +199,7 @@ export default function InterviewDetailView({
           <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px]"></div>
           <div className="relative bg-white/90 backdrop-blur-sm px-6 py-2.5 rounded-full border border-white/50 flex items-center gap-3 text-sm font-medium text-gray-800">
             <div className="w-5 h-5 rounded bg-emerald-100 text-base flex items-center justify-center">
-              😀️
+              {interview?.icon || "💼"}
             </div>
             {jobName}
           </div>

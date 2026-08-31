@@ -60,30 +60,45 @@ export const ViewFilterPopover: React.FC<ViewFilterPopoverProps> = ({
       <div className="space-y-1">
         {views.map((view) => {
           const isSelected = selectedView === view.id;
+          const isDisabled = view.id !== "all";
           return (
             <div
               key={view.id}
-              onClick={() => onSelect(view.id)}
-              className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer transition-all ${
-                isSelected
-                  ? "bg-gray-100/90 font-bold"
-                  : "hover:bg-gray-50 text-gray-700"
+              onClick={() => !isDisabled && onSelect(view.id)}
+              className={`flex items-center justify-between px-3 py-2 rounded-md transition-all ${
+                isDisabled
+                  ? "opacity-40 cursor-not-allowed text-gray-400 select-none"
+                  : isSelected
+                    ? "bg-gray-100/90 font-bold cursor-pointer"
+                    : "hover:bg-gray-50 text-gray-700 cursor-pointer"
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-md bg-gray-100 flex items-center justify-center shrink-0">
+                <div
+                  className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${
+                    isDisabled ? "bg-gray-50 text-gray-300" : "bg-gray-100"
+                  }`}
+                >
                   {view.icon}
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-gray-900 leading-tight">
+                  <div
+                    className={`text-sm font-medium leading-tight ${
+                      isDisabled ? "text-gray-400" : "text-gray-900"
+                    }`}
+                  >
                     {view.label}
                   </div>
-                  <div className="text-[10px] text-gray-500 font-normal leading-none mt-0.5">
+                  <div
+                    className={`text-[10px] font-normal leading-none mt-0.5 ${
+                      isDisabled ? "text-gray-300" : "text-gray-500"
+                    }`}
+                  >
                     {view.desc}
                   </div>
                 </div>
               </div>
-              {isSelected && (
+              {isSelected && !isDisabled && (
                 <Check className="w-3.5 h-3.5 text-orange-500 stroke-[2.5] shrink-0" />
               )}
             </div>
