@@ -14,6 +14,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { logoutAction } from "@/features/auth/actions";
 import CreateInterviewModal from "@/features/interviews/components/CreateInterviewModal";
 import { QuickActionModal } from "@/features/interviews/components/QuickActionModal";
 import { useCreateModalStore } from "@/lib/store/useCreateModalStore";
@@ -26,6 +27,23 @@ export default function DashboardLayout({
   const router = useRouter();
   const { isOpen, openModal, closeModal } = useCreateModalStore();
   const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logoutAction();
+      if (typeof document !== "undefined") {
+        document.cookie =
+          "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
+      }
+      router.push("/login");
+      router.refresh();
+    } catch (err) {
+      console.error("Logout error:", err);
+      setIsLoggingOut(false);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -180,8 +198,13 @@ export default function DashboardLayout({
                   Dhiya Adli
                 </span>
               </div>
-              <button className="bg-[#EA3536] text-white px-3 py-1 rounded-md text-xs font-semibold hover:bg-red-800 transition-colors">
-                Logout
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="bg-[#EA3536] text-white px-3 py-1 rounded-md text-xs font-semibold hover:bg-red-800 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isLoggingOut ? "Logging out..." : "Logout"}
               </button>
             </div>
           </div>

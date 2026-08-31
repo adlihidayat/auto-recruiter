@@ -1,21 +1,30 @@
+/**
+ * What: Login / Sign In View component.
+ * Why: Renders login interface with password visibility toggle.
+ * Boundaries: Rendered on /login route.
+ */
+
 "use client";
 
 import React, { useState } from "react";
-import { FileCode2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Lock, Mail, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { loginAction } from "../actions";
+import Image from "next/image";
 
 export default function SignInView() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !password) {
-      setErrorMessage("Please enter both email and password.");
+      setErrorMessage("Please enter both email/username and password.");
       return;
     }
 
@@ -28,114 +37,132 @@ export default function SignInView() {
       router.push("/");
       router.refresh();
     } else {
-      setErrorMessage(result.error || "Invalid email or password");
+      setErrorMessage(result.error || "Invalid username or password");
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F6F6] flex items-center justify-center p-4 md:p-8 font-sans">
-      {/* Outer Card Container */}
-      <div className="bg-white rounded-3xl border border-[#F1F1F1] p-5 md:p-4.5 shadow-2xs max-w-325 w-full grid grid-cols-1 lg:grid-cols-12 items-stretch">
-        {/* Left Hero Panel */}
-        <div className="lg:col-span-7 bg-[#F9F9F9] rounded-3xl p-8 md:p-8 flex flex-col justify-between min-h-175">
-          {/* Top Brand & Menu Row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-black">
-              <FileCode2 className="w-6 h-6" strokeWidth={2.5} />
-              <span className="font-light text-2xl tracking-tight">
-                auto-rec
-              </span>
-            </div>
-            <div className="flex items-center gap-4 text-sm font-semibold text-[#272727]">
-              <span className="cursor-pointer hover:underline">Username</span>
-              <span className="cursor-pointer hover:underline">Username</span>
-              <span className="cursor-pointer hover:underline">Username</span>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#F6F6F6] flex flex-col items-center justify-center p-4 md:p-8 font-sans">
+      {/* Main Split Container Card */}
+      <div className="bg-white border border-gray-200 rounded-3xl p-6 md:py-6 md:pl-6 md:pr-10 max-w-5xl w-full flex gap-8 items-stretch">
+        {/* left Column: Hero Graphic Preview Section */}
+        <div className="w-full flex-1 rounded-3xl p-6 relative overflow-hidden flex flex-col justify-end items-center min-h-[380px]">
+          <Image
+            src={"/signin-bg.webp"}
+            alt=""
+            fill
+            priority
+            className=" absolute z-0 top-0 left-0"
+          />
 
-          {/* Bottom Banner Content */}
-          <div className="pt-16 pb-4 ">
-            <h1 className="text-4xl md:text-[54px] max-w-150 font-medium text-[#272727] tracking-tight leading-[1.12] mb-4">
-              Login to access the app the app
-            </h1>
-            <p className="text-sm font-medium text-[#616161] leading-relaxed">
-              We Pride Ourselves On Being The World&apos;s Leading Purveyor Of
-              Highly Inventive (And Sometimes Explosive) Gadgets. We Are
-              Actively Expanding Our Digital Infrastructure To Support Our
-              Growing Catalog. We&apos;re Looking For An Innovative AI Engineer
-              Who Can Bridge The Gap Between Complex Machine Learning Models And
-              Intuitive Web Applications.
-            </p>
+          <div className="z-10 flex flex-col items-center space-y-2 pb-5">
+            <Image
+              src={"/logo-no-bg.svg"}
+              alt="logo"
+              width={25}
+              height={25}
+              className="mb-3"
+            />
+            <span className="text-sm font-semibold mb-2">Auto Recruiter</span>
+            <span className="text-xs font-medium text-gray-600">
+              Access your AI recruiting campaigns{" "}
+            </span>
           </div>
         </div>
 
-        {/* Right Login Form Panel */}
-        <div className="lg:col-span-5 flex flex-col justify-center pr-4 md:pr-16 ml-8 py-6">
-          {/* Top Black Logo Icon */}
-          <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center mb-7">
-            <FileCode2 className="w-5 h-5" strokeWidth={2} />
-          </div>
+        {/* right Column: Form Section */}
+        <div className="py-18 max-w-110">
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900 mt-6 mb-1">
+              Log in to Account
+            </h1>
+            <p className="text-sm text-gray-600 font-medium mb-10">
+              Welcome back! Access your AI recruiting campaigns & live voice
+              workspace.
+            </p>
 
-          {/* Title */}
-          <h2 className="text-2xl font-semibold text-[#272727] mb-7">
-            Login to access the app
-          </h2>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-sm font-semibold text-[#272727] mb-2.5 block">
-                Username
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Your Name"
-                className="w-full bg-[#F6F6F6] border-0 rounded-xl px-4 py-2.5 text-sm font-medium text-[#272727] placeholder:text-[#B8B8B8] focus:outline-none focus:ring-2 focus:ring-black/10 transition-shadow"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold text-[#272727] mb-2.5 block">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="password"
-                className="w-full bg-[#F6F6F6] border-0 rounded-xl px-4 py-2.5 text-sm font-medium text-[#272727] placeholder:text-[#B8B8B8] focus:outline-none focus:ring-2 focus:ring-black/10 transition-shadow"
-              />
-            </div>
-
-            {errorMessage && (
-              <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold">
-                {errorMessage}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Email / Username */}
+              <div>
+                <label className="text-sm font-semibold text-[#191919] mb-1.5 block">
+                  Email or Username
+                </label>
+                <div className="relative flex items-center">
+                  <div className="absolute left-3.5 text-[#646464] pointer-events-none">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="alex@acedesign.io"
+                    className="w-full bg-[#F6F6F6] border border-gray-200 rounded-md pl-10 pr-4 py-2 text-sm font-medium text-[#191919] placeholder:text-[#B8B8B8] focus:outline-none focus:ring-2 focus:ring-black/10 transition-shadow"
+                  />
+                </div>
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-black hover:bg-[#272727] text-white text-sm font-semibold py-2.5 rounded-xl transition-colors cursor-pointer mt-4 disabled:opacity-50"
-            >
-              {isLoading ? "Logging in..." : "Login"}
-            </button>
-          </form>
+              {/* Password Input with Show/Hide Toggle */}
+              <div className="mb-10">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-semibold text-[#191919] block">
+                    Password
+                  </label>
+                </div>
+                <div className="relative flex items-center">
+                  <div className="absolute left-3.5 text-[#646464] pointer-events-none">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full bg-[#F6F6F6] border border-gray-200 rounded-md pl-10 pr-10 py-2 text-sm font-medium text-[#191919] placeholder:text-[#B8B8B8] focus:outline-none focus:ring-2 focus:ring-black/10 transition-shadow"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 text-[#646464] hover:text-[#191919] p-1 cursor-pointer transition-colors"
+                    title={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
 
-          {/* Created with Footer */}
-          <div className="mt-7">
-            <span className="text-sm font-semibold text-[#272727] mb-3 block">
-              Created with
-            </span>
-            <div className="flex gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#F6F6F6]" />
-              <div className="w-9 h-9 rounded-xl bg-[#F6F6F6]" />
-              <div className="w-9 h-9 rounded-xl bg-[#F6F6F6]" />
-              <div className="w-9 h-9 rounded-xl bg-[#F6F6F6]" />
-            </div>
+              {errorMessage && (
+                <div className="p-3 rounded-xl bg-red-50 text-red-600 text-xs font-semibold border border-red-100">
+                  {errorMessage}
+                </div>
+              )}
+
+              {/* Link */}
+              <div className="text-center md:text-left text-xs font-medium text-gray-600">
+                Don&apos;t have a workspace yet?{" "}
+                <Link
+                  href="/create-account"
+                  className="font-bold text-gray-900 underline hover:opacity-60"
+                >
+                  Create account
+                </Link>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-[#191919] hover:bg-black text-white text-sm font-semibold py-2 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
+              >
+                <span>{isLoading ? "Signing in..." : "Log in"}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
           </div>
         </div>
       </div>

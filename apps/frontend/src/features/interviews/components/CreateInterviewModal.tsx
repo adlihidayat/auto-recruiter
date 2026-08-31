@@ -1,14 +1,14 @@
 /**
  * What: Container modal component for interview creation flow.
- * Why: Orchestrates multi-step workflow state (Form -> Agent Loading -> Publish Success).
+ * Why: Orchestrates multi-step workflow state, backdrop outside click, and close confirmation dialogs.
  * Boundaries: Delegates step-specific JSX rendering to modular components under create-modal/.
  */
 
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { X, AlertTriangle, Bot } from "lucide-react";
 
 import {
   ModalStep,
@@ -31,6 +31,9 @@ export default function CreateInterviewModal({
   const [modalStep, setModalStep] = useState<ModalStep>("form");
   const [isBackendDone, setIsBackendDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Confirmation dialog state ('form' | 'loading' | null)
+  const [showConfirmClose, setShowConfirmClose] = useState<"form" | "loading" | null>(null);
 
   // Agent Handoff Mock Simulation State
   const [isPaused] = useState(false);
@@ -100,6 +103,64 @@ export default function CreateInterviewModal({
     );
   };
 
+  // Reset modal state
+  const handleResetModal = useCallback(() => {
+    setModalStep("form");
+    setElapsedTime(0);
+    setIsBackendDone(false);
+    setError(null);
+    setShowConfirmClose(null);
+    setFormData({
+      icon: "💼",
+      job_name: "",
+      job_description: "",
+      difficulty: "mid",
+      num_goals: 3,
+      total_duration_minutes: 30,
+      domain_hint: "",
+      communication_weight: 0.2,
+      scheduled_at: "",
+    });
+    setCandidates([
+      { email: "alex.johnson@example.com", first_name: "Alex", last_name: "Johnson" },
+      { email: "sarah.chen@example.com", first_name: "Sarah", last_name: "Chen" },
+      { email: "michael.brown@example.com", first_name: "Michael", last_name: "Brown" },
+    ]);
+  }, []);
+
+  // Request Close intent handler with confirmation dialog checks
+  const handleRequestClose = useCallback(() => {
+    if (modalStep === "form") {
+      const isFormFilled =
+        formData.job_name.trim().length > 0 ||
+        formData.job_description.trim().length > 0 ||
+        formData.domain_hint.trim().length > 0;
+
+      if (isFormFilled) {
+        setShowConfirmClose("form");
+        return;
+      }
+    } else if (modalStep === "loading" && !isBackendDone) {
+      setShowConfirmClose("loading");
+      return;
+    }
+
+    onClose();
+    handleResetModal();
+  }, [formData, modalStep, isBackendDone, onClose, handleResetModal]);
+
+  // Handle ESC key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !showEmojiPicker && !showConfirmClose) {
+        handleRequestClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, showEmojiPicker, showConfirmClose, handleRequestClose]);
+
   // Close & Outside click for Emoji Picker
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -144,13 +205,6 @@ export default function CreateInterviewModal({
     setTimeout(() => setCopiedCandidateId(null), 2000);
   };
 
-  const handleResetModal = () => {
-    setModalStep("form");
-    setElapsedTime(0);
-    setIsBackendDone(false);
-    setError(null);
-  };
-
   const handleContinueToSuccess = () => {
     if (isBackendDone) {
       setModalStep("success");
@@ -191,17 +245,20 @@ export default function CreateInterviewModal({
   if (!isOpen) return null;
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center ${modalStep === "loading" && ""}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Canvas Confetti Layer */}
       <CanvasConfettiOverlay isActive={modalStep === "success"} />
 
-      {/* Backdrop */}
+      {/* Backdrop (Clicking outside triggers request close with confirmation check) */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
-        onClick={modalStep === "loading" ? undefined : handleResetModal}
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity cursor-pointer"
+        onClick={handleRequestClose}
       />
 
-      <div className="rounded-3xl overflow-hidden z-10">
+      <div
+        className="rounded-3xl overflow-hidden z-10"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Content Card */}
         <div
           className={`relative w-full max-h-[90vh] overflow-y-scroll bg-white rounded-3xl shadow-2xl ${
@@ -213,10 +270,7 @@ export default function CreateInterviewModal({
           {/* Close Button */}
           {modalStep !== "loading" && (
             <button
-              onClick={() => {
-                onClose();
-                handleResetModal();
-              }}
+              onClick={handleRequestClose}
               className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-100 cursor-pointer z-20"
             >
               <X className="w-5 h-5" />
@@ -249,7 +303,7 @@ export default function CreateInterviewModal({
               activeAgentIndex={activeAgentIndex}
               mockProgressPercent={mockProgressPercent}
               visibleLogs={visibleLogs}
-              onReset={handleResetModal}
+              onReset={handleRequestClose}
               onContinue={handleContinueToSuccess}
             />
           )}
@@ -266,6 +320,100 @@ export default function CreateInterviewModal({
           )}
         </div>
       </div>
+
+      {/* Confirmation Dialog Overlay for Form Discard */}
+      {showConfirmClose === "form" && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+          onClick={() => setShowConfirmClose(null)}
+        >
+          <div
+            className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-2xl max-w-sm w-full space-y-4 text-center animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-200/60 text-orange-500 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+
+            <div>
+              <h4 className="text-base font-bold text-gray-900 tracking-tight">
+                Discard interview creation?
+              </h4>
+              <p className="text-xs text-gray-500 font-normal leading-relaxed mt-1">
+                Closing will cancel your progress and any un-submitted configuration will be lost.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmClose(null)}
+                className="px-3.5 py-2 flex-1 border border-gray-200 text-gray-700 hover:bg-gray-100 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Continue editing
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmClose(null);
+                  onClose();
+                  handleResetModal();
+                }}
+                className="px-3.5 py-2 flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+              >
+                Discard & close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog Overlay for Pipeline Loading In-Progress */}
+      {showConfirmClose === "loading" && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+          onClick={() => setShowConfirmClose(null)}
+        >
+          <div
+            className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-2xl max-w-sm w-full space-y-4 text-center animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200/60 text-blue-600 flex items-center justify-center mx-auto">
+              <Bot className="w-6 h-6" />
+            </div>
+
+            <div>
+              <h4 className="text-base font-bold text-gray-900 tracking-tight">
+                Agent pipeline in progress
+              </h4>
+              <p className="text-xs text-gray-500 font-normal leading-relaxed mt-1">
+                The AI agents will continue running in the background even if you close this window. You can check campaign status anytime from your dashboard.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmClose(null)}
+                className="px-3.5 py-2 flex-1 border border-gray-200 text-gray-700 hover:bg-gray-100 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Stay here
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmClose(null);
+                  onClose();
+                  handleResetModal();
+                }}
+                className="px-3.5 py-2 flex-1 bg-[#191919] hover:bg-black text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+              >
+                Close window
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Custom Scrollbar Styles for the modal content */}
       <style

@@ -11,7 +11,9 @@ export function proxy(request: NextRequest) {
   const token = request.cookies.get("access_token")?.value;
 
   const isAuthRoute =
-    pathname.startsWith("/login") || pathname.startsWith("/sign-in");
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/sign-in") ||
+    pathname.startsWith("/create-account");
   const isDashboardRoute =
     pathname === "/" ||
     pathname.startsWith("/interviews") ||

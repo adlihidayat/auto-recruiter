@@ -1,12 +1,12 @@
 /**
  * What: Quick Action Command Palette Modal component.
- * Why: Allows users to trigger quick actions across the app via shortcut "K" or "Cmd+K".
+ * Why: Allows users to trigger quick actions and search across all interview campaigns via "K" shortcut.
  * Boundaries: Global layout overlay component.
  */
 
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -14,10 +14,9 @@ import {
   Home,
   Layers,
   CheckCircle2,
-  Copy,
   ArrowRight,
-  Sparkles,
   X,
+  Briefcase,
 } from "lucide-react";
 import { useCreateModalStore } from "@/lib/store/useCreateModalStore";
 
@@ -28,7 +27,7 @@ interface QuickActionModalProps {
 
 interface ActionItem {
   id: string;
-  category: "Actions" | "Navigation" | "Recents";
+  category: "Actions" | "Recent Interviews" | "Matching Interviews";
   title: string;
   description: string;
   icon: React.ReactNode;
@@ -57,97 +56,216 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
     }
   }, [isOpen]);
 
-  const actions: ActionItem[] = [
-    {
-      id: "create-campaign",
-      category: "Actions",
-      title: "Create New Interview",
-      description: "Set up a new AI interview campaign with 4 agents",
-      icon: <LayersPlus className="w-4 h-4 text-orange-500" />,
-      perform: () => {
-        onClose();
-        openModal();
+  // Core Quick Actions
+  const quickActions: ActionItem[] = useMemo(
+    () => [
+      {
+        id: "create-campaign",
+        category: "Actions",
+        title: "Create New Interview",
+        description: "Set up a new AI interview campaign with 4 agents",
+        icon: <LayersPlus className="w-4 h-4 text-orange-500" />,
+        perform: () => {
+          onClose();
+          openModal();
+        },
       },
-    },
-    {
-      id: "copy-invite-link",
-      category: "Actions",
-      title: "Copy Candidate Room Link",
-      description: "Copy active LiveKit candidate room token to clipboard",
-      icon: <Copy className="w-4 h-4 text-purple-500" />,
-      perform: () => {
-        onClose();
-        navigator.clipboard.writeText(
-          `${window.location.origin}/interview?token=mock_room_token_1`
-        );
+      {
+        id: "nav-home",
+        category: "Actions",
+        title: "Go to Home / Dashboard",
+        description: "Return to main campaigns table view",
+        icon: <Home className="w-4 h-4 text-blue-500" />,
+        perform: () => {
+          onClose();
+          router.push("/");
+        },
       },
-    },
-    {
-      id: "nav-home",
-      category: "Navigation",
-      title: "Go to Home / Dashboard",
-      description: "Return to main campaigns table view",
-      icon: <Home className="w-4 h-4 text-blue-500" />,
-      perform: () => {
-        onClose();
-        router.push("/");
+      {
+        id: "filter-all",
+        category: "Actions",
+        title: "View All Campaigns",
+        description: "Show all active, finished & draft campaigns",
+        icon: <Layers className="w-4 h-4 text-gray-700" />,
+        perform: () => {
+          onClose();
+          router.push("/");
+        },
       },
-    },
-    {
-      id: "filter-all",
-      category: "Navigation",
-      title: "View All Campaigns",
-      description: "Show all active, finished & draft campaigns",
-      icon: <Layers className="w-4 h-4 text-gray-700" />,
-      perform: () => {
-        onClose();
-        router.push("/");
+      {
+        id: "filter-active",
+        category: "Actions",
+        title: "Filter Active Campaigns",
+        description: "Display only campaigns with evaluating candidates",
+        icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
+        perform: () => {
+          onClose();
+          router.push("/");
+        },
       },
-    },
-    {
-      id: "filter-active",
-      category: "Navigation",
-      title: "Filter Active Campaigns",
-      description: "Display only campaigns with evaluating candidates",
-      icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
-      perform: () => {
-        onClose();
-        router.push("/");
-      },
-    },
-    {
-      id: "recent-1",
-      category: "Recents",
-      title: "Retail Sales Associate",
-      description: "Core | Mid-Level | 3 Goals",
-      icon: <span className="text-sm">😀️</span>,
-      perform: () => {
-        onClose();
-        router.push("/interviews/campaign-0");
-      },
-    },
-    {
-      id: "recent-2",
-      category: "Recents",
-      title: "Lead Frontend Engineer",
-      description: "Engineering | Senior | 4 Goals",
-      icon: <span className="text-sm">📈️</span>,
-      perform: () => {
-        onClose();
-        router.push("/interviews/campaign-1");
-      },
-    },
-  ];
+    ],
+    [onClose, openModal, router],
+  );
 
-  const filteredActions = actions.filter((item) => {
-    if (!query.trim()) return true;
+  // Latest 5 accessed interviews (matching sidebar)
+  const recentInterviews: ActionItem[] = useMemo(
+    () => [
+      {
+        id: "recent-1",
+        category: "Recent Interviews",
+        title: "Retail Sales Associate",
+        description: "Core | Mid-Level | 3 Candidates Evaluated",
+        icon: <span className="text-sm">😀️</span>,
+        perform: () => {
+          onClose();
+          router.push("/interviews/campaign-0");
+        },
+      },
+      {
+        id: "recent-2",
+        category: "Recent Interviews",
+        title: "Lead Frontend Engineer",
+        description: "Engineering | Senior | 5 Candidates Evaluated",
+        icon: <span className="text-sm">📈️</span>,
+        perform: () => {
+          onClose();
+          router.push("/interviews/campaign-1");
+        },
+      },
+      {
+        id: "recent-3",
+        category: "Recent Interviews",
+        title: "Retail Sales Associate",
+        description: "Core | Junior | 2 Candidates Evaluated",
+        icon: <span className="text-sm">🚗️</span>,
+        perform: () => {
+          onClose();
+          router.push("/interviews/campaign-2");
+        },
+      },
+      {
+        id: "recent-4",
+        category: "Recent Interviews",
+        title: "Lead Frontend Engineer",
+        description: "Product | Mid-Level | 4 Candidates Evaluated",
+        icon: <span className="text-sm">🧑‍🍳️</span>,
+        perform: () => {
+          onClose();
+          router.push("/interviews/campaign-3");
+        },
+      },
+      {
+        id: "recent-5",
+        category: "Recent Interviews",
+        title: "Retail Sales Associate",
+        description: "Design | Lead | 1 Candidate Evaluated",
+        icon: <span className="text-sm">🫁️</span>,
+        perform: () => {
+          onClose();
+          router.push("/interviews/campaign-4");
+        },
+      },
+    ],
+    [onClose, router],
+  );
+
+  // Additional searchable interviews in database
+  const extraInterviews: ActionItem[] = useMemo(
+    () => [
+      {
+        id: "extra-1",
+        category: "Matching Interviews",
+        title: "Marketing Lead Officer",
+        description: "Marketing | Senior | 8 Candidates Evaluated",
+        icon: <span className="text-sm">💼️</span>,
+        perform: () => {
+          onClose();
+          router.push("/interviews/campaign-5");
+        },
+      },
+      {
+        id: "extra-2",
+        category: "Matching Interviews",
+        title: "Product Manager",
+        description: "Product | Senior | 6 Candidates Evaluated",
+        icon: <span className="text-sm">🎨️</span>,
+        perform: () => {
+          onClose();
+          router.push("/interviews/campaign-6");
+        },
+      },
+      {
+        id: "extra-3",
+        category: "Matching Interviews",
+        title: "Engineer CTO Officer",
+        description: "Engineering | Executive | 12 Candidates Evaluated",
+        icon: <span className="text-sm">🛠️</span>,
+        perform: () => {
+          onClose();
+          router.push("/interviews/campaign-7");
+        },
+      },
+      {
+        id: "extra-4",
+        category: "Matching Interviews",
+        title: "Senior Backend Architect",
+        description: "Infrastructure | Principal | 7 Candidates Evaluated",
+        icon: <span className="text-sm">💻️</span>,
+        perform: () => {
+          onClose();
+          router.push("/interviews/campaign-8");
+        },
+      },
+      {
+        id: "extra-5",
+        category: "Matching Interviews",
+        title: "Full Stack Developer",
+        description: "Engineering | Mid-Level | 9 Candidates Evaluated",
+        icon: <span className="text-sm">⚡</span>,
+        perform: () => {
+          onClose();
+          router.push("/interviews/campaign-9");
+        },
+      },
+    ],
+    [onClose, router],
+  );
+
+  // Determine active item set depending on query search
+  const displayedActions: ActionItem[] = useMemo(() => {
+    const isSearching = query.trim().length > 0;
     const q = query.toLowerCase();
-    return (
-      item.title.toLowerCase().includes(q) ||
-      item.description.toLowerCase().includes(q) ||
-      item.category.toLowerCase().includes(q)
-    );
-  });
+
+    if (!isSearching) {
+      return [...quickActions, ...recentInterviews];
+    }
+
+    return [
+      ...quickActions.filter(
+        (item) =>
+          item.title.toLowerCase().includes(q) ||
+          item.description.toLowerCase().includes(q),
+      ),
+      ...recentInterviews
+        .filter(
+          (item) =>
+            item.title.toLowerCase().includes(q) ||
+            item.description.toLowerCase().includes(q),
+        )
+        .map((item) => ({ ...item, category: "Matching Interviews" as const })),
+      ...extraInterviews.filter(
+        (item) =>
+          item.title.toLowerCase().includes(q) ||
+          item.description.toLowerCase().includes(q),
+      ),
+    ];
+  }, [query, quickActions, recentInterviews, extraInterviews]);
+
+  // Group displayed actions by category
+  const categories = useMemo(
+    () => Array.from(new Set(displayedActions.map((item) => item.category))),
+    [displayedActions],
+  );
 
   // Handle keyboard navigation inside popup
   useEffect(() => {
@@ -157,30 +275,32 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedIndex((prev) =>
-          prev < filteredActions.length - 1 ? prev + 1 : 0
+          prev < displayedActions.length - 1 ? prev + 1 : 0,
         );
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedIndex((prev) =>
-          prev > 0 ? prev - 1 : filteredActions.length - 1
+          prev > 0 ? prev - 1 : displayedActions.length - 1,
         );
       } else if (e.key === "Enter") {
         e.preventDefault();
-        if (filteredActions[selectedIndex]) {
-          filteredActions[selectedIndex].perform();
+        if (displayedActions[selectedIndex]) {
+          displayedActions[selectedIndex].perform();
         }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, selectedIndex, filteredActions]);
+  }, [isOpen, selectedIndex, displayedActions]);
 
   if (!isOpen) return null;
 
+  let globalIndexCounter = 0;
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-24 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-44 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
@@ -193,7 +313,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
           <input
             ref={inputRef}
             type="text"
-            placeholder="Type a command or search quick actions..."
+            placeholder="Type to search interviews or actions..."
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -206,50 +326,67 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
               ESC
             </kbd>
             <button
+              type="button"
               onClick={onClose}
-              className="p-1 text-gray-400 hover:text-gray-900 rounded-md transition-colors"
+              className="p-1 text-gray-400 hover:text-gray-900 rounded-md transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Actions List */}
-        <div className="max-h-96 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-          {filteredActions.length === 0 ? (
+        {/* Actions & Interviews List */}
+        <div className="max-h-96 overflow-y-auto p-2 space-y-3 custom-scrollbar">
+          {displayedActions.length === 0 ? (
             <div className="py-8 text-center text-xs font-medium text-gray-400">
-              No matching quick actions found.
+              No matching interviews or quick actions found.
             </div>
           ) : (
-            filteredActions.map((action, idx) => {
-              const isSelected = idx === selectedIndex;
+            categories.map((cat) => {
+              const categoryItems = displayedActions.filter(
+                (item) => item.category === cat,
+              );
+              if (categoryItems.length === 0) return null;
+
               return (
-                <div
-                  key={action.id}
-                  onClick={() => action.perform()}
-                  onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-all ${
-                    isSelected
-                      ? "bg-gray-100/90 text-gray-900 font-medium"
-                      : "hover:bg-gray-50 text-gray-700"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                      {action.icon}
-                    </div>
-                    <div className="truncate">
-                      <div className="text-sm font-medium text-gray-900 leading-tight truncate">
-                        {action.title}
-                      </div>
-                      <div className="text-xs text-gray-500 font-normal leading-none mt-0.5 truncate">
-                        {action.description}
-                      </div>
-                    </div>
+                <div key={cat} className="space-y-1">
+                  <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-3 py-1">
+                    {cat}
                   </div>
-                  {isSelected && (
-                    <ArrowRight className="w-4 h-4 text-orange-500 shrink-0" />
-                  )}
+                  {categoryItems.map((action) => {
+                    const currentIndex = globalIndexCounter++;
+                    const isSelected = currentIndex === selectedIndex;
+
+                    return (
+                      <div
+                        key={action.id}
+                        onClick={() => action.perform()}
+                        onMouseEnter={() => setSelectedIndex(currentIndex)}
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all ${
+                          isSelected
+                            ? "bg-gray-100/90 text-gray-900 font-semibold"
+                            : "hover:bg-gray-50 text-gray-700"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                            {action.icon}
+                          </div>
+                          <div className="truncate">
+                            <div className="text-sm font-medium text-gray-900 leading-tight truncate">
+                              {action.title}
+                            </div>
+                            <div className="text-xs text-gray-500 font-normal leading-none mt-0.5 truncate">
+                              {action.description}
+                            </div>
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <ArrowRight className="w-4 h-4 text-orange-500 shrink-0" />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })
@@ -257,7 +394,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
         </div>
 
         {/* Footer shortcuts helper */}
-        <div className="px-4 py-2 bg-[#FAFAFA] border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500 font-medium">
+        <div className="px-4 py-2.5 bg-[#FAFAFA] border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500 font-medium">
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
               <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded font-mono text-[10px]">
@@ -269,12 +406,12 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
               <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded font-mono text-[10px]">
                 ↵
               </kbd>{" "}
-              Select
+              Open
             </span>
           </div>
-          <div className="flex items-center gap-1 text-gray-400">
-            <Sparkles className="w-3 h-3 text-orange-500" />
-            <span>Quick Actions Palette</span>
+          <div className="flex items-center gap-1.5 text-gray-500">
+            <Briefcase className="w-3.5 h-3.5 text-orange-500" />
+            <span>Search 12+ Campaigns & Actions</span>
           </div>
         </div>
       </div>
