@@ -16,6 +16,7 @@ class InterviewBase(BaseModel):
     domain_hint: str | None = None
     communication_weight: float = 0.0
     scheduled_at: datetime | None = None
+    icon: str | None = "💼"
 
 class InterviewCreate(InterviewBase):
     candidates: list[CandidateCreate] = []
@@ -29,12 +30,35 @@ class InterviewUpdate(BaseModel):
     domain_hint: str | None = None
     communication_weight: float | None = None
     scheduled_at: datetime | None = None
+    icon: str | None = None
 
 from app.schemas.candidate import CandidateResponse
+
+class GoalResponse(BaseModel):
+    id: UUID
+    goal_ref: str
+    interview_id: UUID
+    topic: str
+    goal: str
+    passing_criteria: list[str] = []
+    pushback_triggers: list[dict] = []
+    wrong_answer_signals: list[str] = []
+    suggested_opening: str | None = None
+    weight: float = 1.0
+
+    model_config = ConfigDict(from_attributes=True)
+
+class CreatorInfo(BaseModel):
+    id: UUID
+    username: str | None = None
+    email: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 class InterviewResponse(InterviewBase):
     id: UUID
     creator_id: UUID
+    creator: CreatorInfo | None = None
     status: str
     created_at: datetime
     updated_at: datetime
@@ -44,3 +68,4 @@ class InterviewResponse(InterviewBase):
 class InterviewCreationResponse(BaseModel):
     interview: InterviewResponse
     candidates: list[CandidateResponse]
+

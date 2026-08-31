@@ -13,7 +13,64 @@ export interface LoginResponse {
 }
 
 export interface UserMeResponse {
+  id: string;
   email: string;
+  username?: string | null;
+  country?: string | null;
+  born_date?: string | null;
+  created_at?: string;
+}
+
+export async function checkUsernameApi(
+  username: string
+): Promise<{ username: string; available: boolean }> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/auth/check-username?username=${encodeURIComponent(username)}`,
+  );
+  if (!response.ok) {
+    throw new Error("Failed to check username availability");
+  }
+  return response.json();
+}
+
+export interface RegisterPayload {
+  username: string;
+  email: string;
+  password: string;
+  country?: string;
+  born_date?: string;
+}
+
+export interface RegisterResponse {
+  user: {
+    id: string;
+    email: string;
+    username: string | null;
+    country: string | null;
+    born_date: string | null;
+    created_at: string;
+  };
+  access_token: string;
+  token_type: string;
+}
+
+export async function registerApi(
+  payload: RegisterPayload
+): Promise<RegisterResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Failed to create account");
+  }
+
+  return response.json();
 }
 
 /**
@@ -70,6 +127,12 @@ export async function getMeApi(token: string): Promise<UserMeResponse> {
   return response.json();
 }
 
+export interface BackendCreatorResponse {
+  id: string;
+  username?: string | null;
+  email: string;
+}
+
 export interface BackendInterviewResponse {
   id: string;
   job_name: string;
@@ -80,6 +143,7 @@ export interface BackendInterviewResponse {
   domain_hint?: string | null;
   communication_weight: number;
   creator_id: string;
+  creator?: BackendCreatorResponse | null;
   status: string;
   scheduled_at?: string | null;
   created_at: string;
@@ -103,6 +167,65 @@ export async function getInterviewsApi(
     handleAuthError(response.status);
     const errorData = await response.json().catch(() => ({ detail: "Failed to fetch interviews" }));
     throw new Error(`Failed to fetch interviews (${response.status}): ${errorData.detail || "Unauthorized"}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Fetch a single interview by ID.
+ */
+export async function getInterviewDetailApi(
+  interviewId: string,
+  token: string
+): Promise<BackendInterviewResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/interviews/${interviewId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    handleAuthError(response.status);
+    const errorData = await response.json().catch(() => ({ detail: "Failed to fetch interview detail" }));
+    throw new Error(`Failed to fetch interview (${response.status}): ${errorData.detail || "Not found"}`);
+  }
+
+  return response.json();
+}
+
+export interface BackendGoalResponse {
+  id: string;
+  goal_ref: string;
+  interview_id: string;
+  topic: str;
+  goal: str;
+  passing_criteria: string[];
+  pushback_triggers: Array<Record<string, unknown>>;
+  wrong_answer_signals: string[];
+  suggested_opening?: string | null;
+  weight: number;
+}
+
+/**
+ * Fetch all goals generated for a specific interview.
+ */
+export async function getInterviewGoalsApi(
+  interviewId: string,
+  token: string
+): Promise<BackendGoalResponse[]> {
+  const response = await fetch(`${API_BASE_URL}/api/interviews/${interviewId}/goals`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    handleAuthError(response.status);
+    const errorData = await response.json().catch(() => ({ detail: "Failed to fetch goals" }));
+    throw new Error(`Failed to fetch goals (${response.status}): ${errorData.detail || "Not found"}`);
   }
 
   return response.json();

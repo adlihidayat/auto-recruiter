@@ -42,4 +42,5 @@ export interface InterviewCampaign {
   questionSuite: QuestionItem[];
   candidatesList: CandidateRecord[];
   agentSummary?: string;
+  creatorName?: string;
 }

@@ -17,7 +17,7 @@ from app.models.goal import Goal
 from app.models.transcript import Transcript
 from app.models.report import CandidateReport
 from app.models.job import Job
-from app.schemas.interview import InterviewCreate, InterviewResponse, InterviewCreationResponse, InterviewUpdate
+from app.schemas.interview import InterviewCreate, InterviewResponse, InterviewCreationResponse, InterviewUpdate, GoalResponse
 from app.schemas.candidate import CandidateResponse
 from app.services.plan_service import process_interview_plan_generation
 
@@ -43,6 +43,7 @@ async def create_interview(
         total_duration_minutes=payload.total_duration_minutes,
         domain_hint=payload.domain_hint,
         communication_weight=payload.communication_weight,
+        icon=payload.icon or "💼",
         status="generating_plan"
     )
     session.add(new_interview)
@@ -122,14 +123,16 @@ async def create_interview(
         "candidates": final_candidates
     }
 
+from sqlalchemy.orm import selectinload
+
 @router.get("", response_model=list[InterviewResponse])
 async def list_interviews(session: SessionDep, current_user: CurrentUser):
     """
-    List all interviews created by the current user.
+    List all interviews in the shared workspace across all accounts.
     """
     result = await session.execute(
         select(Interview)
-        .where(Interview.creator_id == current_user.id)
+        .options(selectinload(Interview.creator))
         .order_by(Interview.created_at.desc())
     )
     interviews = result.scalars().all()
@@ -143,14 +146,9 @@ async def list_interview_candidates(
 ):
     """
     List all candidates associated with a specific interview.
-    Verifies that the interview belongs to the current user.
     """
-    # Verify ownership
     result = await session.execute(
-        select(Interview).where(
-            Interview.id == interview_id,
-            Interview.creator_id == current_user.id
-        )
+        select(Interview).where(Interview.id == interview_id)
     )
     interview = result.scalar_one_or_none()
     
@@ -169,6 +167,31 @@ async def list_interview_candidates(
     candidates = candidates_result.scalars().all()
     return list(candidates)
 
+@router.get("/{interview_id}/goals", response_model=list[GoalResponse])
+async def list_interview_goals(
+    interview_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUser
+):
+    """
+    List all goals/plans generated for a specific interview.
+    """
+    result = await session.execute(
+        select(Interview).where(Interview.id == interview_id)
+    )
+    interview = result.scalar_one_or_none()
+    if not interview:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview not found"
+        )
+
+    goals_result = await session.execute(
+        select(Goal).where(Goal.interview_id == interview_id)
+    )
+    goals = goals_result.scalars().all()
+    return list(goals)
+
 @router.get("/{interview_id}", response_model=InterviewResponse)
 async def get_interview(
     interview_id: UUID,
@@ -176,13 +199,12 @@ async def get_interview(
     current_user: CurrentUser
 ):
     """
-    Get a single interview by ID. Verifies ownership.
+    Get a single interview by ID across workspace accounts.
     """
     result = await session.execute(
-        select(Interview).where(
-            Interview.id == interview_id,
-            Interview.creator_id == current_user.id
-        )
+        select(Interview)
+        .options(selectinload(Interview.creator))
+        .where(Interview.id == interview_id)
     )
     interview = result.scalar_one_or_none()
     if not interview:
@@ -200,13 +222,12 @@ async def update_interview(
     current_user: CurrentUser
 ):
     """
-    Update an interview position's details (job_name, job_description, difficulty, scheduled_at, etc.).
+    Update an interview position's details.
     """
     result = await session.execute(
-        select(Interview).where(
-            Interview.id == interview_id,
-            Interview.creator_id == current_user.id
-        )
+        select(Interview)
+        .options(selectinload(Interview.creator))
+        .where(Interview.id == interview_id)
     )
     interview = result.scalar_one_or_none()
     if not interview:
@@ -230,13 +251,10 @@ async def delete_interview(
     current_user: CurrentUser
 ):
     """
-    Delete an interview position and all associated candidates, goals, transcripts, reports, and jobs.
+    Delete an interview position and all associated records across workspace accounts.
     """
     result = await session.execute(
-        select(Interview).where(
-            Interview.id == interview_id,
-            Interview.creator_id == current_user.id
-        )
+        select(Interview).where(Interview.id == interview_id)
     )
     interview = result.scalar_one_or_none()
     if not interview:

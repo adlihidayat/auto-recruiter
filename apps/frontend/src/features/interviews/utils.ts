@@ -37,6 +37,11 @@ export function mapBackendInterviewToCampaign(
   else if (diffLower.includes("lead")) targetSeniority = "Lead";
   else if (diffLower.includes("principal")) targetSeniority = "Principal";
 
+  const creatorName =
+    backendInterview.creator?.username ||
+    backendInterview.creator?.email?.split("@")[0] ||
+    "HR Manager";
+
   return {
     id: backendInterview.id,
     jobTitle: backendInterview.job_name,
@@ -49,5 +54,6 @@ export function mapBackendInterviewToCampaign(
     agentSummary: backendInterview.job_description,
     questionSuite: [],
     candidatesList: [],
+    creatorName,
   };
 }

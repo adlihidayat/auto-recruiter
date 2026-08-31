@@ -5,15 +5,79 @@ Boundaries: Implements FastAPI OAuth2 spec but offloads cryptographic functions 
 """
 
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import select
+from sqlalchemy import select, or_
 
 from app.api.deps import SessionDep, CurrentUser
-from app.core.security import verify_password, create_access_token
+from app.core.security import verify_password, create_access_token, get_password_hash
 from app.models.user import User
+from app.schemas.user import UserRegister, UserResponse, RegisterResponse, UsernameCheckResponse
 
 router = APIRouter()
+
+@router.get("/check-username", response_model=UsernameCheckResponse)
+async def check_username_availability(
+    session: SessionDep,
+    username: str = Query(..., min_length=1, description="Username to check")
+):
+    """
+    Check if a username is available.
+    """
+    result = await session.execute(
+        select(User).where(User.username == username)
+    )
+    existing_user = result.scalar_one_or_none()
+    return UsernameCheckResponse(
+        username=username,
+        available=existing_user is None
+    )
+
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+async def register_user(
+    session: SessionDep,
+    payload: UserRegister
+):
+    """
+    Create a new user account with username, country, born date, email, and password.
+    """
+    # 1. Check email uniqueness
+    result_email = await session.execute(select(User).where(User.email == payload.email))
+    if result_email.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is already registered"
+        )
+
+    # 2. Check username uniqueness
+    if payload.username:
+        result_user = await session.execute(select(User).where(User.username == payload.username))
+        if result_user.scalar_one_or_none() is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username is already taken"
+            )
+
+    # 3. Create user
+    new_user = User(
+        email=payload.email,
+        username=payload.username,
+        country=payload.country,
+        born_date=payload.born_date,
+        hashed_password=get_password_hash(payload.password)
+    )
+    session.add(new_user)
+    await session.commit()
+    await session.refresh(new_user)
+
+    # 4. Generate JWT access token
+    access_token = create_access_token(subject=str(new_user.id))
+
+    return RegisterResponse(
+        user=UserResponse.model_validate(new_user),
+        access_token=access_token,
+        token_type="bearer"
+    )
 
 @router.post("/login")
 async def login_access_token(
@@ -21,16 +85,20 @@ async def login_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
 ) -> dict[str, str]:
     """
-    OAuth2 compatible token login, get an access token for future requests.
+    OAuth2 compatible token login. Supports logging in by email or username.
     """
-    # Find user by email
-    result = await session.execute(select(User).where(User.email == form_data.username))
+    # Find user by email or username
+    result = await session.execute(
+        select(User).where(
+            or_(User.email == form_data.username, User.username == form_data.username)
+        )
+    )
     user = result.scalar_one_or_none()
     
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect email or password"
+            detail="Incorrect username/email or password"
         )
         
     access_token = create_access_token(subject=str(user.id))
@@ -40,9 +108,9 @@ async def login_access_token(
         "token_type": "bearer"
     }
 
-@router.get("/me")
-async def test_current_user(current_user: CurrentUser) -> dict[str, str]:
+@router.get("/me", response_model=UserResponse)
+async def test_current_user(current_user: CurrentUser):
     """
-    Test endpoint to verify the current JWT works and returns the logged in user's email.
+    Get current logged in user details.
     """
-    return {"email": current_user.email}
+    return current_user

@@ -15,5 +15,8 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    username: Mapped[str | None] = mapped_column(String(100), unique=True, index=True, nullable=True)
+    country: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    born_date: Mapped[str | None] = mapped_column(String(50), nullable=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))

@@ -17,6 +17,7 @@ import {
   getCandidateTranscriptsApi,
   getCandidatesForInterviewApi,
 } from "@/lib/api/client";
+import { CandidateReportSkeleton } from "@/components/common/PageSkeletonWrapper";
 
 interface CandidateReportViewProps {
   interviewId?: string;
@@ -27,6 +28,7 @@ export default function CandidateReportView({
   interviewId,
   candidateId,
 }: CandidateReportViewProps) {
+  const [isLoading, setIsLoading] = useState(true);
   const [report, setReport] = useState<any>(null);
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const [candidateInfo, setCandidateInfo] = useState<any>(null);
@@ -73,9 +75,20 @@ export default function CandidateReportView({
         const [reportRes, transcriptsRes, candidatesRes] =
           await Promise.all(promises);
 
-        if (reportRes?.raw_report) setReport(reportRes.raw_report);
-        if (transcriptsRes && transcriptsRes.length > 0)
+        if (reportRes) {
+          const raw = reportRes.raw_report || {};
+          setReport({
+            ...raw,
+            recommendation: raw.recommendation || reportRes.recommendation || "Advance",
+            reasoning: reportRes.reasoning || raw.reasoning || raw.status_reason || raw.short_summary,
+            goals: raw.goals || [],
+            communication: raw.communication || {},
+          });
+        }
+
+        if (transcriptsRes && transcriptsRes.length > 0) {
           setTranscripts(transcriptsRes);
+        }
 
         const cInfo = (candidatesRes as any[])?.find(
           (c: any) => c.id === candidateId,
@@ -83,16 +96,25 @@ export default function CandidateReportView({
         if (cInfo) setCandidateInfo(cInfo);
       } catch (err) {
         console.warn("Failed to load candidate data", err);
+      } finally {
+        setIsLoading(false);
       }
     }
     loadData();
   }, [candidateId, interviewId]);
 
-  // Fallbacks for loading state or missing API
-  const recommendation = report?.recommendation || "Advance with follow-up";
+  if (isLoading) {
+    return <CandidateReportSkeleton />;
+  }
+
+  // Real DB data with clean fallback
+  const recommendation = report?.recommendation || "Advance";
   const reasoning =
-    report?.reasoning ||
-    "lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+    typeof report?.reasoning === "string"
+      ? report.reasoning
+      : Array.isArray(report?.reasoning)
+        ? report.reasoning.join(" ")
+        : "The candidate has completed the automated AI interview evaluation pipeline. Detailed scoring criteria, required signals, and turn-by-turn conversation transcripts are recorded below.";
 
   const communication = report?.communication || {
     overall: {
@@ -275,10 +297,10 @@ export default function CandidateReportView({
           </Link>
           <span>/</span>
           <Link
-            href="/"
+            href={interviewId ? `/interviews/${interviewId}` : "/"}
             className="hover:text-gray-900 transition-colors cursor-pointer"
           >
-            Backend Engineer
+            Campaign Details
           </Link>
           <span>/</span>
           <span className="text-gray-900">{fullName}</span>
