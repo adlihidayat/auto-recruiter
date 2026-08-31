@@ -9,6 +9,7 @@ import { Link as LinkIcon, ExternalLink, Check, Copy } from "lucide-react";
 import { InterviewFormData } from "./types";
 
 interface DisplayCandidate {
+  id?: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -184,7 +185,7 @@ export const CreateInterviewSuccessStep: React.FC<
                   ? window.location.origin
                   : "http://localhost:3000";
               const roomUrl = `${origin}/interview?token=${tokenValue}`;
-              const candidateId = `cand-${idx}`;
+              const candidateId = c.id || `cand-${idx}`;
               const isCopied = copiedCandidateId === candidateId;
 
               return (

@@ -5,7 +5,13 @@
  */
 
 import React from "react";
-import { Filter, Binoculars, PenTool, CheckCircle2, ArrowRight } from "lucide-react";
+import {
+  Filter,
+  Binoculars,
+  PenTool,
+  CheckCircle2,
+  ArrowRight,
+} from "lucide-react";
 
 export const AGENT_STEPS = [
   {
@@ -42,7 +48,14 @@ export const AGENT_STEPS = [
   },
 ];
 
-export const MOCK_LOGS = [
+export interface MockLogItem {
+  time: number;
+  dot: string;
+  text: React.ReactNode;
+  isPending?: boolean;
+}
+
+export const MOCK_LOGS: MockLogItem[] = [
   // Agent 0: Context (0s - 5s)
   {
     time: 1200,
@@ -59,11 +72,11 @@ export const MOCK_LOGS = [
     dot: "bg-blue-500",
     text: (
       <>
-        <span className="font-semibold text-gray-900">
+        <span className="font-semibold text-gray-900 mr-1">
           Context <ArrowRight className="w-3 h-3 inline -mt-0.5 mx-0.5" />{" "}
           Research
         </span>{" "}
-        domain context attached
+        <span>domain context attached</span>
       </>
     ),
   },
@@ -83,11 +96,11 @@ export const MOCK_LOGS = [
     dot: "bg-purple-500",
     text: (
       <>
-        <span className="font-semibold text-gray-900">
+        <span className="font-semibold text-gray-900 mr-1">
           Research <ArrowRight className="w-3 h-3 inline -mt-0.5 mx-0.5" />{" "}
           Planning
         </span>{" "}
-        skill matrix compiled
+        <span>skill matrix compiled</span>
       </>
     ),
   },
@@ -107,11 +120,11 @@ export const MOCK_LOGS = [
     dot: "bg-orange-500",
     text: (
       <>
-        <span className="font-semibold text-gray-900">
+        <span className="font-semibold text-gray-900 mr-1">
           Planning <ArrowRight className="w-3 h-3 inline -mt-0.5 mx-0.5" />{" "}
           Finished
         </span>{" "}
-        interview campaign plan locked
+        <span>interview campaign plan locked</span>
       </>
     ),
   },
@@ -129,7 +142,13 @@ export const MOCK_LOGS = [
   {
     time: 20000,
     dot: "bg-emerald-500",
-    text: "recording final sign-off & deploying campaign",
+    text: (
+      <>
+        <span className="font-semibold text-gray-900">
+          Interview is ready!
+        </span>{" "}
+      </>
+    ),
   },
 ];
 

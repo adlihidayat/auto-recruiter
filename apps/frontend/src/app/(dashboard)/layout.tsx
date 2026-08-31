@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { logoutAction } from "@/features/auth/actions";
+import { getMeApi } from "@/lib/api/client";
 import CreateInterviewModal from "@/features/interviews/components/CreateInterviewModal";
 import { QuickActionModal } from "@/features/interviews/components/QuickActionModal";
 import { useCreateModalStore } from "@/lib/store/useCreateModalStore";
@@ -28,6 +29,28 @@ export default function DashboardLayout({
   const { isOpen, openModal, closeModal } = useCreateModalStore();
   const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [userName, setUserName] = useState<string>("User");
+
+  useEffect(() => {
+    async function fetchUserInfo() {
+      try {
+        const rawToken = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("access_token="))
+          ?.split("=")[1];
+        const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
+        if (tokenCookie) {
+          const me = await getMeApi(tokenCookie);
+          if (me) {
+            setUserName(me.username || me.email.split("@")[0] || "User");
+          }
+        }
+      } catch {
+        // Fallback
+      }
+    }
+    fetchUserInfo();
+  }, []);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -194,8 +217,8 @@ export default function DashboardLayout({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 px-2">
                 <Image src="/profile.svg" alt="Avatar" width={20} height={20} />
-                <span className="text-xs font-bold text-gray-900">
-                  Dhiya Adli
+                <span className="text-xs font-bold text-gray-900 truncate max-w-[100px]">
+                  {userName}
                 </span>
               </div>
               <button

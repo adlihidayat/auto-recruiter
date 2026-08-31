@@ -9,6 +9,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { X, AlertTriangle, Bot } from "lucide-react";
+import { createInterviewApi, BackendCandidateResponse } from "@/lib/api/client";
 
 import {
   ModalStep,
@@ -33,31 +34,68 @@ export default function CreateInterviewModal({
   const [error, setError] = useState<string | null>(null);
 
   // Confirmation dialog state ('form' | 'loading' | null)
-  const [showConfirmClose, setShowConfirmClose] = useState<"form" | "loading" | null>(null);
+  const [showConfirmClose, setShowConfirmClose] = useState<
+    "form" | "loading" | null
+  >(null);
 
   // Agent Handoff Mock Simulation State
   const [isPaused] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+
+  const [isApiFinished, setIsApiFinished] = useState(false);
+  const [createdInterviewId, setCreatedInterviewId] = useState<string | null>(null);
+  const [createdCandidates, setCreatedCandidates] = useState<BackendCandidateResponse[]>([]);
 
   useEffect(() => {
     if (modalStep !== "loading" || isPaused || isBackendDone) return;
     const interval = setInterval(() => {
       setElapsedTime((prev) => {
         const next = prev + 100;
-        if (next >= 20000) {
+        if (next >= 20000 && isApiFinished) {
           setIsBackendDone(true);
-          return 20000;
         }
         return next;
       });
     }, 100);
     return () => clearInterval(interval);
-  }, [modalStep, isPaused, isBackendDone]);
+  }, [modalStep, isPaused, isBackendDone, isApiFinished]);
 
   // Derived mock calculation
   const mockProgressPercent = Math.min(100, (elapsedTime / 20000) * 100);
   const activeAgentIndex = Math.min(3, Math.floor((elapsedTime / 20000) * 4));
-  const visibleLogs = MOCK_LOGS.filter((log) => log.time <= elapsedTime);
+  const baseLogs = MOCK_LOGS.filter((log, index) => {
+    if (index < 11) return log.time <= elapsedTime;
+    return false;
+  });
+
+  const visibleLogs = (() => {
+    if (isBackendDone) {
+      const finalLog = MOCK_LOGS[11];
+      return [
+        ...baseLogs,
+        {
+          ...finalLog,
+          time: elapsedTime,
+        },
+      ];
+    }
+    if (elapsedTime > 20000) {
+      return [
+        ...baseLogs,
+        {
+          time: elapsedTime,
+          dot: "bg-amber-500",
+          isPending: true,
+          text: (
+            <span className="text-amber-600 font-medium">
+              waiting the agent to process...
+            </span>
+          ),
+        },
+      ];
+    }
+    return baseLogs;
+  })();
 
   // Emoji picker state
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -77,16 +115,29 @@ export default function CreateInterviewModal({
   });
 
   const [candidates, setCandidates] = useState<CandidateInput[]>([
-    { email: "alex.johnson@example.com", first_name: "Alex", last_name: "Johnson" },
+    {
+      email: "alex.johnson@example.com",
+      first_name: "Alex",
+      last_name: "Johnson",
+    },
     { email: "sarah.chen@example.com", first_name: "Sarah", last_name: "Chen" },
-    { email: "michael.brown@example.com", first_name: "Michael", last_name: "Brown" },
+    {
+      email: "michael.brown@example.com",
+      first_name: "Michael",
+      last_name: "Brown",
+    },
   ]);
 
-  const [copiedCandidateId, setCopiedCandidateId] = useState<string | null>(null);
+  const [copiedCandidateId, setCopiedCandidateId] = useState<string | null>(
+    null,
+  );
 
   // Candidate management handlers
   const handleAddCandidate = () => {
-    setCandidates((prev) => [...prev, { email: "", first_name: "", last_name: "" }]);
+    setCandidates((prev) => [
+      ...prev,
+      { email: "", first_name: "", last_name: "" },
+    ]);
   };
 
   const handleRemoveCandidate = (index: number) => {
@@ -96,10 +147,10 @@ export default function CreateInterviewModal({
   const handleCandidateChange = (
     index: number,
     field: "email" | "first_name" | "last_name",
-    value: string
+    value: string,
   ) => {
     setCandidates((prev) =>
-      prev.map((c, i) => (i === index ? { ...c, [field]: value } : c))
+      prev.map((c, i) => (i === index ? { ...c, [field]: value } : c)),
     );
   };
 
@@ -108,6 +159,8 @@ export default function CreateInterviewModal({
     setModalStep("form");
     setElapsedTime(0);
     setIsBackendDone(false);
+    setIsApiFinished(false);
+    setCreatedInterviewId(null);
     setError(null);
     setShowConfirmClose(null);
     setFormData({
@@ -122,9 +175,21 @@ export default function CreateInterviewModal({
       scheduled_at: "",
     });
     setCandidates([
-      { email: "alex.johnson@example.com", first_name: "Alex", last_name: "Johnson" },
-      { email: "sarah.chen@example.com", first_name: "Sarah", last_name: "Chen" },
-      { email: "michael.brown@example.com", first_name: "Michael", last_name: "Brown" },
+      {
+        email: "alex.johnson@example.com",
+        first_name: "Alex",
+        last_name: "Johnson",
+      },
+      {
+        email: "sarah.chen@example.com",
+        first_name: "Sarah",
+        last_name: "Chen",
+      },
+      {
+        email: "michael.brown@example.com",
+        first_name: "Michael",
+        last_name: "Brown",
+      },
     ]);
   }, []);
 
@@ -180,10 +245,16 @@ export default function CreateInterviewModal({
     };
   }, [showEmojiPicker]);
 
-  const handleSubmitForm = (e: React.FormEvent) => {
+  const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.job_name || !formData.job_description || !formData.domain_hint) {
-      setError("Please fill in all required fields (Job Name, Description, Domain Hint).");
+    if (
+      !formData.job_name ||
+      !formData.job_description ||
+      !formData.domain_hint
+    ) {
+      setError(
+        "Please fill in all required fields (Job Name, Description, Domain Hint).",
+      );
       return;
     }
     const validCandidates = candidates.filter((c) => c.email.trim().length > 0);
@@ -196,6 +267,42 @@ export default function CreateInterviewModal({
     setModalStep("loading");
     setElapsedTime(0);
     setIsBackendDone(false);
+    setIsApiFinished(false);
+
+    try {
+      const rawToken = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("access_token="))
+        ?.split("=")[1];
+      const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
+      if (!tokenCookie) {
+        setError("Authentication token not found.");
+        setModalStep("form");
+        return;
+      }
+
+      const payload = {
+        job_name: formData.job_name,
+        job_description: formData.job_description,
+        icon: formData.icon,
+        difficulty: formData.difficulty,
+        num_goals: formData.num_goals,
+        total_duration_minutes: formData.total_duration_minutes,
+        domain_hint: formData.domain_hint,
+        communication_weight: formData.communication_weight,
+        scheduled_at: formData.scheduled_at ? new Date(formData.scheduled_at).toISOString() : undefined,
+        candidates: validCandidates,
+      };
+
+      const result = await createInterviewApi(payload, tokenCookie);
+      setCreatedInterviewId(result.interview.id);
+      setCreatedCandidates(result.candidates);
+      setIsApiFinished(true);
+    } catch (err: unknown) {
+      console.error("Failed to create interview", err);
+      setError(err instanceof Error ? err.message : "Failed to create interview");
+      setModalStep("form");
+    }
   };
 
   const handleCopyLink = (candidateId: string, token: string) => {
@@ -223,24 +330,29 @@ export default function CreateInterviewModal({
   const handleSeeDetail = () => {
     onCampaignCreated();
     onClose();
-    router.push(`/interviews/mock-interview-id`);
+    if (createdInterviewId) {
+      router.push(`/interviews/${createdInterviewId}`);
+    } else {
+      router.push(`/`);
+    }
     handleResetModal();
   };
 
-  const displayCandidates = candidates.map((c, i) => ({
-    first_name:
-      c.first_name || (i === 0 ? "Alex" : i === 1 ? "Sarah" : "Michael"),
-    last_name:
-      c.last_name || (i === 0 ? "Johnson" : i === 1 ? "Chen" : "Brown"),
-    email:
-      c.email ||
-      (i === 0
-        ? "alex.johnson@example.com"
-        : i === 1
-        ? "sarah.chen@example.com"
-        : "michael.brown@example.com"),
-    room_token: `mock_room_token_${i + 1}`,
-  }));
+  const displayCandidates = createdCandidates.length > 0 
+    ? createdCandidates.map((c) => ({
+        id: c.id,
+        first_name: c.first_name || "",
+        last_name: c.last_name || "",
+        email: c.email,
+        room_token: c.room_token || "unavailable",
+      }))
+    : candidates.map((c, i) => ({
+        id: `mock-${i}`,
+        first_name: c.first_name || (i === 0 ? "Alex" : i === 1 ? "Sarah" : "Michael"),
+        last_name: c.last_name || (i === 0 ? "Johnson" : i === 1 ? "Chen" : "Brown"),
+        email: c.email || (i === 0 ? "alex.johnson@example.com" : i === 1 ? "sarah.chen@example.com" : "michael.brown@example.com"),
+        room_token: `mock_room_token_${i + 1}`,
+      }));
 
   if (!isOpen) return null;
 
@@ -328,7 +440,7 @@ export default function CreateInterviewModal({
           onClick={() => setShowConfirmClose(null)}
         >
           <div
-            className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-2xl max-w-sm w-full space-y-4 text-center animate-in zoom-in-95 duration-150"
+            className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-2xl max-w-sm w-full space-y-8 text-center animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-200/60 text-orange-500 flex items-center justify-center mx-auto">
@@ -336,11 +448,12 @@ export default function CreateInterviewModal({
             </div>
 
             <div>
-              <h4 className="text-base font-bold text-gray-900 tracking-tight">
+              <h4 className="text-base font-semibold text-gray-900 tracking-tight">
                 Discard interview creation?
               </h4>
-              <p className="text-xs text-gray-500 font-normal leading-relaxed mt-1">
-                Closing will cancel your progress and any un-submitted configuration will be lost.
+              <p className="text-sm text-gray-600 font-normal leading-relaxed mt-1">
+                Closing will cancel your progress and any un-submitted
+                configuration will be lost.
               </p>
             </div>
 
@@ -348,7 +461,7 @@ export default function CreateInterviewModal({
               <button
                 type="button"
                 onClick={() => setShowConfirmClose(null)}
-                className="px-3.5 py-2 flex-1 border border-gray-200 text-gray-700 hover:bg-gray-100 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                className="px-3.5 py-2 flex-1 border border-gray-200 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
               >
                 Continue editing
               </button>
@@ -359,7 +472,7 @@ export default function CreateInterviewModal({
                   onClose();
                   handleResetModal();
                 }}
-                className="px-3.5 py-2 flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                className="px-3.5 py-2 flex-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors cursor-pointer shadow-xs"
               >
                 Discard & close
               </button>
@@ -387,7 +500,9 @@ export default function CreateInterviewModal({
                 Agent pipeline in progress
               </h4>
               <p className="text-xs text-gray-500 font-normal leading-relaxed mt-1">
-                The AI agents will continue running in the background even if you close this window. You can check campaign status anytime from your dashboard.
+                The AI agents will continue running in the background even if
+                you close this window. You can check campaign status anytime
+                from your dashboard.
               </p>
             </div>
 

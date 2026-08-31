@@ -20,7 +20,7 @@ export const CompareFilterPopover: React.FC<CompareFilterPopoverProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const ranges = ["This month", "Last month", "Q3 2026", "All time"];
+  const ranges = ["This Year", "Last 3 Month", "This month", "All time"];
 
   return (
     <div

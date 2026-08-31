@@ -26,7 +26,7 @@ import { InterviewCampaign } from "../types";
 import {
   getInterviewsApi,
   getCandidatesForInterviewApi,
-  deleteInterviewApi,
+  batchDeleteInterviewsApi,
 } from "@/lib/api/client";
 import { mapBackendInterviewToCampaign } from "../utils";
 import { useRouter } from "next/navigation";
@@ -281,18 +281,10 @@ export default function DashboardView() {
   };
 
   const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+  const [showBatchDeleteModal, setShowBatchDeleteModal] = useState(false);
 
-  const handleBatchDelete = async () => {
+  const confirmBatchDelete = async () => {
     if (selectedIds.length === 0) return;
-    const count = selectedIds.length;
-    if (
-      !window.confirm(
-        `Are you sure you want to delete ${count} selected interview campaign${count > 1 ? "s" : ""}?`,
-      )
-    ) {
-      return;
-    }
-
     setIsBatchDeleting(true);
     try {
       const rawToken = document.cookie
@@ -302,20 +294,17 @@ export default function DashboardView() {
       const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
 
       if (tokenCookie) {
-        await Promise.all(
-          selectedIds.map((id) =>
-            deleteInterviewApi(id, tokenCookie).catch(() => null),
-          ),
-        );
+        await batchDeleteInterviewsApi(selectedIds, tokenCookie);
       }
 
       setCampaignsList((prev) =>
         prev.filter((c) => !selectedIds.includes(c.id)),
       );
       setSelectedIds([]);
+      setShowBatchDeleteModal(false);
       await loadBackendInterviews();
     } catch (err) {
-      console.error("Failed to delete selected interviews", err);
+      console.error("Failed to batch delete selected interviews", err);
     } finally {
       setIsBatchDeleting(false);
     }
@@ -651,9 +640,9 @@ export default function DashboardView() {
               {selectedIds.length > 0 && (
                 <button
                   type="button"
-                  onClick={handleBatchDelete}
+                  onClick={() => setShowBatchDeleteModal(true)}
                   disabled={isBatchDeleting}
-                  className="px-2.5 py-1 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
+                  className="px-2.5 py-1 bg-[#EA3536] text-white border border-[#EA3536] rounded-lg text-sm font-medium hover:bg-red-600 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Delete ({selectedIds.length})</span>
@@ -916,6 +905,53 @@ export default function DashboardView() {
           </div>
         </div>
       </div>
+
+      {/* Batch Delete Confirmation Modal Overlay */}
+      {showBatchDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl max-w-md w-full p-6 text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto border border-red-100 mb-6">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div className=" mb-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-1">
+                Batch Delete {selectedIds.length} Interview
+                {selectedIds.length > 1 ? "s" : ""}?
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Are you sure you want to delete{" "}
+                <span className="font-semibold text-gray-900">
+                  {selectedIds.length} selected campaign
+                  {selectedIds.length > 1 ? "s" : ""}
+                </span>
+                ? This will permanently remove all associated candidates,
+                evaluation goals, reports, and transcript logs in one atomic
+                operation.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isBatchDeleting}
+                onClick={() => setShowBatchDeleteModal(false)}
+                className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isBatchDeleting}
+                onClick={confirmBatchDelete}
+                className="flex-1 py-2 bg-[#EA3536] text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {isBatchDeleting
+                  ? "Deleting..."
+                  : `Delete ${selectedIds.length} Campaign${selectedIds.length > 1 ? "s" : ""}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

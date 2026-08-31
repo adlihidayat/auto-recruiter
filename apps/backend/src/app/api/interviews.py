@@ -17,7 +17,7 @@ from app.models.goal import Goal
 from app.models.transcript import Transcript
 from app.models.report import CandidateReport
 from app.models.job import Job
-from app.schemas.interview import InterviewCreate, InterviewResponse, InterviewCreationResponse, InterviewUpdate, GoalResponse
+from app.schemas.interview import InterviewCreate, InterviewResponse, InterviewCreationResponse, InterviewUpdate, GoalResponse, BatchDeleteInterviewsRequest
 from app.schemas.candidate import CandidateResponse
 from app.services.plan_service import process_interview_plan_generation
 
@@ -298,3 +298,54 @@ async def delete_interview(
     await session.delete(interview)
     await session.commit()
     return None
+
+@router.post("/batch-delete", status_code=status.HTTP_200_OK)
+async def batch_delete_interviews(
+    payload: BatchDeleteInterviewsRequest,
+    session: SessionDep,
+    current_user: CurrentUser
+):
+    """
+    Batch delete multiple interviews and all associated candidates, goals, transcripts, reports, and jobs in one atomic database operation.
+    """
+    if not payload.interview_ids:
+        return {"deleted_count": 0, "status": "success"}
+
+    # 1. Fetch candidate IDs associated with all selected interviews
+    cand_result = await session.execute(
+        select(Candidate.id).where(Candidate.interview_id.in_(payload.interview_ids))
+    )
+    candidate_ids = cand_result.scalars().all()
+
+    if candidate_ids:
+        # Delete reports
+        await session.execute(
+            delete(CandidateReport).where(CandidateReport.candidate_id.in_(candidate_ids))
+        )
+        # Delete transcripts
+        await session.execute(
+            delete(Transcript).where(Transcript.candidate_id.in_(candidate_ids))
+        )
+        # Delete candidates
+        await session.execute(
+            delete(Candidate).where(Candidate.interview_id.in_(payload.interview_ids))
+        )
+
+    # 2. Delete goals
+    await session.execute(
+        delete(Goal).where(Goal.interview_id.in_(payload.interview_ids))
+    )
+
+    # 3. Delete background jobs
+    for i_id in payload.interview_ids:
+        await session.execute(
+            delete(Job).where(Job.payload["interview_id"].as_string() == str(i_id))
+        )
+
+    # 4. Delete interviews
+    result = await session.execute(
+        delete(Interview).where(Interview.id.in_(payload.interview_ids))
+    )
+    await session.commit()
+
+    return {"deleted_count": result.rowcount, "status": "success"}

@@ -5,8 +5,8 @@
  */
 
 import React from "react";
-import { Check, ArrowRight, RotateCcw } from "lucide-react";
-import { AGENT_STEPS, MOCK_LOGS } from "./constants";
+import { Check, ArrowRight, RotateCcw, Loader2 } from "lucide-react";
+import { AGENT_STEPS, MOCK_LOGS, MockLogItem } from "./constants";
 import { InterviewFormData } from "./types";
 
 interface CreateInterviewLoadingStepProps {
@@ -16,12 +16,14 @@ interface CreateInterviewLoadingStepProps {
   isBackendDone: boolean;
   activeAgentIndex: number;
   mockProgressPercent: number;
-  visibleLogs: typeof MOCK_LOGS;
+  visibleLogs: MockLogItem[];
   onReset: () => void;
   onContinue: () => void;
 }
 
-export const CreateInterviewLoadingStep: React.FC<CreateInterviewLoadingStepProps> = ({
+export const CreateInterviewLoadingStep: React.FC<
+  CreateInterviewLoadingStepProps
+> = ({
   formData,
   elapsedTime,
   isPaused,
@@ -64,29 +66,22 @@ export const CreateInterviewLoadingStep: React.FC<CreateInterviewLoadingStepProp
               <span className="text-xs font-semibold text-gray-600 tracking-wider">
                 Task :
               </span>
-              <span className="text-xs font-medium text-gray-800">
-                {formData.job_description.substring(0, 50) ||
+              <span className="text-xs font-medium text-gray-800 w-60 truncate">
+                {formData.job_name.substring(0, 50) ||
                   "Analyze and create interview plan"}
-                {formData.job_description.length > 50 ? "..." : ""}
               </span>
             </div>
-            <span className="text-xs font-mono text-gray-600">
-              #12f157dds
-            </span>
+            <span className="text-xs font-mono text-gray-600">#12f157dds</span>
           </div>
 
           {/* Agents Progress */}
           <div className="relative">
             <div className="flex justify-between relative z-10 px-2 sm:px-6">
               {AGENT_STEPS.map((step, idx) => {
-                const isActive =
-                  activeAgentIndex === idx && !isBackendDone;
+                const isActive = activeAgentIndex === idx && !isBackendDone;
                 const isPast = activeAgentIndex > idx || isBackendDone;
                 return (
-                  <div
-                    key={idx}
-                    className="flex flex-col items-center gap-3 "
-                  >
+                  <div key={idx} className="flex flex-col items-center gap-3 ">
                     <div
                       className={`relative w-12 h-12 rounded-2xl flex items-center justify-center transition-colors duration-500 ${
                         isPast || isActive
@@ -162,7 +157,11 @@ export const CreateInterviewLoadingStep: React.FC<CreateInterviewLoadingStepProp
                   {(log.time / 1000).toFixed(1)}s
                 </span>
                 <div className="flex items-center gap-3 mt-1.5 shrink-0">
-                  <div className={`w-2 h-2 rounded-full ${log.dot}`} />
+                  {log.isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin -ml-0.5" />
+                  ) : (
+                    <div className={`w-2 h-2 rounded-full ${log.dot}`} />
+                  )}
                 </div>
                 <div className="text-sm text-gray-600 leading-snug">
                   {log.text}
@@ -180,9 +179,7 @@ export const CreateInterviewLoadingStep: React.FC<CreateInterviewLoadingStepProp
                 isBackendDone ? "text-emerald-600" : "text-gray-900"
               }`}
             >
-              {isBackendDone
-                ? "Success"
-                : AGENT_STEPS[activeAgentIndex].name}
+              {isBackendDone ? "Success" : AGENT_STEPS[activeAgentIndex].name}
               {"  "}·
             </span>
             <span className="text-xs text-gray-500">

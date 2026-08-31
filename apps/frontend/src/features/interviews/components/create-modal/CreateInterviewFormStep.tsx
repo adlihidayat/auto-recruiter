@@ -117,7 +117,7 @@ export const CreateInterviewFormStep: React.FC<
               onChange={(e) =>
                 setFormData({ ...formData, job_name: e.target.value })
               }
-              className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
+              className="w-full px-3 py-1.5 bg-[#F6F6F6] border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
               placeholder="e.g. Senior Frontend Engineer"
             />
           </div>
@@ -138,7 +138,7 @@ export const CreateInterviewFormStep: React.FC<
                   scheduled_at: e.target.value,
                 })
               }
-              className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
+              className="w-full px-3 py-1.5 bg-[#F6F6F6] border border-gray-200 rounded-lg text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
             />
           </div>
 
@@ -160,7 +160,7 @@ export const CreateInterviewFormStep: React.FC<
                     domain_hint: e.target.value,
                   })
                 }
-                className="w-full pl-8.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
+                className="w-full pl-8.5 px-3 py-1.5 bg-[#F6F6F6] border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
                 placeholder="e.g. React & TypeScript"
               />
             </div>
@@ -186,7 +186,7 @@ export const CreateInterviewFormStep: React.FC<
                     total_duration_minutes: parseInt(e.target.value) || 5,
                   })
                 }
-                className="w-full px-3 py-1.5 pr-8 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full px-3 py-1.5 pr-8 bg-[#F6F6F6] border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center text-gray-400 pointer-events-auto">
                 <button
@@ -237,7 +237,7 @@ export const CreateInterviewFormStep: React.FC<
                     difficulty: e.target.value,
                   })
                 }
-                className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all appearance-none cursor-pointer"
+                className="w-full px-3 py-1.5 bg-[#F6F6F6] border border-gray-200 rounded-lg text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all appearance-none cursor-pointer"
               >
                 <option value="junior">Junior</option>
                 <option value="mid">Mid-Level</option>
@@ -248,7 +248,7 @@ export const CreateInterviewFormStep: React.FC<
           </div>
 
           {/* Number of Goals */}
-          <div>
+          <div className="">
             <label className="block text-sm font-medium text-gray-900 mb-2">
               Goals Count
             </label>
@@ -264,9 +264,9 @@ export const CreateInterviewFormStep: React.FC<
                     num_goals: parseInt(e.target.value) || 1,
                   })
                 }
-                className="w-full px-3 py-1.5 pr-8 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full px-3 py-1.5 pr-8 bg-[#F6F6F6] border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center text-gray-400 pointer-events-auto">
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center  text-gray-400 pointer-events-auto">
                 <button
                   type="button"
                   onClick={() =>
@@ -346,7 +346,7 @@ export const CreateInterviewFormStep: React.FC<
                 job_description: e.target.value,
               })
             }
-            className="w-full h-28 px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all resize-none"
+            className="w-full h-28 px-3 py-1.5 bg-[#F6F6F6] border border-gray-200 rounded-xl text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all resize-none"
             placeholder="Paste the job description here..."
           />
         </div>
@@ -380,7 +380,7 @@ export const CreateInterviewFormStep: React.FC<
                     onChange={(e) =>
                       onCandidateChange(index, "email", e.target.value)
                     }
-                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
+                    className="w-full px-3 py-1.5 bg-[#F6F6F6] border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
                     required
                   />
                   <input
@@ -390,7 +390,7 @@ export const CreateInterviewFormStep: React.FC<
                     onChange={(e) =>
                       onCandidateChange(index, "first_name", e.target.value)
                     }
-                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
+                    className="w-full px-3 py-1.5 bg-[#F6F6F6] border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
                   />
                   <input
                     type="text"
@@ -399,7 +399,7 @@ export const CreateInterviewFormStep: React.FC<
                     onChange={(e) =>
                       onCandidateChange(index, "last_name", e.target.value)
                     }
-                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
+                    className="w-full px-3 py-1.5 bg-[#F6F6F6] border border-gray-200 rounded-lg text-sm text-gray-900 font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all"
                   />
                 </div>
                 {candidates.length > 1 && (

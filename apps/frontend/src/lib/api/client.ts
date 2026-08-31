@@ -364,6 +364,7 @@ export interface CreateCandidatePayload {
 export interface CreateInterviewPayload {
   job_name: string;
   job_description: string;
+  icon?: string;
   difficulty?: string;
   num_goals?: number;
   total_duration_minutes?: number;
@@ -459,4 +460,26 @@ export async function deleteInterviewApi(
     const errorData = await response.json().catch(() => ({ detail: "Failed to delete interview" }));
     throw new Error(`Failed to delete interview (${response.status}): ${errorData.detail || "Bad Request"}`);
   }
+}
+
+/**
+ * Batch delete multiple interviews and all associated data in one atomic query.
+ */
+export async function batchDeleteInterviewsApi(
+  interviewIds: string[],
+  token: string
+): Promise<{ deleted_count: number; status: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/interviews/batch-delete`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ interview_ids: interviewIds }),
+  });
+  if (!response.ok) {
+    handleAuthError(response.status);
+    throw new Error("Failed to batch delete interviews");
+  }
+  return response.json();
 }

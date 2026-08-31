@@ -69,3 +69,6 @@ class InterviewCreationResponse(BaseModel):
     interview: InterviewResponse
     candidates: list[CandidateResponse]
 
+class BatchDeleteInterviewsRequest(BaseModel):
+    interview_ids: list[UUID]
+

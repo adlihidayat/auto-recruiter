@@ -7,7 +7,13 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { ExternalLink, CheckCircle2, AlertTriangle, Trash2, AlertCircle } from "lucide-react";
+import {
+  ExternalLink,
+  CheckCircle2,
+  AlertTriangle,
+  Trash2,
+  AlertCircle,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -25,12 +31,17 @@ interface InterviewDetailViewProps {
   interviewId: string;
 }
 
-export default function InterviewDetailView({ interviewId }: InterviewDetailViewProps) {
+export default function InterviewDetailView({
+  interviewId,
+}: InterviewDetailViewProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [unavailableCandidate, setUnavailableCandidate] = useState<BackendCandidateResponse | null>(null);
-  const [interview, setInterview] = useState<BackendInterviewResponse | null>(null);
+  const [unavailableCandidate, setUnavailableCandidate] =
+    useState<BackendCandidateResponse | null>(null);
+  const [interview, setInterview] = useState<BackendInterviewResponse | null>(
+    null,
+  );
   const [goals, setGoals] = useState<BackendGoalResponse[]>([]);
   const [candidates, setCandidates] = useState<BackendCandidateResponse[]>([]);
 
@@ -52,7 +63,9 @@ export default function InterviewDetailView({ interviewId }: InterviewDetailView
         const [detailRes, goalsRes, candRes] = await Promise.all([
           getInterviewDetailApi(interviewId, tokenCookie).catch(() => null),
           getInterviewGoalsApi(interviewId, tokenCookie).catch(() => []),
-          getCandidatesForInterviewApi(interviewId, tokenCookie).catch(() => []),
+          getCandidatesForInterviewApi(interviewId, tokenCookie).catch(
+            () => [],
+          ),
         ]);
 
         if (!isCancelled) {
@@ -74,8 +87,9 @@ export default function InterviewDetailView({ interviewId }: InterviewDetailView
     };
   }, [interviewId]);
 
-  const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this interview campaign?")) return;
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  const confirmDelete = async () => {
     setIsDeleting(true);
     try {
       const rawToken = document.cookie
@@ -91,6 +105,7 @@ export default function InterviewDetailView({ interviewId }: InterviewDetailView
     } catch (err) {
       console.error("Failed to delete interview", err);
       setIsDeleting(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -123,7 +138,9 @@ export default function InterviewDetailView({ interviewId }: InterviewDetailView
             Interview List
           </Link>
           <span className="text-gray-300">/</span>
-          <span className="font-medium text-gray-900 truncate max-w-xs">{jobName}</span>
+          <span className="font-medium text-gray-900 truncate max-w-xs">
+            {jobName}
+          </span>
         </div>
 
         {/* Header Section */}
@@ -158,7 +175,7 @@ export default function InterviewDetailView({ interviewId }: InterviewDetailView
               </button>
               <button
                 type="button"
-                onClick={handleDelete}
+                onClick={() => setShowDeleteModal(true)}
                 disabled={isDeleting}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-[#EA3536] text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors cursor-pointer disabled:opacity-50"
               >
@@ -198,43 +215,55 @@ export default function InterviewDetailView({ interviewId }: InterviewDetailView
                 >
                   <div className="flex border-b border-gray-100">
                     <div className="flex-1 px-4 py-4 text-sm text-gray-900 leading-relaxed font-medium">
-                      <span className="font-semibold text-gray-500 mr-2">Goal ({planItem.goal_ref || `g_0${planIdx + 1}`}):</span>
+                      <span className="font-semibold text-gray-500 mr-2">
+                        Goal ({planItem.goal_ref || `g_0${planIdx + 1}`}):
+                      </span>
                       {planItem.goal || planItem.topic}
                     </div>
                   </div>
 
                   <div className="p-4 space-y-4 bg-[#FAFAFA]">
-                    {planItem.passing_criteria && planItem.passing_criteria.length > 0 && (
-                      <div>
-                        <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-2">
-                          Required Signals:
-                        </h3>
-                        <ul className="space-y-2">
-                          {planItem.passing_criteria.map((crit, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-sm text-gray-900">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-                              {crit}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                    {planItem.passing_criteria &&
+                      planItem.passing_criteria.length > 0 && (
+                        <div>
+                          <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-2">
+                            Required Signals:
+                          </h3>
+                          <ul className="space-y-2">
+                            {planItem.passing_criteria.map((crit, idx) => (
+                              <li
+                                key={idx}
+                                className="flex items-start gap-2 text-sm text-gray-900"
+                              >
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                                {crit}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
-                    {planItem.wrong_answer_signals && planItem.wrong_answer_signals.length > 0 && (
-                      <div>
-                        <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-2 mt-4">
-                          Red Flags:
-                        </h3>
-                        <ul className="space-y-2">
-                          {planItem.wrong_answer_signals.map((trigger, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-sm text-gray-900">
-                              <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                              {trigger}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                    {planItem.wrong_answer_signals &&
+                      planItem.wrong_answer_signals.length > 0 && (
+                        <div>
+                          <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-2 mt-4">
+                            Red Flags:
+                          </h3>
+                          <ul className="space-y-2">
+                            {planItem.wrong_answer_signals.map(
+                              (trigger, idx) => (
+                                <li
+                                  key={idx}
+                                  className="flex items-start gap-2 text-sm text-gray-900"
+                                >
+                                  <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                                  {trigger}
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                        </div>
+                      )}
                   </div>
                 </div>
               ))}
@@ -258,7 +287,9 @@ export default function InterviewDetailView({ interviewId }: InterviewDetailView
                   const candName =
                     `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim() ||
                     candidate.email;
-                  const statusLower = (candidate.status || "not-started").toLowerCase();
+                  const statusLower = (
+                    candidate.status || "not-started"
+                  ).toLowerCase();
 
                   const isFinished =
                     statusLower === "finished" ||
@@ -275,13 +306,16 @@ export default function InterviewDetailView({ interviewId }: InterviewDetailView
                     statusLower === "grader_evaluating";
 
                   // Status dot color matching dashboard table (Gray = Not Started, Blue = On Progress, Green = Finished)
-                  let statusDotClass = "bg-gray-400 shadow-[0_0_0_2px_rgba(156,163,175,0.2)]";
+                  let statusDotClass =
+                    "bg-gray-400 shadow-[0_0_0_2px_rgba(156,163,175,0.2)]";
                   let statusText = "Not Started";
                   if (isFinished) {
-                    statusDotClass = "bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]";
+                    statusDotClass =
+                      "bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]";
                     statusText = "Finished";
                   } else if (isInProgress) {
-                    statusDotClass = "bg-blue-500 shadow-[0_0_0_2px_rgba(59,130,246,0.2)]";
+                    statusDotClass =
+                      "bg-blue-500 shadow-[0_0_0_2px_rgba(59,130,246,0.2)]";
                     statusText = "On Progress";
                   }
 
@@ -293,7 +327,10 @@ export default function InterviewDetailView({ interviewId }: InterviewDetailView
 
                     if (
                       rawRec.toLowerCase().includes("advance with") ||
-                      (score !== null && score !== undefined && score >= 50 && score < 80)
+                      (score !== null &&
+                        score !== undefined &&
+                        score >= 50 &&
+                        score < 80)
                     ) {
                       recBadge = (
                         <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-amber-50 text-amber-700 border border-amber-200">
@@ -340,7 +377,9 @@ export default function InterviewDetailView({ interviewId }: InterviewDetailView
                           <span className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
                             {candName}
                           </span>
-                          <span className="text-sm text-gray-600">{candidate.email}</span>
+                          <span className="text-sm text-gray-600">
+                            {candidate.email}
+                          </span>
                           {recBadge}
                         </div>
                       </div>
@@ -348,7 +387,9 @@ export default function InterviewDetailView({ interviewId }: InterviewDetailView
                         <span className="text-xs text-gray-500 font-medium capitalize">
                           Status: {statusText}
                         </span>
-                        <span className={`w-2 h-2 rounded-full ${statusDotClass}`} />
+                        <span
+                          className={`w-2 h-2 rounded-full ${statusDotClass}`}
+                        />
                       </div>
                     </div>
                   );
@@ -362,29 +403,71 @@ export default function InterviewDetailView({ interviewId }: InterviewDetailView
       {/* Report Not Available Modal Overlay */}
       {unavailableCandidate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl max-w-md w-full p-6 text-center space-y-4">
-            <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-100">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl max-w-md w-full p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-100 mb-10">
               <AlertCircle className="w-6 h-6" />
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-1">
+            <div className=" mb-10">
+              <h3 className="text-base font-semibold text-gray-900 mb-1">
                 Report Not Available
               </h3>
-              <p className="text-xs text-gray-600 leading-relaxed">
+              <p className="text-sm text-gray-600 leading-relaxed">
                 The evaluation report for{" "}
                 <span className="font-semibold text-gray-900">
-                  {`${unavailableCandidate.first_name || ""} ${unavailableCandidate.last_name || ""}`.trim() || unavailableCandidate.email}
+                  {`${unavailableCandidate.first_name || ""} ${unavailableCandidate.last_name || ""}`.trim() ||
+                    unavailableCandidate.email}
                 </span>{" "}
-                is not available yet. Reports are generated automatically once the candidate completes their AI interview.
+                is not available yet. Reports are generated automatically once
+                the candidate completes their AI interview.
               </p>
             </div>
             <button
               type="button"
               onClick={() => setUnavailableCandidate(null)}
-              className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-xs font-semibold hover:bg-black transition-colors cursor-pointer"
+              className="w-full py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition-colors cursor-pointer"
             >
               Okay, got it
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Campaign Confirmation Modal Overlay */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl max-w-md w-full p-6 text-center space-y-4">
+            <div className="w-12 h-12 rounded-full mb-6 bg-red-50 text-red-600 flex items-center justify-center mx-auto border border-red-100">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div className=" mb-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-1">
+                Delete Interview Campaign?
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Are you sure you want to delete{" "}
+                <span className="font-semibold text-gray-900">{jobName}</span>?
+                This will permanently remove all evaluation goals, candidate
+                records, reports, and conversation logs.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={confirmDelete}
+                className="flex-1 py-2 bg-[#EA3536] text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {isDeleting ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
           </div>
         </div>
       )}
