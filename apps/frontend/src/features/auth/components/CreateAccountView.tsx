@@ -50,7 +50,8 @@ export default function CreateAccountView() {
         }
         setStep("credentials");
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Failed to verify username";
+        const message =
+          err instanceof Error ? err.message : "Failed to verify username";
         setErrorMessage(message);
       } finally {
         setIsSubmitting(false);
@@ -73,7 +74,8 @@ export default function CreateAccountView() {
         router.push("/");
         router.refresh();
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Failed to create account";
+        const message =
+          err instanceof Error ? err.message : "Failed to create account";
         setErrorMessage(message);
         setIsSubmitting(false);
       }

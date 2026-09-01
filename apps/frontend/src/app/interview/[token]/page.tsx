@@ -9,8 +9,8 @@ import {
   Sparkles,
   Play,
   Clock,
+  ShieldCheck,
 } from "lucide-react";
-import Image from "next/image";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
@@ -19,6 +19,7 @@ import {
   BarVisualizer,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
+import Image from "next/image";
 
 type Phase = "lobby" | "room" | "completed";
 
@@ -132,11 +133,24 @@ export default function CandidateInterviewPage({
 
         updateLevel();
       } catch (err: unknown) {
-        console.error("Microphone access error:", err);
-        // Fallback to default audio stream if exact deviceId constraints failed
+        setHasMicPermission(false);
+        if (
+          err instanceof Error &&
+          (err.name === "NotAllowedError" ||
+            err.name === "PermissionDeniedError")
+        ) {
+          console.warn(
+            "Microphone permission pending user gesture or browser permission allowance.",
+          );
+          return;
+        }
         if (deviceId) {
-          console.warn("Exact mic constraint failed, falling back to default stream");
-          const fallbackStream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
+          console.warn(
+            "Exact mic constraint failed, falling back to default stream",
+          );
+          const fallbackStream = await navigator.mediaDevices
+            .getUserMedia({ audio: true })
+            .catch(() => null);
           if (fallbackStream) {
             streamRef.current = fallbackStream;
             setHasMicPermission(true);
@@ -144,11 +158,7 @@ export default function CandidateInterviewPage({
             if (fallbackTrack?.label) {
               setActiveMicLabel(fallbackTrack.label);
             }
-          } else {
-            setHasMicPermission(false);
           }
-        } else {
-          setHasMicPermission(false);
         }
       }
     },
@@ -188,42 +198,50 @@ export default function CandidateInterviewPage({
   }, [initMicrophone]);
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#272727] font-sans flex flex-col justify-between selection:bg-[#FE6100]/20 selection:text-[#FE6100]">
+    <div className="min-h-screen bg-[#F6F6F6] text-gray-900 font-sans flex flex-col justify-between selection:bg-gray-200">
       {/* Main Body Content based on active phase */}
-      <main className="flex-1 max-w-5xl w-full mx-auto p-6 flex flex-col justify-center items-center">
-        {/* PHASE 1: PRE-ROOM / LOBBY */}
+      <main className="flex-1 max-w-5xl w-full mx-auto p-4 md:p-8 flex flex-col justify-center items-center">
+        {/* PHASE 1: PRE-ROOM / LOBBY PREPARATION */}
         {phase === "lobby" && (
-          <div className="w-full max-w-xl bg-white rounded-3xl border border-[#E9E9E9] shadow-xl p-8 animate-in fade-in zoom-in-95 duration-200">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 rounded-2xl bg-black-50 flex items-center justify-center mx-auto mb-4 text-[#FE6100]">
-                <Image
-                  src="/logo.svg"
-                  alt="Company Logo"
-                  width={50}
-                  height={50}
-                  style={{ width: "auto", height: "auto" }}
-                />
-              </div>
-              <h1 className="text-2xl font-extrabold text-[#272727] tracking-tight">
-                Senior Frontend Engineer Interview
+          <div className="w-full max-w-xl bg-white rounded-3xl border border-gray-200 shadow-xl p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header / Branding */}
+            <div className="text-center mb-8 pt-5 flex flex-col items-center">
+              <Image
+                src="/logo.svg"
+                alt="Logo"
+                width={35}
+                height={35}
+                className="mx-auto mb-3"
+              />
+              <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
+                AI Voice Interview Session
               </h1>
-              <p className="text-sm text-[#616161] mt-2">
-                Welcome! Please check your audio settings before joining the AI
-                interview room.
+              <p className="text-sm text-gray-600 mt-2 max-w-100 text-center">
+                Welcome! Please check your microphone and audio input before
+                entering the live interview.
               </p>
             </div>
 
-            {/* Audio Check Widget */}
-            <div className="bg-[#F9FAFB] rounded-2xl border border-[#E9E9E9] p-5 mb-8 space-y-4">
-              <h3 className="text-xs font-bold text-[#616161] uppercase tracking-wider">
-                Device Test
-              </h3>
+            {/* Audio & Device Check Widget */}
+            <div className="bg-gray-50 rounded-2xl border border-gray-200 mb-6 space-y-4 pb-4">
+              <div className="flex items-center justify-between border-b px-4 py-3 border-gray-200">
+                <h3 className="text-xs font-medium text-gray-600 tracking-wider">
+                  Audio & Microphone Test
+                </h3>
+                <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Ready
+                </span>
+              </div>
 
-              {/* Mic Input */}
-              <div className="flex items-center justify-between">
+              {/* Mic Input Info */}
+              <div className="flex items-center justify-between px-4">
                 <div className="flex items-center gap-3">
                   <div
-                    className={`p-2.5 rounded-xl ${isMuted ? "bg-red-50 text-red-500" : "bg-emerald-50 text-emerald-600"}`}
+                    className={`p-2.5 rounded-xl transition-colors ${
+                      isMuted
+                        ? "bg-red-50 text-red-500 border border-red-100"
+                        : "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                    }`}
                   >
                     {isMuted ? (
                       <MicOff className="w-5 h-5" />
@@ -232,10 +250,10 @@ export default function CandidateInterviewPage({
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-[#272727]">
-                      Microphone
+                    <p className="text-sm font-semibold text-gray-900">
+                      Microphone Device
                     </p>
-                    <p className="text-xs text-[#616161]">
+                    <p className="text-xs text-gray-600 truncate max-w-[220px]">
                       {activeMicLabel ||
                         audioInputs.find((d) => d.deviceId === selectedInput)
                           ?.label ||
@@ -245,22 +263,23 @@ export default function CandidateInterviewPage({
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => setIsMuted(!isMuted)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     isMuted
                       ? "bg-red-100 text-red-700 hover:bg-red-200"
-                      : "bg-gray-200 text-[#272727] hover:bg-gray-300"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200"
                   }`}
                 >
                   {isMuted ? "Unmute" : "Mute"}
                 </button>
               </div>
 
-              {/* Volume Level bar */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs text-[#616161] font-medium">
-                  <span>Real Microphone Input Level</span>
-                  <span>
+              {/* Live Audio Level Meter */}
+              <div className="space-y-1.5 px-4 pt-0 pb-2">
+                <div className="flex justify-between text-xs text-gray-600 font-medium">
+                  <span>Input Signal Level</span>
+                  <span className="font-medium text-gray-600">
                     {!hasMicPermission
                       ? "Mic Access Required"
                       : isMuted
@@ -270,7 +289,7 @@ export default function CandidateInterviewPage({
                           : "Listening..."}
                   </span>
                 </div>
-                <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-gray-200/80 rounded-full overflow-hidden border border-gray-200">
                   <div
                     className={`h-full transition-all duration-75 ${
                       isMuted
@@ -285,91 +304,108 @@ export default function CandidateInterviewPage({
               </div>
 
               {!hasMicPermission && (
-                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-800 font-medium">
-                  <span>Microphone permission required for the interview</span>
-                  <button
-                    onClick={() => initMicrophone()}
-                    className="px-3 py-1 bg-[#FE6100] text-white rounded-lg font-semibold hover:bg-[#e05600] transition-colors cursor-pointer"
-                  >
-                    Enable Mic
-                  </button>
+                <div className="px-4">
+                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-800 font-medium">
+                    <span>
+                      Microphone permission required for the interview
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => initMicrophone()}
+                      className="px-3 py-1 bg-gray-900 text-white rounded-lg font-semibold hover:bg-black transition-colors cursor-pointer"
+                    >
+                      Enable Mic
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Quick Guidelines */}
-            <div className="space-y-2 mb-8 text-xs text-[#616161]">
-              <div className="flex items-center gap-2">
+            {/* Preparation Guidelines */}
+            <div className="space-y-2.5 mb-8 text-xs text-gray-600 ">
+              <div className="flex items-center gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                 <span>
-                  Ensure you are in a quiet environment with a stable internet
-                  connection.
+                  Ensure you are in a quiet environment with a clear microphone.
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-[#FE6100] flex-shrink-0" />
+              <div className="flex items-center gap-2.5">
+                <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />
                 <span>
-                  Estimated Duration: 30 minutes (3 evaluation goals).
+                  Estimated Duration: 15–60 minutes (multi-goal evaluation).
                 </span>
               </div>
             </div>
 
             {/* Join Action Button */}
             <button
+              type="button"
               onClick={() => setPhase("room")}
-              className="w-full py-4 bg-[#FE6100] hover:bg-[#e05600] text-white rounded-2xl font-bold text-base shadow-lg shadow-[#FE6100]/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-2.5 bg-[#191919] hover:bg-black text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.99]"
             >
-              <Play className="w-5 h-5 fill-current" />
+              <Play className="w-4 h-4 fill-current" />
               <span>Enter Interview Room</span>
             </button>
           </div>
         )}
 
         {/* PHASE 2: LIVE INTERVIEW ROOM */}
-        {phase === "room" && token && (
-          <LiveKitRoom
-            serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL || "ws://localhost:7880"}
-            token={token}
-            connect={true}
-            audio={true}
-            video={false}
-            onDisconnected={() => setPhase("completed")}
-            className="w-full max-w-3xl flex flex-col gap-6"
-          >
-            {/* RoomAudioRenderer MUST be included so you can hear the interviewer's voice */}
-            <RoomAudioRenderer />
-            {/* Custom LiveKit Voice Assistant Stage */}
-            <LiveKitVoiceStage
+        {phase === "room" &&
+          token &&
+          (token === "mock-token" || token.startsWith("mock") ? (
+            <MockVoiceStage
               onLeave={() => setPhase("completed")}
               realAudioLevel={realAudioLevel}
               isMuted={isMuted}
               onToggleMute={() => setIsMuted(!isMuted)}
             />
-          </LiveKitRoom>
-        )}
+          ) : (
+            <LiveKitRoom
+              serverUrl={
+                process.env.NEXT_PUBLIC_LIVEKIT_URL || "ws://localhost:7880"
+              }
+              token={token}
+              connect={true}
+              audio={true}
+              video={false}
+              onDisconnected={() => setPhase("completed")}
+              className="w-full max-w-3xl flex flex-col gap-6"
+            >
+              {/* RoomAudioRenderer MUST be included so you can hear the interviewer's voice */}
+              <RoomAudioRenderer />
+              {/* Custom LiveKit Voice Assistant Stage */}
+              <LiveKitVoiceStage
+                onLeave={() => setPhase("completed")}
+                realAudioLevel={realAudioLevel}
+                isMuted={isMuted}
+                onToggleMute={() => setIsMuted(!isMuted)}
+              />
+            </LiveKitRoom>
+          ))}
 
         {/* PHASE 3: POST-INTERVIEW FINISH PAGE */}
         {phase === "completed" && (
-          <div className="w-full max-w-lg bg-white rounded-3xl border border-[#E9E9E9] shadow-xl p-8 text-center animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-20 h-20 rounded-3xl bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-6 text-emerald-600">
+          <div className="w-full max-w-lg bg-white rounded-3xl border border-gray-200/90 shadow-xl p-8 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-20 h-20 rounded-3xl bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-6 text-emerald-600 shadow-xs">
               <CheckCircle2 className="w-10 h-10" />
             </div>
 
-            <h1 className="text-2xl font-extrabold text-[#272727] tracking-tight">
+            <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
               Interview Completed!
             </h1>
 
-            <p className="text-sm text-[#616161] mt-3 leading-relaxed">
-              Thank you for completing your AI interview. Your responses have
-              been successfully recorded and are being processed by our
-              evaluation engine.
-            </p>
+            <div className=" w-full flex justify-center">
+              <p className="text-sm text-gray-600 max-w-100 mt-3 leading-relaxed">
+                Thank you for taking the time to complete your interview. Your
+                voice responses have been safely saved and sent for evaluation.
+              </p>
+            </div>
 
-            <div className="mt-8 p-4 bg-gray-50 border border-[#E9E9E9] rounded-2xl text-xs text-[#616161] space-y-1 text-left">
-              <p className="font-semibold text-[#272727]">What happens next?</p>
-              <p>
-                The recruiting team will review your report and reach out
-                regarding next steps shortly.
+            <div className="mt-8 p-5 bg-gray-50 border border-gray-200 rounded-2xl text-xs text-gray-600 space-y-1.5 text-left">
+              <p className="font-medium text-gray-900">What happens next?</p>
+              <p className="leading-relaxed">
+                The hiring team will review your structured evaluation report
+                and reach out regarding next steps.
               </p>
             </div>
           </div>
@@ -384,6 +420,129 @@ interface LiveKitVoiceStageProps {
   realAudioLevel: number;
   isMuted: boolean;
   onToggleMute: () => void;
+}
+
+function MockVoiceStage({
+  onLeave,
+  realAudioLevel,
+  isMuted,
+  onToggleMute,
+}: LiveKitVoiceStageProps) {
+  const state = "speaking";
+  const agentTranscriptions = [
+    {
+      text: "Hello! Welcome to your AI interview session. Could you please introduce yourself and outline your experience?",
+    },
+  ];
+
+  return (
+    <div className="w-full max-w-3xl flex flex-col gap-6">
+      {/* Main Stage View */}
+      <div className="relative w-full bg-[#191919] rounded-3xl border border-gray-800 shadow-2xl p-8 min-h-[420px] flex flex-col items-center justify-center overflow-hidden">
+        {/* Agent Avatar & Orb */}
+        <div className="relative flex flex-col items-center z-10">
+          <div className="relative mb-6">
+            {state === "speaking" && (
+              <div className="absolute -inset-3 rounded-full bg-emerald-500/20 animate-ping opacity-75" />
+            )}
+            <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-2xl flex items-center justify-center">
+              <div className="w-full h-full bg-[#191919] rounded-full flex items-center justify-center ">
+                <Sparkles
+                  className="w-12 h-12 text-emerald-400"
+                  strokeWidth="1"
+                />
+              </div>
+            </div>
+          </div>
+          <h2 className="text-lg font-semibold text-white tracking-tight flex items-center gap-2">
+            Interviewer{" "}
+            <span className="text-xs font-semibold uppercase px-2.5 py-1 rounded-lg bg-white/10 text-gray-300">
+              speaking
+            </span>
+          </h2>
+
+          {/* Demo Audio Visualizer */}
+          <div className="h-8 mt-4 flex items-center gap-1.5">
+            {[40, 75, 55, 90, 60, 80, 45].map((height, i) => (
+              <div
+                key={i}
+                className="w-0.5 bg-emerald-400 rounded-full animate-pulse"
+                style={{
+                  height: `${height}%`,
+                  animationDelay: `${i * 120}ms`,
+                }}
+              />
+            ))}
+          </div>
+          {/* Dynamic Spoken Transcript */}
+          <p className="text-sm text-gray-200 max-w-md text-center mt-6 bg-white/10 p-4 rounded-2xl backdrop-blur-md shadow-xl leading-relaxed">
+            &ldquo;{agentTranscriptions[0].text}&rdquo;
+          </p>
+        </div>
+      </div>
+
+      {/* Control Bar with Real-time Microphone Input Meter */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-lg flex items-center justify-between px-6 gap-6">
+        {/* Mic Controls & Volume Meter */}
+        <div className="flex items-center gap-4 flex-1 max-w-md">
+          <button
+            type="button"
+            onClick={onToggleMute}
+            className={`p-2 rounded-lg transition-colors cursor-pointer flex items-center justify-center ${
+              isMuted
+                ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
+                : "bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100"
+            }`}
+            title={isMuted ? "Unmute Mic" : "Mute Mic"}
+          >
+            {isMuted ? (
+              <MicOff className="w-5 h-5" />
+            ) : (
+              <Mic className="w-5 h-5" />
+            )}
+          </button>
+
+          {/* Volume Indicator Bar matching lobby preparation exactly */}
+          <div className="flex-1 space-y-1">
+            <div className="flex justify-between text-xs font-medium text-gray-600">
+              <span>Your Mic Input</span>
+              <span className="font-semibold text-xs text-gray-900">
+                {isMuted
+                  ? "Muted"
+                  : realAudioLevel > 15
+                    ? "Receiving Sound"
+                    : "Listening..."}
+              </span>
+            </div>
+            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
+              <div
+                className={`h-full transition-all duration-75 ${
+                  isMuted
+                    ? "w-0"
+                    : realAudioLevel > 20
+                      ? "bg-emerald-500"
+                      : "bg-emerald-400"
+                }`}
+                style={{
+                  width: isMuted ? "0%" : `${realAudioLevel}%`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Leave Action Button */}
+        <button
+          type="button"
+          onClick={onLeave}
+          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0 transition-colors shadow-sm"
+        >
+          <PhoneOff className="w-4 h-4" />
+          <span>Leave Interview</span>
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function LiveKitVoiceStage({
@@ -403,34 +562,38 @@ function LiveKitVoiceStage({
   return (
     <div className="w-full max-w-3xl flex flex-col gap-6">
       {/* Main Stage View */}
-      <div className="relative w-full bg-[#18181B] rounded-3xl border border-gray-800 shadow-2xl p-8 min-h-[420px] flex flex-col items-center justify-center overflow-hidden">
-        {/* Agent Avatar */}
+      <div className="relative w-full bg-[#191919] rounded-3xl border border-gray-800 shadow-2xl p-8 min-h-[420px] flex flex-col items-center justify-center overflow-hidden">
+        {/* Agent Avatar & Orb */}
         <div className="relative flex flex-col items-center z-10">
           <div className="relative mb-6">
             {state === "speaking" && (
-              <div className="absolute -inset-3 rounded-full bg-[#FE6100]/20 animate-ping opacity-75" />
+              <div className="absolute -inset-3 rounded-full bg-emerald-500/20 animate-ping opacity-75" />
             )}
-            <div className="w-28 h-28 rounded-full bg-gradient-to-tr from-[#FE6100] to-amber-400 p-1 shadow-xl flex items-center justify-center">
-              <div className="w-full h-full bg-[#18181B] rounded-full flex items-center justify-center">
+            <div className="w-28 h-28 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 p-1 shadow-2xl flex items-center justify-center">
+              <div className="w-full h-full bg-[#191919] rounded-full flex items-center justify-center border border-white/10">
                 <Sparkles
-                  className={`w-12 h-12 ${state === "speaking" ? "text-[#FE6100]" : "text-gray-400"}`}
+                  className={`w-12 h-12 transition-colors ${
+                    state === "speaking" ? "text-emerald-400" : "text-gray-400"
+                  }`}
                 />
               </div>
             </div>
           </div>
-          <h2 className="text-xl font-bold text-white tracking-tight">
+          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
             AI Interviewer{" "}
-            <span className="text-xs font-normal text-gray-400">
-              ({state})
+            <span className="text-xs font-semibold uppercase px-2.5 py-0.5 rounded-full bg-white/10 text-gray-300 border border-white/10">
+              {state || "Connecting"}
             </span>
           </h2>
+
           {/* Dynamic Spoken Transcript from Realtime Worker */}
           {agentTranscriptions.length > 0 && (
-            <p className="text-sm text-gray-300 max-w-md text-center mt-6 bg-white/5 border border-white/10 p-4 rounded-2xl backdrop-blur-sm">
+            <p className="text-sm text-gray-200 max-w-md text-center mt-6 bg-white/10 border border-white/15 p-4 rounded-2xl backdrop-blur-md shadow-xl leading-relaxed">
               &ldquo;
               {agentTranscriptions[agentTranscriptions.length - 1].text}&rdquo;
             </p>
           )}
+
           {/* Audio Visualizer */}
           <div className="h-8 mt-4">
             <BarVisualizer state={state} barCount={7} trackRef={audioTrack} />
@@ -439,15 +602,16 @@ function LiveKitVoiceStage({
       </div>
 
       {/* Control Bar with Real-time Microphone Input Meter */}
-      <div className="bg-white rounded-2xl border border-[#E9E9E9] p-4 shadow-lg flex items-center justify-between px-6 gap-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-lg flex items-center justify-between px-6 gap-6">
         {/* Mic Controls & Volume Meter */}
         <div className="flex items-center gap-4 flex-1 max-w-md">
           <button
+            type="button"
             onClick={handleToggleMute}
             className={`p-3 rounded-xl transition-colors cursor-pointer flex items-center justify-center ${
               isMuted
-                ? "bg-red-50 text-red-600 hover:bg-red-100"
-                : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
+                : "bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100"
             }`}
             title={isMuted ? "Unmute Mic" : "Mute Mic"}
           >
@@ -460,9 +624,9 @@ function LiveKitVoiceStage({
 
           {/* Volume Indicator Bar matching lobby preparation exactly */}
           <div className="flex-1 space-y-1">
-            <div className="flex justify-between text-xs font-medium text-[#616161]">
+            <div className="flex justify-between text-xs font-medium text-gray-600">
               <span>Your Mic Input</span>
-              <span className="font-semibold text-xs text-[#272727]">
+              <span className="font-semibold text-xs text-gray-900">
                 {isMuted
                   ? "Muted"
                   : realAudioLevel > 15
@@ -489,8 +653,9 @@ function LiveKitVoiceStage({
 
         {/* Leave Action Button */}
         <button
+          type="button"
           onClick={onLeave}
-          className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl text-sm font-bold flex items-center gap-2 cursor-pointer shrink-0"
+          className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0 transition-colors shadow-sm"
         >
           <PhoneOff className="w-4 h-4" />
           <span>Leave Interview</span>

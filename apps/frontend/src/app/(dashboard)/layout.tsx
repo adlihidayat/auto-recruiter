@@ -245,7 +245,7 @@ export default function DashboardLayout({
                 type="button"
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="bg-[#EA3536] text-white px-3 py-1 rounded-md text-xs font-semibold hover:bg-red-800 transition-colors cursor-pointer disabled:opacity-50"
+                className="bg-[#EA3536] text-white px-3 py-1 rounded-lg text-xs font-semibold hover:bg-red-800 transition-colors cursor-pointer disabled:opacity-50"
               >
                 {isLoggingOut ? "Logging out..." : "Logout"}
               </button>
