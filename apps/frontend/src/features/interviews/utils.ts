@@ -19,7 +19,11 @@ export function mapBackendInterviewToCampaign(
   const upperStatus = backendInterview.status?.toUpperCase() || "";
   if (upperStatus.includes("COMPLET") || upperStatus.includes("FINISH")) {
     pipelineStage = "COMPLETED";
-  } else if (upperStatus.includes("LIVE") || upperStatus.includes("SCHEDULED")) {
+  } else if (
+    upperStatus.includes("LIVE") ||
+    upperStatus.includes("SCHEDULED") ||
+    upperStatus.includes("PROGRESS")
+  ) {
     pipelineStage = "INTERVIEWER_LIVE";
   } else if (upperStatus.includes("EVALUAT") || upperStatus.includes("GRADE")) {
     pipelineStage = "GRADER_EVALUATING";

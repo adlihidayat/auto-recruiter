@@ -107,6 +107,15 @@ async def process_candidate_grading(candidate_id: uuid.UUID) -> None:
             candidate.composite_score = agent_response.get("overall_score")
             candidate.recommendation = agent_response.get("recommendation")
             
+            # Check if all candidates for this interview are now finished
+            all_cands_res = await session.execute(
+                select(Candidate.status).where(Candidate.interview_id == candidate.interview_id)
+            )
+            all_statuses = all_cands_res.scalars().all()
+            if all_statuses and all(s == "finished" or s == candidate.status for s in all_statuses):
+                if interview:
+                    interview.status = "finished"
+            
             await session.commit()
             logger.info(f"Successfully finished grading candidate {candidate_id}")
             

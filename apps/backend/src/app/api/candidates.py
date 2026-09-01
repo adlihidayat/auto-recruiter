@@ -124,6 +124,14 @@ async def finish_candidate_interview(
         
     # Update candidate status to on-progress (since grading takes time)
     candidate.status = "on-progress"
+
+    # Update parent interview status to on-progress
+    interview_res = await session.execute(
+        select(Interview).where(Interview.id == candidate.interview_id)
+    )
+    parent_interview = interview_res.scalar_one_or_none()
+    if parent_interview and parent_interview.status != "finished":
+        parent_interview.status = "on-progress"
     
     await session.commit()
     

@@ -4,7 +4,7 @@ Why: Exposes endpoints for the frontend to create and list interviews and their 
 Boundaries: Connects HTTP layer to Database layer without housing complex business logic.
 """
 
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, status, BackgroundTasks
 from sqlalchemy import select, delete
@@ -46,8 +46,9 @@ async def create_interview(
         total_duration_minutes=payload.total_duration_minutes,
         domain_hint=payload.domain_hint,
         communication_weight=payload.communication_weight,
+        scheduled_at=payload.scheduled_at,
         icon=payload.icon or "💼",
-        status="generating_plan"
+        status="not-started"
     )
     session.add(new_interview)
     await session.flush()
@@ -126,7 +127,59 @@ async def create_interview(
         "candidates": final_candidates
     }
 
-from sqlalchemy.orm import selectinload
+async def _sync_interview_statuses(session, interviews: list[Interview]) -> None:
+    if not interviews:
+        return
+
+    interview_ids = [i.id for i in interviews]
+
+    cand_result = await session.execute(
+        select(Candidate).where(Candidate.interview_id.in_(interview_ids))
+    )
+    candidates_by_interview: dict[UUID, list[Candidate]] = {}
+    for candidate in cand_result.scalars().all():
+        if candidate.interview_id not in candidates_by_interview:
+            candidates_by_interview[candidate.interview_id] = []
+        candidates_by_interview[candidate.interview_id].append(candidate)
+
+    now = datetime.now(UTC)
+    need_commit = False
+    for interview in interviews:
+        # Check if scheduled time has been reached, passed, or expired (>48h)
+        sched = interview.scheduled_at or interview.created_at
+        if sched is not None:
+            if sched.tzinfo is None:
+                sched = sched.replace(tzinfo=UTC)
+            is_scheduled_reached = (sched <= now)
+            is_expired_48h = (now >= sched + timedelta(days=2))
+        else:
+            is_scheduled_reached = False
+            is_expired_48h = False
+
+        cands = candidates_by_interview.get(interview.id, [])
+
+        if is_expired_48h:
+            # Mark all unfinished candidates as 'not-joined'
+            for c in cands:
+                if c.status in ("not-started", "on-progress"):
+                    c.status = "not-joined"
+                    need_commit = True
+            target_status = "finished"
+        else:
+            c_statuses = [c.status for c in cands]
+            if c_statuses and all(s in ("finished", "not-joined") for s in c_statuses):
+                target_status = "finished"
+            elif is_scheduled_reached or any(s in ("on-progress", "finished", "not-joined") for s in c_statuses):
+                target_status = "on-progress"
+            else:
+                target_status = "not-started"
+
+        if interview.status != target_status:
+            interview.status = target_status
+            need_commit = True
+
+    if need_commit:
+        await session.commit()
 
 @router.get("", response_model=list[InterviewResponse])
 async def list_interviews(session: SessionDep, current_user: CurrentUser):
@@ -138,8 +191,9 @@ async def list_interviews(session: SessionDep, current_user: CurrentUser):
         .options(selectinload(Interview.creator))
         .order_by(Interview.created_at.desc())
     )
-    interviews = result.scalars().all()
-    return list(interviews)
+    interviews = list(result.scalars().all())
+    await _sync_interview_statuses(session, interviews)
+    return interviews
 
 @router.get("/{interview_id}/candidates", response_model=list[CandidateResponse])
 async def list_interview_candidates(
@@ -230,7 +284,9 @@ async def get_recent_interviews(
         .order_by(UserRecentInterview.viewed_at.desc())
         .limit(5)
     )
-    return list(result.scalars().all())
+    interviews = list(result.scalars().all())
+    await _sync_interview_statuses(session, interviews)
+    return interviews
 
 @router.post("/{interview_id}/view", response_model=list[InterviewResponse])
 async def record_interview_view(
@@ -274,7 +330,7 @@ async def get_interview(
             detail="Interview not found"
         )
 
-    # Automatically record view for current user
+    await _sync_interview_statuses(session, [interview])
     await _record_user_recent_view(session, current_user.id, interview_id)
 
     return interview

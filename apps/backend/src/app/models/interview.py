@@ -27,8 +27,8 @@ class Interview(Base):
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     icon: Mapped[str | None] = mapped_column(String(50), nullable=True, default="💼")
     
-    # enum: generating_plan, scheduled, failed_plan_generation
-    status: Mapped[str] = mapped_column(String(50), nullable=False, default="generating_plan")
+    # Enum: not-started, on-progress, finished
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="not-started")
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(

@@ -133,6 +133,62 @@ export default function InterviewDetailView({
       })
     : "Recently";
 
+  const getStatusBadgeStyle = (
+    statusStr: string,
+    cands: BackendCandidateResponse[],
+  ) => {
+    const s = statusStr.toLowerCase();
+
+    // Emerald: Finished / Completed
+    const isFinished =
+      s.includes("finish") ||
+      s.includes("complet") ||
+      s.includes("done") ||
+      s.includes("pass") ||
+      (cands.length > 0 &&
+        cands.every((c) => {
+          const st = c.status?.toLowerCase() || "";
+          return (
+            st === "finished" ||
+            st === "done" ||
+            st === "evaluated" ||
+            st === "completed" ||
+            st === "passed" ||
+            st === "rejected"
+          );
+        }));
+
+    if (isFinished) {
+      return "bg-emerald-100 text-emerald-700 border border-emerald-200/60";
+    }
+
+    // Blue: In-progress / Live / Evaluating
+    const isInProgress =
+      s.includes("progress") ||
+      s.includes("live") ||
+      s.includes("evaluat") ||
+      s.includes("grade") ||
+      s.includes("running") ||
+      (cands.length > 0 &&
+        cands.some((c) => {
+          const st = c.status?.toLowerCase() || "";
+          return (
+            st === "on-progress" ||
+            st === "in_progress" ||
+            st === "evaluating" ||
+            st === "finished" ||
+            st === "evaluated"
+          );
+        }));
+
+    if (isInProgress) {
+      return "bg-blue-100 text-blue-700 border border-blue-200/60";
+    }
+
+    // Gray: Not started / Active / Draft
+    return "bg-gray-100 text-gray-700 border border-gray-200/60";
+  };
+
   return (
     <div className="flex flex-col h-full bg-white overflow-y-auto">
       <div className="px-8 py-8 max-w-[900px] w-full mx-auto">
@@ -154,14 +210,21 @@ export default function InterviewDetailView({
         {/* Header Section */}
         <div className="flex flex-col gap-2 mb-8">
           <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center border border-orange-100 text-xl">
-            {interview?.icon || "💼"}
+            <span className="-translate-y-1">{interview?.icon || "💼"}</span>
           </div>
           <div className="flex justify-between gap-1 items-start">
             <div>
-              <div className="flex items-center gap-3 mt-2">
-                <h1 className="text-2xl font-bold text-gray-900">{jobName}</h1>
-                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-md capitalize">
-                  {status}
+              <div className="flex items-center  gap-3 mt-2">
+                <h1 className="text-2xl font-bold max-w-92 text-gray-900">
+                  {jobName}
+                </h1>
+                <span
+                  className={`px-2 py-0.5 translate-y-0.5 text-xs font-semibold rounded-md capitalize ${getStatusBadgeStyle(
+                    status,
+                    candidates,
+                  )}`}
+                >
+                  {status.replace(/_/g, " ")}
                 </span>
               </div>
               <div className="flex items-center gap-3 mt-1 text-sm text-gray-600">
@@ -199,7 +262,9 @@ export default function InterviewDetailView({
           <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px]"></div>
           <div className="relative bg-white/90 backdrop-blur-sm px-6 py-2.5 rounded-full border border-white/50 flex items-center gap-3 text-sm font-medium text-gray-800">
             <div className="w-5 h-5 rounded bg-emerald-100 text-base flex items-center justify-center">
-              {interview?.icon || "💼"}
+              <span className="-translate-y-0.5">
+                {interview?.icon || "💼"}
+              </span>
             </div>
             {jobName}
           </div>
@@ -221,12 +286,14 @@ export default function InterviewDetailView({
                   key={planItem.id || planIdx}
                   className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-xs"
                 >
-                  <div className="flex border-b border-gray-100">
+                  <div className="flex border-b border-gray-200">
                     <div className="flex-1 px-4 py-4 text-sm text-gray-900 leading-relaxed font-medium">
-                      <span className="font-semibold text-gray-500 mr-2">
-                        Goal ({planItem.goal_ref || `g_0${planIdx + 1}`}):
+                      <span className="font-semibold text-gray-600 mr-1">
+                        Goal ({planItem.goal_ref || `g_0${planIdx + 1}`}) :
                       </span>
-                      {planItem.goal || planItem.topic}
+                      <span className="">
+                        {planItem.goal || planItem.topic}
+                      </span>
                     </div>
                   </div>
 
@@ -235,7 +302,7 @@ export default function InterviewDetailView({
                       planItem.passing_criteria.length > 0 && (
                         <div>
                           <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-2">
-                            Required Signals:
+                            Green Flags:
                           </h3>
                           <ul className="space-y-2">
                             {planItem.passing_criteria.map((crit, idx) => (
@@ -309,11 +376,17 @@ export default function InterviewDetailView({
                   const isInProgress =
                     statusLower === "in_progress" ||
                     statusLower === "in-progress" ||
+                    statusLower === "on-progress" ||
                     statusLower === "pending" ||
                     statusLower === "interviewer_live" ||
                     statusLower === "grader_evaluating";
 
-                  // Status dot color matching dashboard table (Gray = Not Started, Blue = On Progress, Green = Finished)
+                  const isNotJoined =
+                    statusLower === "not-joined" ||
+                    statusLower === "not_joined" ||
+                    statusLower === "expired";
+
+                  // Status dot color matching dashboard table (Gray = Not Started, Blue = On Progress, Green = Finished, Red = Not Joined)
                   let statusDotClass =
                     "bg-gray-400 shadow-[0_0_0_2px_rgba(156,163,175,0.2)]";
                   let statusText = "Not Started";
@@ -325,6 +398,10 @@ export default function InterviewDetailView({
                     statusDotClass =
                       "bg-blue-500 shadow-[0_0_0_2px_rgba(59,130,246,0.2)]";
                     statusText = "On Progress";
+                  } else if (isNotJoined) {
+                    statusDotClass =
+                      "bg-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.2)]";
+                    statusText = "Not Joined";
                   }
 
                   // Determine recommendation badge beside email if finished
@@ -392,7 +469,11 @@ export default function InterviewDetailView({
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-gray-500 font-medium capitalize">
+                        <span
+                          className={`text-xs font-medium capitalize ${
+                            isNotJoined ? "text-red-600" : "text-gray-500"
+                          }`}
+                        >
                           Status: {statusText}
                         </span>
                         <span
@@ -420,13 +501,27 @@ export default function InterviewDetailView({
                 Report Not Available
               </h3>
               <p className="text-sm text-gray-600 leading-relaxed">
-                The evaluation report for{" "}
-                <span className="font-semibold text-gray-900">
-                  {`${unavailableCandidate.first_name || ""} ${unavailableCandidate.last_name || ""}`.trim() ||
-                    unavailableCandidate.email}
-                </span>{" "}
-                is not available yet. Reports are generated automatically once
-                the candidate completes their AI interview.
+                {unavailableCandidate.status?.toLowerCase().includes("not-joined") ||
+                unavailableCandidate.status?.toLowerCase().includes("not_joined") ? (
+                  <>
+                    The candidate{" "}
+                    <span className="font-semibold text-gray-900">
+                      {`${unavailableCandidate.first_name || ""} ${unavailableCandidate.last_name || ""}`.trim() ||
+                        unavailableCandidate.email}
+                    </span>{" "}
+                    did not join the interview within the 48-hour timeframe, so no evaluation report was generated.
+                  </>
+                ) : (
+                  <>
+                    The evaluation report for{" "}
+                    <span className="font-semibold text-gray-900">
+                      {`${unavailableCandidate.first_name || ""} ${unavailableCandidate.last_name || ""}`.trim() ||
+                        unavailableCandidate.email}
+                    </span>{" "}
+                    is not available yet. Reports are generated automatically once
+                    the candidate completes their AI interview.
+                  </>
+                )}
               </p>
             </div>
             <button

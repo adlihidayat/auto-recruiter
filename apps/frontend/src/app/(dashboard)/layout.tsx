@@ -149,12 +149,12 @@ export default function DashboardLayout({
         {/* Sidebar */}
         <aside className="w-[240px] flex-shrink-0 bg-[#FAFAFA] border-r border-gray-200 flex flex-col">
           {/* Workspace Header */}
-          <div className="px-4 pt-5 pb-3 flex items-center gap-2 cursor-pointer">
+          <div className="px-4 pt-5 pb-3 flex items-center gap-2">
             <Image src="/logo.svg" alt="Logo" width={20} height={20} />
             <span className="text-sm font-semibold flex-1 truncate">
               Auto-Recruiter
             </span>
-            <ChevronDown className="w-4 h-4 text-gray-400" />
+            {/* <ChevronDown className="w-4 h-4 text-gray-400" /> */}
           </div>
 
           {/* Search Bar (Triggers Quick Action Popup) */}
@@ -219,9 +219,7 @@ export default function DashboardLayout({
                     className="flex capitalize items-center gap-3 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100 transition-colors"
                   >
                     <span>{item.icon || "💼"}</span>
-                    <span className="truncate max-w-44">
-                      {item.job_name}
-                    </span>
+                    <span className="truncate max-w-44">{item.job_name}</span>
                   </Link>
                 ))
               ) : (

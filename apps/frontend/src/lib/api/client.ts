@@ -200,8 +200,8 @@ export interface BackendGoalResponse {
   id: string;
   goal_ref: string;
   interview_id: string;
-  topic: str;
-  goal: str;
+  topic: string;
+  goal: string;
   passing_criteria: string[];
   pushback_triggers: Array<Record<string, unknown>>;
   wrong_answer_signals: string[];

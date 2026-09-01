@@ -290,7 +290,9 @@ export default function CreateInterviewModal({
         total_duration_minutes: formData.total_duration_minutes,
         domain_hint: formData.domain_hint,
         communication_weight: formData.communication_weight,
-        scheduled_at: formData.scheduled_at ? new Date(formData.scheduled_at).toISOString() : undefined,
+        scheduled_at: formData.scheduled_at
+          ? new Date(formData.scheduled_at).toISOString()
+          : new Date().toISOString(),
         candidates: validCandidates,
       };
 

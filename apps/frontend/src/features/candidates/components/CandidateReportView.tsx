@@ -57,29 +57,23 @@ export default function CandidateReportView({
         const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
         if (!tokenCookie) return;
 
-        const promises = [
-          getCandidateReportApi(candidateId, tokenCookie).catch(() => null),
-          getCandidateTranscriptsApi(candidateId, tokenCookie).catch(
-            () => null,
-          ),
-        ];
+        const reportPromise = getCandidateReportApi(candidateId, tokenCookie).catch(() => null);
+        const transcriptsPromise = getCandidateTranscriptsApi(candidateId, tokenCookie).catch(() => null);
+        const candidatesPromise = interviewId
+          ? getCandidatesForInterviewApi(interviewId, tokenCookie).catch(() => null)
+          : Promise.resolve(null);
 
-        if (interviewId) {
-          promises.push(
-            getCandidatesForInterviewApi(interviewId, tokenCookie).catch(
-              () => null,
-            ),
-          );
-        }
-
-        const [reportRes, transcriptsRes, candidatesRes] =
-          await Promise.all(promises);
+        const [reportRes, transcriptsRes, candidatesRes] = await Promise.all([
+          reportPromise,
+          transcriptsPromise,
+          candidatesPromise,
+        ]);
 
         if (reportRes) {
           const raw = reportRes.raw_report || {};
           setReport({
             ...raw,
-            recommendation: raw.recommendation || reportRes.recommendation || "Advance",
+            recommendation: raw.recommendation || (reportRes as any).recommendation || "Advance",
             reasoning: reportRes.reasoning || raw.reasoning || raw.status_reason || raw.short_summary,
             goals: raw.goals || [],
             communication: raw.communication || {},

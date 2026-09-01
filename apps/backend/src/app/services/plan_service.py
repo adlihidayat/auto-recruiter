@@ -82,19 +82,17 @@ async def process_interview_plan_generation(interview_id: uuid.UUID) -> None:
                 )
                 session.add(goal_entity)
                 
-            # 5. Transition Interview status to 'scheduled' and Job status to 'done'
-            interview.status = "scheduled"
+            # 5. Transition Job status to 'done'
             if job:
                 job.status = "done"
                 
             await session.commit()
-            logger.info(f"✅ Successfully completed plan generation for interview_id: {interview_id}. Status updated to 'scheduled'.")
+            logger.info(f"✅ Successfully completed plan generation for interview_id: {interview_id}.")
             
             # TODO: Future Action Item - Generate candidate LiveKit meeting room tokens & send email invitations
             
         except Exception as exc:
             logger.error(f"❌ Failed plan generation for interview_id: {interview_id}: {exc}", exc_info=True)
-            interview.status = "failed_plan_generation"
             if job:
                 job.status = "failed"
                 job.last_error = str(exc)
