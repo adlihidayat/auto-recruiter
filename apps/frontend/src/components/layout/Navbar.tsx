@@ -56,6 +56,8 @@ export default function Navbar() {
       // 2. Clear document cookie on client with max-age=0
       document.cookie =
         "access_token=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
+      document.cookie =
+        "last_active_at=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
       // 3. Client navigation to /login
       router.push("/login");
       router.refresh();

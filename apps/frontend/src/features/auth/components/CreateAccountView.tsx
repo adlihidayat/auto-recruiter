@@ -66,10 +66,9 @@ export default function CreateAccountView() {
           born_date: bornDate || undefined,
         });
 
-        // Set access_token cookie
-        const expirationDate = new Date();
-        expirationDate.setDate(expirationDate.getDate() + 7);
-        document.cookie = `access_token=${res.access_token}; path=/; expires=${expirationDate.toUTCString()}; SameSite=Lax`;
+        // Set access_token & last_active_at as session cookies (clear on browser shutdown)
+        document.cookie = `access_token=${res.access_token}; path=/; SameSite=Lax`;
+        document.cookie = `last_active_at=${Date.now()}; path=/; SameSite=Lax`;
 
         router.push("/");
         router.refresh();
