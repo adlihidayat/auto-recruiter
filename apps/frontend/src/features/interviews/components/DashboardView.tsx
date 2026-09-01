@@ -249,7 +249,7 @@ export default function DashboardView() {
   const [selectedStatus, setSelectedStatus] = useState<StatusFilterType>("ALL");
   const [selectedView, setSelectedView] = useState<ViewFilterType>("all");
   const [selectedDept, setSelectedDept] = useState("All departments");
-  const [selectedCompare, setSelectedCompare] = useState("This month");
+  const [selectedCompare, setSelectedCompare] = useState("This Year");
   const [showChart, setShowChart] = useState(true);
   const [showStats, setShowStats] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");

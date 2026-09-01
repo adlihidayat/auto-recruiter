@@ -117,6 +117,119 @@ export default function InterviewDetailView({
     }
   };
 
+  const isInterviewFinished = useMemo(() => {
+    const s = (interview?.status || "active").toLowerCase();
+    return (
+      s.includes("finish") ||
+      s.includes("complet") ||
+      s.includes("done") ||
+      s.includes("pass") ||
+      (candidates.length > 0 &&
+        candidates.every((c) => {
+          const st = c.status?.toLowerCase() || "";
+          return (
+            st === "finished" ||
+            st === "evaluated" ||
+            st === "completed" ||
+            st === "passed" ||
+            st === "rejected" ||
+            st === "not-joined" ||
+            st === "not_joined" ||
+            st === "expired"
+          );
+        }))
+    );
+  }, [interview?.status, candidates]);
+
+  const sortedCandidates = useMemo(() => {
+    const list = [...candidates];
+    return list.sort((a, b) => {
+      if (!isInterviewFinished) {
+        // Mode 1: Interview on progress -> finished, on-progress, not-started, not-joined
+        const getProgressRank = (c: BackendCandidateResponse) => {
+          const st = (c.status || "not-started").toLowerCase();
+          if (
+            st === "finished" ||
+            st === "evaluated" ||
+            st === "completed" ||
+            st === "passed" ||
+            st === "rejected"
+          ) {
+            return 1;
+          }
+          if (
+            st === "in_progress" ||
+            st === "in-progress" ||
+            st === "on-progress" ||
+            st === "pending" ||
+            st === "interviewer_live" ||
+            st === "grader_evaluating"
+          ) {
+            return 2;
+          }
+          if (
+            st === "not-started" ||
+            st === "not_started" ||
+            st === "draft" ||
+            st === "invited"
+          ) {
+            return 3;
+          }
+          return 4; // not-joined / expired / other
+        };
+
+        const rankA = getProgressRank(a);
+        const rankB = getProgressRank(b);
+        if (rankA !== rankB) return rankA - rankB;
+      } else {
+        // Mode 2: Interview finished -> finished advance, finished advance with follow up, finished hold, last not-joined
+        const getFinishedRank = (c: BackendCandidateResponse) => {
+          const st = (c.status || "not-started").toLowerCase();
+          const isCandFinished =
+            st === "finished" ||
+            st === "evaluated" ||
+            st === "completed" ||
+            st === "passed" ||
+            st === "rejected";
+
+          if (isCandFinished) {
+            const rawRec = (c.recommendation || "").toLowerCase();
+            const score = c.composite_score;
+
+            const isAdvanceWithFollowUp =
+              rawRec.includes("advance with") ||
+              (score !== null &&
+                score !== undefined &&
+                score >= 50 &&
+                score < 80);
+
+            if (isAdvanceWithFollowUp) return 2; // Finished Advance with follow up
+
+            const isAdvance =
+              rawRec.includes("advance") ||
+              (score !== null && score !== undefined && score >= 80);
+
+            if (isAdvance) return 1; // Finished Advance
+
+            return 3; // Finished Hold
+          }
+
+          // Not joined / others last
+          return 4;
+        };
+
+        const rankA = getFinishedRank(a);
+        const rankB = getFinishedRank(b);
+        if (rankA !== rankB) return rankA - rankB;
+      }
+
+      // Tie breaker by name
+      const nameA = `${a.first_name || ""} ${a.last_name || ""}`.trim() || a.email;
+      const nameB = `${b.first_name || ""} ${b.last_name || ""}`.trim() || b.email;
+      return nameA.localeCompare(nameB);
+    });
+  }, [candidates, isInterviewFinished]);
+
   if (isLoading) {
     return <InterviewDetailSkeleton />;
   }
@@ -352,13 +465,13 @@ export default function InterviewDetailView({
             Candidates ({candidates.length})
           </h2>
           <div className="border border-gray-200 rounded-xl bg-white flex flex-col">
-            {candidates.length === 0 ? (
+            {sortedCandidates.length === 0 ? (
               <div className="p-6 text-center text-sm text-gray-500">
                 No candidates registered for this campaign yet.
               </div>
             ) : (
               <div className="overflow-y-auto max-h-96 divide-y divide-gray-100">
-                {candidates.map((candidate) => {
+                {sortedCandidates.map((candidate) => {
                   const candName =
                     `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim() ||
                     candidate.email;
