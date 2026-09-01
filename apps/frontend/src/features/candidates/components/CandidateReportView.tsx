@@ -57,10 +57,18 @@ export default function CandidateReportView({
         const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
         if (!tokenCookie) return;
 
-        const reportPromise = getCandidateReportApi(candidateId, tokenCookie).catch(() => null);
-        const transcriptsPromise = getCandidateTranscriptsApi(candidateId, tokenCookie).catch(() => null);
+        const reportPromise = getCandidateReportApi(
+          candidateId,
+          tokenCookie,
+        ).catch(() => null);
+        const transcriptsPromise = getCandidateTranscriptsApi(
+          candidateId,
+          tokenCookie,
+        ).catch(() => null);
         const candidatesPromise = interviewId
-          ? getCandidatesForInterviewApi(interviewId, tokenCookie).catch(() => null)
+          ? getCandidatesForInterviewApi(interviewId, tokenCookie).catch(
+              () => null,
+            )
           : Promise.resolve(null);
 
         const [reportRes, transcriptsRes, candidatesRes] = await Promise.all([
@@ -73,8 +81,15 @@ export default function CandidateReportView({
           const raw = reportRes.raw_report || {};
           setReport({
             ...raw,
-            recommendation: raw.recommendation || (reportRes as any).recommendation || "Advance",
-            reasoning: reportRes.reasoning || raw.reasoning || raw.status_reason || raw.short_summary,
+            recommendation:
+              raw.recommendation ||
+              (reportRes as any).recommendation ||
+              "Advance",
+            reasoning:
+              reportRes.reasoning ||
+              raw.reasoning ||
+              raw.status_reason ||
+              raw.short_summary,
             goals: raw.goals || [],
             communication: raw.communication || {},
           });
@@ -294,7 +309,7 @@ export default function CandidateReportView({
             href={interviewId ? `/interviews/${interviewId}` : "/"}
             className="hover:text-gray-900 transition-colors cursor-pointer"
           >
-            Campaign Details
+            Interview Details
           </Link>
           <span>/</span>
           <span className="text-gray-900">{fullName}</span>

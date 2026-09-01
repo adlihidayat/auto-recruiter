@@ -62,9 +62,9 @@ async def process_interview_plan_generation(interview_id: uuid.UUID) -> None:
             
             logger.info(f"Agent Service returned {len(questions)} questions for interview_id: {interview_id}")
             
-            # 4. Save Goal entities into PostgreSQL
+            # 4. Save Goal entities into PostgreSQL with clean sequential goal_refs (g_01, g_02, ...)
             for idx, q_data in enumerate(questions):
-                goal_ref = q_data.get("goal_id") or f"g_0{idx + 1}"
+                goal_ref = f"g_{idx + 1:02d}"
                 
                 goal_entity = Goal(
                     goal_ref=goal_ref,
