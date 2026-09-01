@@ -14,6 +14,7 @@ interface CreateInterviewLoadingStepProps {
   elapsedTime: number;
   isPaused: boolean;
   isBackendDone: boolean;
+  apiError: string | null;
   activeAgentIndex: number;
   mockProgressPercent: number;
   visibleLogs: MockLogItem[];
@@ -28,6 +29,7 @@ export const CreateInterviewLoadingStep: React.FC<
   elapsedTime,
   isPaused,
   isBackendDone,
+  apiError,
   activeAgentIndex,
   mockProgressPercent,
   visibleLogs,
@@ -176,14 +178,26 @@ export const CreateInterviewLoadingStep: React.FC<
           <div className="flex items-center gap-1">
             <span
               className={`text-sm font-medium ${
-                isBackendDone ? "text-emerald-600" : "text-gray-900"
+                isBackendDone
+                  ? apiError
+                    ? "text-red-600 font-semibold"
+                    : "text-emerald-600 font-semibold"
+                  : "text-gray-900"
               }`}
             >
-              {isBackendDone ? "Success" : AGENT_STEPS[activeAgentIndex].name}
+              {isBackendDone
+                ? apiError
+                  ? "Failed"
+                  : "Success"
+                : AGENT_STEPS[activeAgentIndex].name}
               {"  "}·
             </span>
             <span className="text-xs text-gray-500">
-              {isBackendDone ? "mock complete" : "running processes"}
+              {isBackendDone
+                ? apiError
+                  ? "process error"
+                  : "process complete"
+                : "running processes"}
             </span>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -194,10 +208,14 @@ export const CreateInterviewLoadingStep: React.FC<
               Cancel
             </button>
             <button
-              onClick={onContinue}
-              className="px-3 py-1.5 bg-[#191919] text-white rounded-md text-sm font-medium flex items-center justify-center gap-2 hover:bg-black transition-colors flex-1 sm:flex-none shadow-md shadow-black/10 cursor-pointer"
+              onClick={isBackendDone && !apiError ? onContinue : onReset}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium flex items-center justify-center gap-2 transition-colors flex-1 sm:flex-none shadow-md cursor-pointer ${
+                isBackendDone && apiError
+                  ? "bg-red-600 text-white hover:bg-red-700 shadow-red-600/10"
+                  : "bg-[#191919] text-white hover:bg-black shadow-black/10"
+              }`}
             >
-              {isBackendDone ? (
+              {isBackendDone && !apiError ? (
                 <>
                   Continue <ArrowRight className="w-4 h-4" />
                 </>

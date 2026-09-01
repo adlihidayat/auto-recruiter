@@ -93,7 +93,5 @@ async def process_interview_plan_generation(interview_id: uuid.UUID) -> None:
             
         except Exception as exc:
             logger.error(f"❌ Failed plan generation for interview_id: {interview_id}: {exc}", exc_info=True)
-            if job:
-                job.status = "failed"
-                job.last_error = str(exc)
-            await session.commit()
+            await session.rollback()
+            raise exc

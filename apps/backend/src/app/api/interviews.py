@@ -110,16 +110,31 @@ async def create_interview(
     await session.refresh(new_interview)
 
     # 4. Trigger synchronous plan generation (calls Agents Service over HTTP)
-    # The frontend is mocking a loading screen and expects this to block until ready.
-    await process_interview_plan_generation(new_interview.id)
+    try:
+        await process_interview_plan_generation(new_interview.id)
+    except Exception as exc:
+        # Clean up database records so no orphan/bad interview or job rows remain
+        await session.execute(delete(Job).where(Job.payload["interview_id"].as_string() == str(new_interview.id)))
+        await session.execute(delete(Candidate).where(Candidate.interview_id == new_interview.id))
+        await session.execute(delete(Interview).where(Interview.id == new_interview.id))
+        await session.commit()
 
-    # Re-fetch candidates to ensure their status/info is up to date (though we just created them)
+        error_msg = str(exc).strip()
+        if not error_msg or len(error_msg) > 300:
+            error_msg = "Failed to generate interview plan. Please try again or simplify your job description."
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_msg
+        )
+
+    # Re-fetch candidates to ensure their status/info is up to date
     candidates_result = await session.execute(
         select(Candidate).where(Candidate.interview_id == new_interview.id)
     )
     final_candidates = candidates_result.scalars().all()
 
-    # Re-fetch the interview since the background job processing updates its status
+    # Re-fetch the interview since status might have updated
     await session.refresh(new_interview)
 
     return {

@@ -43,6 +43,7 @@ export default function CreateInterviewModal({
   const [elapsedTime, setElapsedTime] = useState(0);
 
   const [isApiFinished, setIsApiFinished] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [createdInterviewId, setCreatedInterviewId] = useState<string | null>(null);
   const [createdCandidates, setCreatedCandidates] = useState<BackendCandidateResponse[]>([]);
 
@@ -70,6 +71,21 @@ export default function CreateInterviewModal({
 
   const visibleLogs = (() => {
     if (isBackendDone) {
+      if (apiError) {
+        return [
+          ...baseLogs,
+          {
+            time: elapsedTime,
+            dot: "bg-red-500",
+            isError: true,
+            text: (
+              <span className="text-red-600 font-semibold leading-tight">
+                {apiError}
+              </span>
+            ),
+          },
+        ];
+      }
       const finalLog = MOCK_LOGS[11];
       return [
         ...baseLogs,
@@ -160,6 +176,7 @@ export default function CreateInterviewModal({
     setElapsedTime(0);
     setIsBackendDone(false);
     setIsApiFinished(false);
+    setApiError(null);
     setCreatedInterviewId(null);
     setError(null);
     setShowConfirmClose(null);
@@ -240,9 +257,7 @@ export default function CreateInterviewModal({
     if (showEmojiPicker) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => window.removeEventListener("mousedown", handleClickOutside);
   }, [showEmojiPicker]);
 
   const handleSubmitForm = async (e: React.FormEvent) => {
@@ -264,6 +279,7 @@ export default function CreateInterviewModal({
     }
 
     setError(null);
+    setApiError(null);
     setModalStep("loading");
     setElapsedTime(0);
     setIsBackendDone(false);
@@ -276,8 +292,10 @@ export default function CreateInterviewModal({
         ?.split("=")[1];
       const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
       if (!tokenCookie) {
-        setError("Authentication token not found.");
-        setModalStep("form");
+        const errMsg = "Authentication token not found.";
+        setError(errMsg);
+        setApiError(errMsg);
+        setIsApiFinished(true);
         return;
       }
 
@@ -302,8 +320,10 @@ export default function CreateInterviewModal({
       setIsApiFinished(true);
     } catch (err: unknown) {
       console.error("Failed to create interview", err);
-      setError(err instanceof Error ? err.message : "Failed to create interview");
-      setModalStep("form");
+      const errMsg = err instanceof Error ? err.message : "Failed to create interview";
+      setError(errMsg);
+      setApiError(errMsg);
+      setIsApiFinished(true);
     }
   };
 
@@ -316,10 +336,16 @@ export default function CreateInterviewModal({
 
   const handleContinueToSuccess = () => {
     if (isBackendDone) {
-      setModalStep("success");
+      if (apiError) {
+        setModalStep("form");
+      } else {
+        setModalStep("success");
+      }
     } else {
-      setElapsedTime(0);
+      setModalStep("form");
       setIsBackendDone(false);
+      setIsApiFinished(false);
+      setElapsedTime(0);
     }
   };
 
@@ -414,10 +440,16 @@ export default function CreateInterviewModal({
               elapsedTime={elapsedTime}
               isPaused={isPaused}
               isBackendDone={isBackendDone}
+              apiError={apiError}
               activeAgentIndex={activeAgentIndex}
               mockProgressPercent={mockProgressPercent}
               visibleLogs={visibleLogs}
-              onReset={handleRequestClose}
+              onReset={() => {
+                setModalStep("form");
+                setIsBackendDone(false);
+                setIsApiFinished(false);
+                setElapsedTime(0);
+              }}
               onContinue={handleContinueToSuccess}
             />
           )}
