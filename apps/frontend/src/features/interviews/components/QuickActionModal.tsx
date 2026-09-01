@@ -19,6 +19,11 @@ import {
   Briefcase,
 } from "lucide-react";
 import { useCreateModalStore } from "@/lib/store/useCreateModalStore";
+import {
+  getInterviewsApi,
+  getRecentInterviewsApi,
+  BackendInterviewResponse,
+} from "@/lib/api/client";
 
 interface QuickActionModalProps {
   isOpen: boolean;
@@ -44,6 +49,9 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const [allInterviews, setAllInterviews] = useState<BackendInterviewResponse[]>([]);
+  const [recentInterviews, setRecentInterviews] = useState<BackendInterviewResponse[]>([]);
+
   // Focus input & reset query on mount
   useEffect(() => {
     if (isOpen) {
@@ -54,6 +62,40 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
       }, 50);
       return () => clearTimeout(timer);
     }
+  }, [isOpen]);
+
+  // Fetch real interviews and recents when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isCancelled = false;
+    async function loadData() {
+      try {
+        const rawToken = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("access_token="))
+          ?.split("=")[1];
+        const tokenCookie = rawToken ? decodeURIComponent(rawToken) : null;
+        if (!tokenCookie) return;
+
+        const [interviewsRes, recentsRes] = await Promise.all([
+          getInterviewsApi(tokenCookie).catch(() => []),
+          getRecentInterviewsApi(tokenCookie).catch(() => []),
+        ]);
+
+        if (!isCancelled) {
+          setAllInterviews(interviewsRes || []);
+          setRecentInterviews(recentsRes || []);
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
+    loadData();
+    return () => {
+      isCancelled = true;
+    };
   }, [isOpen]);
 
   // Core Quick Actions
@@ -107,128 +149,38 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
     [onClose, openModal, router],
   );
 
-  // Latest 5 accessed interviews (matching sidebar)
-  const recentInterviews: ActionItem[] = useMemo(
-    () => [
-      {
-        id: "recent-1",
-        category: "Recent Interviews",
-        title: "Retail Sales Associate",
-        description: "Core | Mid-Level | 3 Candidates Evaluated",
-        icon: <span className="text-sm">😀️</span>,
+  // Real recent interviews
+  const recentActions: ActionItem[] = useMemo(
+    () =>
+      recentInterviews.map((item) => ({
+        id: `recent-${item.id}`,
+        category: "Recent Interviews" as const,
+        title: item.job_name,
+        description: `${item.domain_hint || "General"} | ${item.difficulty || "Mid"} | ${item.status.replace(/_/g, " ")}`,
+        icon: <span className="text-sm">{item.icon || "💼"}</span>,
         perform: () => {
           onClose();
-          router.push("/interviews/campaign-0");
+          router.push(`/interviews/${item.id}`);
         },
-      },
-      {
-        id: "recent-2",
-        category: "Recent Interviews",
-        title: "Lead Frontend Engineer",
-        description: "Engineering | Senior | 5 Candidates Evaluated",
-        icon: <span className="text-sm">📈️</span>,
-        perform: () => {
-          onClose();
-          router.push("/interviews/campaign-1");
-        },
-      },
-      {
-        id: "recent-3",
-        category: "Recent Interviews",
-        title: "Retail Sales Associate",
-        description: "Core | Junior | 2 Candidates Evaluated",
-        icon: <span className="text-sm">🚗️</span>,
-        perform: () => {
-          onClose();
-          router.push("/interviews/campaign-2");
-        },
-      },
-      {
-        id: "recent-4",
-        category: "Recent Interviews",
-        title: "Lead Frontend Engineer",
-        description: "Product | Mid-Level | 4 Candidates Evaluated",
-        icon: <span className="text-sm">🧑‍🍳️</span>,
-        perform: () => {
-          onClose();
-          router.push("/interviews/campaign-3");
-        },
-      },
-      {
-        id: "recent-5",
-        category: "Recent Interviews",
-        title: "Retail Sales Associate",
-        description: "Design | Lead | 1 Candidate Evaluated",
-        icon: <span className="text-sm">🫁️</span>,
-        perform: () => {
-          onClose();
-          router.push("/interviews/campaign-4");
-        },
-      },
-    ],
-    [onClose, router],
+      })),
+    [recentInterviews, onClose, router],
   );
 
-  // Additional searchable interviews in database
-  const extraInterviews: ActionItem[] = useMemo(
-    () => [
-      {
-        id: "extra-1",
-        category: "Matching Interviews",
-        title: "Marketing Lead Officer",
-        description: "Marketing | Senior | 8 Candidates Evaluated",
-        icon: <span className="text-sm">💼️</span>,
+  // All real interviews in database
+  const allInterviewActions: ActionItem[] = useMemo(
+    () =>
+      allInterviews.map((item) => ({
+        id: `interview-${item.id}`,
+        category: "Matching Interviews" as const,
+        title: item.job_name,
+        description: `${item.domain_hint || "General"} | ${item.difficulty || "Mid"} | ${item.status.replace(/_/g, " ")}`,
+        icon: <span className="text-sm">{item.icon || "💼"}</span>,
         perform: () => {
           onClose();
-          router.push("/interviews/campaign-5");
+          router.push(`/interviews/${item.id}`);
         },
-      },
-      {
-        id: "extra-2",
-        category: "Matching Interviews",
-        title: "Product Manager",
-        description: "Product | Senior | 6 Candidates Evaluated",
-        icon: <span className="text-sm">🎨️</span>,
-        perform: () => {
-          onClose();
-          router.push("/interviews/campaign-6");
-        },
-      },
-      {
-        id: "extra-3",
-        category: "Matching Interviews",
-        title: "Engineer CTO Officer",
-        description: "Engineering | Executive | 12 Candidates Evaluated",
-        icon: <span className="text-sm">🛠️</span>,
-        perform: () => {
-          onClose();
-          router.push("/interviews/campaign-7");
-        },
-      },
-      {
-        id: "extra-4",
-        category: "Matching Interviews",
-        title: "Senior Backend Architect",
-        description: "Infrastructure | Principal | 7 Candidates Evaluated",
-        icon: <span className="text-sm">💻️</span>,
-        perform: () => {
-          onClose();
-          router.push("/interviews/campaign-8");
-        },
-      },
-      {
-        id: "extra-5",
-        category: "Matching Interviews",
-        title: "Full Stack Developer",
-        description: "Engineering | Mid-Level | 9 Candidates Evaluated",
-        icon: <span className="text-sm">⚡</span>,
-        perform: () => {
-          onClose();
-          router.push("/interviews/campaign-9");
-        },
-      },
-    ],
-    [onClose, router],
+      })),
+    [allInterviews, onClose, router],
   );
 
   // Determine active item set depending on query search
@@ -237,29 +189,23 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
     const q = query.toLowerCase();
 
     if (!isSearching) {
-      return [...quickActions, ...recentInterviews];
+      return [...quickActions, ...recentActions];
     }
 
-    return [
-      ...quickActions.filter(
-        (item) =>
-          item.title.toLowerCase().includes(q) ||
-          item.description.toLowerCase().includes(q),
-      ),
-      ...recentInterviews
-        .filter(
-          (item) =>
-            item.title.toLowerCase().includes(q) ||
-            item.description.toLowerCase().includes(q),
-        )
-        .map((item) => ({ ...item, category: "Matching Interviews" as const })),
-      ...extraInterviews.filter(
-        (item) =>
-          item.title.toLowerCase().includes(q) ||
-          item.description.toLowerCase().includes(q),
-      ),
-    ];
-  }, [query, quickActions, recentInterviews, extraInterviews]);
+    const filteredQuick = quickActions.filter(
+      (item) =>
+        item.title.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q),
+    );
+
+    const filteredInterviews = allInterviewActions.filter(
+      (item) =>
+        item.title.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q),
+    );
+
+    return [...filteredQuick, ...filteredInterviews];
+  }, [query, quickActions, recentActions, allInterviewActions]);
 
   // Group displayed actions by category
   const categories = useMemo(
@@ -411,7 +357,9 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
           </div>
           <div className="flex items-center gap-1.5 text-gray-500">
             <Briefcase className="w-3.5 h-3.5 text-orange-500" />
-            <span>Search 12+ Campaigns & Actions</span>
+            <span>
+              Search {allInterviews.length > 0 ? `${allInterviews.length}` : "0"} Campaigns & Actions
+            </span>
           </div>
         </div>
       </div>
