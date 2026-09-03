@@ -82,18 +82,29 @@ const MONTH_NAMES = [
   "Dec",
 ];
 
-function getCampaignMonthIndex(dateStr: string): number {
-  if (!dateStr) return 7; // August default
+function getCampaignMonthAndDay(dateStr: string): {
+  monthIdx: number;
+  dayOfMonth: number;
+} {
+  if (!dateStr) return { monthIdx: 7, dayOfMonth: 1 }; // August 1st default
   const d = new Date(dateStr);
   if (!isNaN(d.getTime())) {
-    return d.getMonth();
+    return { monthIdx: d.getMonth(), dayOfMonth: d.getDate() };
   }
   const parts = dateStr.split("/");
   if (parts.length === 3) {
+    const dayNum = parseInt(parts[0], 10);
     const monthNum = parseInt(parts[1], 10) - 1;
-    if (monthNum >= 0 && monthNum <= 11) return monthNum;
+    return {
+      monthIdx: monthNum >= 0 && monthNum <= 11 ? monthNum : 7,
+      dayOfMonth: !isNaN(dayNum) && dayNum >= 1 ? dayNum : 1,
+    };
   }
-  return 7;
+  return { monthIdx: 7, dayOfMonth: 1 };
+}
+
+function getCampaignMonthIndex(dateStr: string): number {
+  return getCampaignMonthAndDay(dateStr).monthIdx;
 }
 
 function ChartSection({
@@ -104,52 +115,55 @@ function ChartSection({
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(14);
   const currentYear = new Date().getFullYear();
 
-  // Compute monthly totals dynamically from campaignsList
+  // Compute bi-monthly totals dynamically (1st-15th and 16th-31st) from campaignsList
   const monthlyMetrics = MONTH_NAMES.map((monthName, monthIdx) => {
-    const monthCampaigns = campaignsList.filter(
-      (c) => getCampaignMonthIndex(c.createdAtTimestamp) === monthIdx,
-    );
+    const monthCampaigns = campaignsList.filter((c) => {
+      const info = getCampaignMonthAndDay(c.createdAtTimestamp);
+      return info.monthIdx === monthIdx;
+    });
 
-    const totalCount = monthCampaigns.length;
-    const finishedCount = monthCampaigns.filter(
-      (c) =>
-        c.currentPipelineStage === "COMPLETED" ||
-        (c.activeCandidateCount > 0 &&
-          c.evaluatedCandidateCount === c.activeCandidateCount),
-    ).length;
+    const firstHalfCount = monthCampaigns.filter((c) => {
+      const info = getCampaignMonthAndDay(c.createdAtTimestamp);
+      return info.dayOfMonth <= 15;
+    }).length;
 
-    return { month: monthName, totalCount, finishedCount };
+    const secondHalfCount = monthCampaigns.filter((c) => {
+      const info = getCampaignMonthAndDay(c.createdAtTimestamp);
+      return info.dayOfMonth >= 16;
+    }).length;
+
+    return { month: monthName, firstHalfCount, secondHalfCount };
   });
 
   const maxVal = Math.max(
     1,
-    ...monthlyMetrics.flatMap((m) => [m.totalCount, m.finishedCount]),
+    ...monthlyMetrics.flatMap((m) => [m.firstHalfCount, m.secondHalfCount]),
   );
 
   const chartBars = monthlyMetrics.flatMap((m) => [
     {
-      value: m.totalCount,
+      value: m.firstHalfCount,
       height:
-        m.totalCount === 0
+        m.firstHalfCount === 0
           ? 12
           : Math.max(
               16,
-              Math.min(100, Math.round((m.totalCount / maxVal) * 85)),
+              Math.min(100, Math.round((m.firstHalfCount / maxVal) * 85)),
             ),
       month: m.month,
-      label: "Total Created",
+      period: "1st - 15th",
     },
     {
-      value: m.finishedCount,
+      value: m.secondHalfCount,
       height:
-        m.finishedCount === 0
+        m.secondHalfCount === 0
           ? 12
           : Math.max(
               16,
-              Math.min(100, Math.round((m.finishedCount / maxVal) * 85)),
+              Math.min(100, Math.round((m.secondHalfCount / maxVal) * 85)),
             ),
       month: m.month,
-      label: "Finished",
+      period: "16th - 31st",
     },
   ]);
 
@@ -193,9 +207,9 @@ function ChartSection({
                         {/* Tooltip on Hover */}
                         {isHovered && (
                           <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center pointer-events-none">
-                            <div className="bg-[#18181B] text-white px-3 py-1.5 rounded-sm shadow-xl text-center w-28 border border-gray-800">
+                            <div className="bg-[#18181B] text-white px-3 py-1.5 rounded-sm shadow-xl text-center w-32 border border-gray-800">
                               <div className="text-[10px] text-gray-400 font-medium leading-none mb-1">
-                                {bar.month} {currentYear}
+                                {bar.period} {bar.month} {currentYear}
                               </div>
                               <div className="text-xs font-bold text-white leading-none">
                                 {bar.value}{" "}
