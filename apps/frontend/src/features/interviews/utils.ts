@@ -8,11 +8,6 @@ export function mapBackendInterviewToCampaign(
   backendInterview: BackendInterviewResponse
 ): InterviewCampaign {
   const dateToFormat = backendInterview.scheduled_at ? backendInterview.scheduled_at : backendInterview.created_at;
-  const formattedDate = new Date(dateToFormat).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
 
   // Normalize status string to PipelineStage
   let pipelineStage: PipelineStage = "QUESTION_MAKER";
@@ -55,7 +50,6 @@ export function mapBackendInterviewToCampaign(
     activeCandidateCount: 0,
     evaluatedCandidateCount: 0,
     createdAtTimestamp: dateToFormat,
-    formattedCreatedAt: formattedDate,
     agentSummary: backendInterview.job_description,
     questionSuite: [],
     candidatesList: [],

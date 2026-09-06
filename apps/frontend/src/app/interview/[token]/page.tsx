@@ -18,6 +18,7 @@ import {
   useLocalParticipant,
   TrackReferenceOrPlaceholder,
   useTrackVolume,
+  isTrackReference,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
 import Image from "next/image";
@@ -53,8 +54,8 @@ export default function CandidateInterviewPage({
   // Unwrap params and searchParams
   useEffect(() => {
     Promise.all([
-      params ? params : Promise.resolve({ token: undefined }),
-      searchParams ? searchParams : Promise.resolve({ token: undefined }),
+      params ?? Promise.resolve({ token: undefined }),
+      searchParams ?? Promise.resolve({ token: undefined }),
     ]).then(([pRes, sRes]) => {
       const activeToken = sRes?.token || pRes?.token;
       if (activeToken) {
@@ -624,7 +625,9 @@ function StageVisualizer({
   audioTrack?: TrackReferenceOrPlaceholder;
 }) {
   const isThinking = state === "thinking" || state === "reasoning";
-  const volume = useTrackVolume(audioTrack); // returns 0-1
+  const volume = useTrackVolume(
+    isTrackReference(audioTrack) ? audioTrack : undefined,
+  ); // returns 0-1
   const volMultiplier = volume ? Math.max(0.3, volume * 3) : 1;
 
   if (isThinking) {
