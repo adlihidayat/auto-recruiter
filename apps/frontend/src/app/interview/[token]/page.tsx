@@ -26,11 +26,16 @@ type Phase = "lobby" | "room" | "completed";
 
 export default function CandidateInterviewPage({
   params,
+  searchParams,
 }: {
-  params: Promise<{ token: string }>;
+  params: Promise<{ token?: string }>;
+  searchParams?: Promise<{ token?: string }>;
 }) {
-  const [token, setToken] = useState<string>("mock-token");
+  const [token, setToken] = useState<string>("");
   const [phase, setPhase] = useState<Phase>("lobby");
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [isStartingRoom, setIsStartingRoom] = useState(false);
 
   // Audio & Devices state
   const [isMuted, setIsMuted] = useState(false);
@@ -45,14 +50,54 @@ export default function CandidateInterviewPage({
   const audioCtxRef = React.useRef<AudioContext | null>(null);
   const animFrameRef = React.useRef<number | null>(null);
 
-  // Unwrap params
+  // Unwrap params and searchParams
   useEffect(() => {
-    params.then((res) => {
-      if (res.token) {
-        setToken(res.token);
+    Promise.all([
+      params ? params : Promise.resolve({ token: undefined }),
+      searchParams ? searchParams : Promise.resolve({ token: undefined }),
+    ]).then(([pRes, sRes]) => {
+      const activeToken = sRes?.token || pRes?.token;
+      if (activeToken) {
+        setToken(activeToken);
+      } else {
+        setToken("mock-token");
       }
     });
-  }, [params]);
+  }, [params, searchParams]);
+
+  // Check Session Status on Load
+  useEffect(() => {
+    if (!token) return;
+
+    if (token === "mock-token") {
+      setTimeout(() => setIsLoadingSession(false), 0);
+      return;
+    }
+
+    const checkSession = async () => {
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+        const res = await fetch(`${backendUrl}/api/session/${token}`);
+        if (!res.ok) {
+          throw new Error(
+            "Failed to load interview session. The link might be invalid or expired.",
+          );
+        }
+        const data = await res.json();
+
+        if (data.status === "finished") {
+          setPhase("completed");
+        }
+      } catch (err) {
+        setSessionError(
+          err instanceof Error ? err.message : "Failed to load session",
+        );
+      } finally {
+        setIsLoadingSession(false);
+      }
+    };
+    checkSession();
+  }, [token]);
 
   // Log active candidate room token
   useEffect(() => {
@@ -198,6 +243,64 @@ export default function CandidateInterviewPage({
     startAudio();
   }, [initMicrophone]);
 
+  const handleEnterRoom = async () => {
+    if (token !== "mock-token") {
+      setIsStartingRoom(true);
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+        const res = await fetch(`${backendUrl}/api/session/${token}/start`, {
+          method: "POST",
+        });
+        if (!res.ok) {
+          throw new Error("Failed to start the interview session.");
+        }
+      } catch (err) {
+        console.error(err);
+        setSessionError(
+          err instanceof Error ? err.message : "Failed to start session",
+        );
+        setIsStartingRoom(false);
+        return; // Don't enter room if backend failed
+      }
+    }
+    setPhase("room");
+  };
+
+  if (isLoadingSession) {
+    return (
+      <div className="min-h-screen bg-[#F6F6F6] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-gray-200 border-t-gray-800 rounded-full animate-spin" />
+          <p className="text-sm font-medium text-gray-600 tracking-wide">
+            Loading session...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (sessionError) {
+    return (
+      <div className="min-h-screen bg-[#F6F6F6] flex items-center justify-center p-4">
+        <div className="bg-white p-6 py-8 rounded-3xl border border-red-100 shadow-xl max-w-md text-center flex flex-col items-center gap-0">
+          <div className="w-12 h-12 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-6">
+            <span className="font-bold text-2xl">!</span>
+          </div>
+          <h2 className="text-base font-semibold text-gray-900">
+            Session Error
+          </h2>
+          <p className="text-sm text-gray-600 mb-6">{sessionError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-3 py-1.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:opacity-75 transition-colors cursor-pointer"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F6F6F6] text-gray-900 font-sans flex flex-col justify-between selection:bg-gray-200">
       {/* Main Body Content based on active phase */}
@@ -241,7 +344,7 @@ export default function CandidateInterviewPage({
                     className={`p-2.5 rounded-xl transition-colors ${
                       isMuted
                         ? "bg-red-50 text-red-500 border border-red-100"
-                        : "bg-orange-50 text-orange-600 border border-orange-100"
+                        : "bg-emerald-50 text-emerald-600 border border-emerald-100"
                     }`}
                   >
                     {isMuted ? (
@@ -341,11 +444,20 @@ export default function CandidateInterviewPage({
             {/* Join Action Button */}
             <button
               type="button"
-              onClick={() => setPhase("room")}
-              className="w-full py-2.5 bg-[#191919] hover:bg-black text-white rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.99]"
+              onClick={handleEnterRoom}
+              disabled={isStartingRoom}
+              className="w-full py-2.5 bg-[#191919] hover:bg-black text-white rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              <Play className="w-2.5 h-2.5 fill-current" />
-              <span>Enter Interview Room</span>
+              {isStartingRoom ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Play className="w-2.5 h-2.5 fill-current" />
+              )}
+              <span>
+                {isStartingRoom
+                  ? "Starting Interview..."
+                  : "Enter Interview Room"}
+              </span>
             </button>
           </div>
         )}
@@ -405,8 +517,8 @@ export default function CandidateInterviewPage({
             </div>
 
             <div className="mt-8 p-5 bg-gray-50 border border-gray-200 rounded-2xl text-xs text-gray-600 space-y-1.5 text-left">
-              <p className="font-medium text-gray-900">What happens next?</p>
-              <p className="leading-relaxed">
+              <p className="font-semibold text-gray-900">What happens next?</p>
+              <p className="leading-relaxed font-medium">
                 The hiring team will review your structured evaluation report
                 and reach out regarding next steps.
               </p>
@@ -507,10 +619,12 @@ function StageVisualizer({
   state,
   audioTrack,
 }: {
-  state: any;
+  state: string;
   audioTrack?: TrackReferenceOrPlaceholder;
 }) {
   const isThinking = state === "thinking" || state === "reasoning";
+  const volume = useTrackVolume(audioTrack); // returns 0-1
+  const volMultiplier = volume ? Math.max(0.3, volume * 3) : 1;
 
   if (isThinking) {
     return (
@@ -527,9 +641,6 @@ function StageVisualizer({
       </div>
     );
   }
-
-  const volume = useTrackVolume(audioTrack as any); // returns 0-1
-  const volMultiplier = volume ? Math.max(0.3, volume * 3) : 1;
 
   return (
     <div className="h-8 mt-4 flex items-center gap-1.5">
@@ -597,7 +708,7 @@ function MockVoiceStage({
             className={`p-3 rounded-xl transition-colors cursor-pointer flex items-center justify-center ${
               isMuted
                 ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
-                : "bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100"
+                : "bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100"
             }`}
             title={isMuted ? "Unmute Mic" : "Mute Mic"}
           >
@@ -708,7 +819,7 @@ function LiveKitVoiceStage({
             className={`p-3 rounded-xl transition-colors cursor-pointer flex items-center justify-center ${
               isMuted
                 ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
-                : "bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100"
+                : "bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100"
             }`}
             title={isMuted ? "Unmute Mic" : "Mute Mic"}
           >

@@ -39,7 +39,7 @@ export const AGENT_STEPS = [
     icon: <PenTool className="w-5 h-5" />,
   },
   {
-    name: "Finished",
+    name: "Generating",
     role: "SYSTEM",
     color: "text-emerald-500",
     bg: "bg-emerald-100",

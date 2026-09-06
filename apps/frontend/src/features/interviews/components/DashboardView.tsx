@@ -349,17 +349,28 @@ export default function DashboardView() {
                 );
                 if (candidates) {
                   campaign.activeCandidateCount = candidates.length;
-                  campaign.evaluatedCandidateCount = candidates.filter(
-                    (c) =>
-                      c.status?.toLowerCase() === "finished" ||
-                      c.status?.toLowerCase() === "done" ||
-                      c.status?.toLowerCase() === "evaluated" ||
-                      c.status?.toLowerCase() === "completed" ||
-                      c.status?.toLowerCase() === "passed" ||
-                      c.status?.toLowerCase() === "rejected" ||
+                  const isCampaignFinished =
+                    campaign.currentPipelineStage === "COMPLETED" ||
+                    bi.status?.toLowerCase() === "finished" ||
+                    bi.status?.toLowerCase() === "completed";
+
+                  campaign.evaluatedCandidateCount = candidates.filter((c) => {
+                    const st = c.status?.toLowerCase() || "";
+                    return (
+                      st === "finished" ||
+                      st === "done" ||
+                      st === "evaluated" ||
+                      st === "completed" ||
+                      st === "passed" ||
+                      st === "rejected" ||
+                      st === "not-joined" ||
+                      st === "not_joined" ||
+                      st === "expired" ||
                       (c.composite_score !== null &&
-                        c.composite_score !== undefined),
-                  ).length;
+                        c.composite_score !== undefined) ||
+                      isCampaignFinished
+                    );
+                  }).length;
                 }
               } catch {
                 // Candidates fetch handles empty list gracefully
