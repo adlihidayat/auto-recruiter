@@ -451,7 +451,7 @@ export default function DashboardView() {
       ? currentTotal > 0
         ? 100
         : 0
-      : Math.round((Math.abs(totalDiff) / lastTotal) * 100);
+      : Math.round((totalDiff / lastTotal) * 100);
   const isTotalUptrend = totalDiff >= 0;
 
   // Finished Interviews Comparison
@@ -467,7 +467,7 @@ export default function DashboardView() {
       ? currentFinished > 0
         ? 100
         : 0
-      : Math.round((Math.abs(finishedDiff) / lastFinished) * 100);
+      : Math.round((finishedDiff / lastFinished) * 100);
   const isFinishedUptrend = finishedDiff >= 0;
 
   return (
@@ -558,8 +558,8 @@ export default function DashboardView() {
                       <TrendingDown className="w-3 h-3" />
                     )}
                     {isTotalUptrend
-                      ? `+${totalPercentChange}%`
-                      : `-${totalPercentChange}%`}{" "}
+                      ? `${totalPercentChange}%`
+                      : `${totalPercentChange}%`}{" "}
                     this month
                   </div>
                 </div>
@@ -586,8 +586,8 @@ export default function DashboardView() {
                       <TrendingDown className="w-3 h-3" />
                     )}
                     {isFinishedUptrend
-                      ? `+${finishedPercentChange}%`
-                      : `-${finishedPercentChange}%`}{" "}
+                      ? `${finishedPercentChange}%`
+                      : `${finishedPercentChange}%`}{" "}
                     this month
                   </div>
                 </div>
