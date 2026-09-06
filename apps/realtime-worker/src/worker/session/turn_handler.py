@@ -73,7 +73,7 @@ class InterviewerLLM(llm.LLM):
                     break
 
         transcript = user_msg or ""
-        logger.info(f"Received candidate transcript: {transcript}")
+        logger.info(f"\n========================================\n[VAD] Candidate finished speaking. Received transcript: '{transcript}'\n========================================")
         
         # We need to return an LLMStream synchronously, so we start a task to run the graph
         # and yield chunks from it.
@@ -109,35 +109,44 @@ class GraphExecutionStream(llm.LLMStream):
     async def _execute_graph(self) -> str:
         # Check if interview is finished
         if self.session_state.current_goal is None:
-            logger.info("All goals completed. Concluding interview.")
+            logger.info("\n========================================\n[FLOW] All goals completed. Concluding interview.\n========================================")
             if self.shutdown_callback:
                 asyncio.create_task(self.shutdown_callback())
             return "Thank you for your time, the interview is now concluded. Have a great day!"
             
         # 1. Update session state with candidate transcript
-        self.session_state.add_history_item(role="candidate", content=self.transcript)
+        # If the last item is a candidate turn, it means a previous agent execution 
+        # was cancelled mid-generation by new speech. We must overwrite the old partial 
+        # transcript with the new combined one instead of appending duplicates!
+        if self.session_state.goal_history and self.session_state.goal_history[-1].role == "candidate":
+            self.session_state.goal_history[-1].content = self.transcript
+        else:
+            self.session_state.add_history_item(role="candidate", content=self.transcript)
         
         # 2. Prepare LangGraph input
         input_state = self.session_state.get_agent_input_state(self.transcript)
         
         # 3. Invoke LangGraph
         try:
-            logger.info("Invoking LangGraph interviewer-agent...")
+            logger.info("\n========================================\n[AGENT] Processing candidate's response through LangGraph...\n========================================")
             result_state = await interviewer_graph.ainvoke(input_state)
             decision = result_state.get("decision")
             
             if not decision:
+                logger.error("[AGENT] Error: No decision returned by LangGraph!")
                 return "I'm sorry, I encountered an internal error. Let's try that again."
                 
             action = decision.action
             message = decision.message_to_candidate
+            
+            logger.info(f"\n========================================\n[AGENT] Decision reached:\nAction: {action.upper()}\nReasoning: {decision.reasoning}\nMessage: '{message}'\n========================================")
             
             # 4. Update session state with interviewer's response
             self.session_state.add_history_item(role="interviewer", content=message)
             
             # 5. Handle Advance
             if action == "advance":
-                logger.info("Agent decided to advance. Saving goal and moving to next.")
+                logger.info("\n========================================\n[DB] Batch storing to db cause advance! (Mocking save...)\n========================================")
                 # We hit the backend /finish endpoint
                 payload = FinishGoalPayload(transcripts=[])
                 for turn in self.session_state.goal_history:
@@ -155,7 +164,14 @@ class GraphExecutionStream(llm.LLMStream):
                 
                 # Advance local state
                 self.session_state.advance_goal()
+                logger.info(f"[FLOW] Advanced to next goal. Remaining goals: {len(self.session_state.goals)}")
                 
+                if self.session_state.current_goal is None:
+                    logger.info("\n========================================\n[FLOW] All goals completed. Scheduling interview conclusion.\n========================================")
+                    if self.shutdown_callback:
+                        # Schedule room deletion. Might want to increase the 5s delay in main.py to allow TTS to finish.
+                        asyncio.create_task(self.shutdown_callback())
+                        
             return message
             
         except Exception as e:

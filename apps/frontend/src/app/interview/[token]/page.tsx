@@ -16,7 +16,8 @@ import {
   RoomAudioRenderer,
   useVoiceAssistant,
   useLocalParticipant,
-  BarVisualizer,
+  TrackReferenceOrPlaceholder,
+  useTrackVolume,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
 import Image from "next/image";
@@ -229,7 +230,7 @@ export default function CandidateInterviewPage({
                   Audio & Microphone Test
                 </h3>
                 <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Ready
+                  <ShieldCheck className="w-3 h-3" /> Ready
                 </span>
               </div>
 
@@ -240,7 +241,7 @@ export default function CandidateInterviewPage({
                     className={`p-2.5 rounded-xl transition-colors ${
                       isMuted
                         ? "bg-red-50 text-red-500 border border-red-100"
-                        : "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                        : "bg-orange-50 text-orange-600 border border-orange-100"
                     }`}
                   >
                     {isMuted ? (
@@ -295,8 +296,8 @@ export default function CandidateInterviewPage({
                       isMuted
                         ? "w-0"
                         : realAudioLevel > 20
-                          ? "bg-emerald-500"
-                          : "bg-emerald-400"
+                          ? "bg-orange-500"
+                          : "bg-orange-400"
                     }`}
                     style={{ width: isMuted ? "0%" : `${realAudioLevel}%` }}
                   />
@@ -330,7 +331,7 @@ export default function CandidateInterviewPage({
                 </span>
               </div>
               <div className="flex items-center gap-2.5">
-                <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                <Clock className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                 <span>
                   Estimated Duration: 15–60 minutes (multi-goal evaluation).
                 </span>
@@ -341,9 +342,9 @@ export default function CandidateInterviewPage({
             <button
               type="button"
               onClick={() => setPhase("room")}
-              className="w-full py-2.5 bg-[#191919] hover:bg-black text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.99]"
+              className="w-full py-2.5 bg-[#191919] hover:bg-black text-white rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.99]"
             >
-              <Play className="w-4 h-4 fill-current" />
+              <Play className="w-2.5 h-2.5 fill-current" />
               <span>Enter Interview Room</span>
             </button>
           </div>
@@ -352,7 +353,7 @@ export default function CandidateInterviewPage({
         {/* PHASE 2: LIVE INTERVIEW ROOM */}
         {phase === "room" &&
           token &&
-          (token === "mock-token" || token.startsWith("mock") ? (
+          (token === "mock-token" ? (
             <MockVoiceStage
               onLeave={() => setPhase("completed")}
               realAudioLevel={realAudioLevel}
@@ -368,7 +369,9 @@ export default function CandidateInterviewPage({
               connect={true}
               audio={true}
               video={false}
-              onDisconnected={() => setPhase("completed")}
+              onDisconnected={() => {
+                console.log("LiveKit room disconnected");
+              }}
               className="w-full max-w-3xl flex flex-col gap-6"
             >
               {/* RoomAudioRenderer MUST be included so you can hear the interviewer's voice */}
@@ -387,7 +390,7 @@ export default function CandidateInterviewPage({
         {phase === "completed" && (
           <div className="w-full max-w-lg bg-white rounded-3xl border border-gray-200/90 shadow-xl p-8 text-center animate-in fade-in zoom-in-95 duration-200">
             <div className="w-20 h-20 rounded-3xl bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-6 text-emerald-600 shadow-xs">
-              <CheckCircle2 className="w-10 h-10" />
+              <CheckCircle2 className="w-10 h-10" strokeWidth="1.5" />
             </div>
 
             <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
@@ -422,6 +425,130 @@ interface LiveKitVoiceStageProps {
   onToggleMute: () => void;
 }
 
+function InterviewerOrb({ state }: { state: string }) {
+  const isSpeaking = state === "speaking";
+  const isThinking = state === "thinking" || state === "reasoning";
+  const isListening = state === "listening";
+
+  return (
+    <div className="relative mb-6 flex items-center justify-center">
+      {/* Speaking Ping Ring */}
+      {isSpeaking && (
+        <div className="absolute -inset-3 rounded-full bg-orange-500/20 animate-ping opacity-75" />
+      )}
+
+      {/* Thinking Circular Wavy Animated Rings */}
+      {isThinking && (
+        <>
+          {/* Outer Wave Pulse Ring */}
+          <div className="absolute -inset-6 rounded-full border-2 border-orange-400/30 animate-ping opacity-60" />
+
+          {/* Outer Clockwise Rotating Dashed Wavy Circle */}
+          <svg
+            className="absolute -inset-5 w-38 h-38 animate-[spin_8s_linear_infinite] text-orange-400/70 pointer-events-none"
+            viewBox="0 0 100 100"
+          >
+            <circle
+              cx="50"
+              cy="50"
+              r="46"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeDasharray="6 10"
+              strokeLinecap="round"
+            />
+          </svg>
+
+          {/* Inner Counter-Rotating Wavy Ring */}
+          <svg
+            className="absolute -inset-3 w-34 h-34 animate-[spin_5s_linear_infinite_reverse] text-red-300/80 pointer-events-none"
+            viewBox="0 0 100 100"
+          >
+            <circle
+              cx="50"
+              cy="50"
+              r="40"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeDasharray="4 6 12 6"
+              strokeLinecap="round"
+            />
+          </svg>
+        </>
+      )}
+
+      {/* Listening Breathing Halo */}
+      {isListening && (
+        <div className="absolute -inset-3 rounded-full bg-red-500/20 animate-pulse opacity-75" />
+      )}
+
+      {/* Main Central Orb */}
+      <div className="w-28 h-28 rounded-full bg-gradient-to-tr from-orange-300 to-red-300 p-0.5 shadow-2xl flex items-center justify-center relative z-10">
+        <div className="w-full h-full bg-[#191919] rounded-full flex items-center justify-center border border-white/10">
+          <Sparkles
+            className={`w-12 h-12 transition-colors ${
+              isSpeaking
+                ? "text-orange-300"
+                : isThinking
+                  ? "text-red-300 animate-pulse"
+                  : "text-gray-400"
+            }`}
+            strokeWidth="1"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StageVisualizer({
+  state,
+  audioTrack,
+}: {
+  state: any;
+  audioTrack?: TrackReferenceOrPlaceholder;
+}) {
+  const isThinking = state === "thinking" || state === "reasoning";
+
+  if (isThinking) {
+    return (
+      <div className="h-8 mt-4 flex items-center justify-center gap-3">
+        {/* Animated Wavy Circular Wave Indicator */}
+        <div className="relative flex items-center justify-center w-7 h-7">
+          <div className="absolute inset-0 rounded-full border border-orange-400/60 animate-ping opacity-75" />
+          <div className="absolute inset-0.5 rounded-full border-2 border-red-300 border-t-transparent animate-[spin_1.2s_linear_infinite]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-orange-400 animate-pulse" />
+        </div>
+        <span className="text-xs font-semibold text-orange-400 tracking-wider uppercase animate-pulse">
+          Thinking...
+        </span>
+      </div>
+    );
+  }
+
+  const volume = useTrackVolume(audioTrack as any); // returns 0-1
+  const volMultiplier = volume ? Math.max(0.3, volume * 3) : 1;
+
+  return (
+    <div className="h-8 mt-4 flex items-center gap-1.5">
+      {[40, 65, 45, 80, 50, 70, 35].map((height, i) => (
+        <div
+          key={i}
+          className={`w-0.5 bg-orange-300 rounded-full ${!audioTrack ? "animate-pulse" : "transition-all duration-75"}`}
+          style={{
+            height: audioTrack
+              ? `${Math.min(100, height * volMultiplier)}%`
+              : `${height}%`,
+            animationDelay: `${i * 120}ms`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function MockVoiceStage({
   onLeave,
   realAudioLevel,
@@ -441,41 +568,20 @@ function MockVoiceStage({
       <div className="relative w-full bg-[#191919] rounded-3xl border border-gray-800 shadow-2xl p-8 min-h-[420px] flex flex-col items-center justify-center overflow-hidden">
         {/* Agent Avatar & Orb */}
         <div className="relative flex flex-col items-center z-10">
-          <div className="relative mb-6">
-            {state === "speaking" && (
-              <div className="absolute -inset-3 rounded-full bg-emerald-500/20 animate-ping opacity-75" />
-            )}
-            <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-2xl flex items-center justify-center">
-              <div className="w-full h-full bg-[#191919] rounded-full flex items-center justify-center ">
-                <Sparkles
-                  className="w-12 h-12 text-emerald-400"
-                  strokeWidth="1"
-                />
-              </div>
-            </div>
-          </div>
-          <h2 className="text-lg font-semibold text-white tracking-tight flex items-center gap-2">
-            Interviewer{" "}
-            <span className="text-xs font-semibold uppercase px-2.5 py-1 rounded-lg bg-white/10 text-gray-300">
-              speaking
+          <InterviewerOrb state={state} />
+
+          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+            AI Interviewer{" "}
+            <span className="text-xs font-semibold uppercase px-2.5 py-0.5 rounded-full bg-white/10 text-gray-300 border border-white/10">
+              {state}
             </span>
           </h2>
 
-          {/* Demo Audio Visualizer */}
-          <div className="h-8 mt-4 flex items-center gap-1.5">
-            {[40, 75, 55, 90, 60, 80, 45].map((height, i) => (
-              <div
-                key={i}
-                className="w-0.5 bg-emerald-400 rounded-full animate-pulse"
-                style={{
-                  height: `${height}%`,
-                  animationDelay: `${i * 120}ms`,
-                }}
-              />
-            ))}
-          </div>
+          {/* Audio / Thinking Visualizer */}
+          <StageVisualizer state={state} />
+
           {/* Dynamic Spoken Transcript */}
-          <p className="text-sm text-gray-200 max-w-md text-center mt-6 bg-white/10 p-4 rounded-2xl backdrop-blur-md shadow-xl leading-relaxed">
+          <p className="text-sm text-gray-200 max-w-md text-center mt-6 bg-white/10 border border-white/15 p-4 rounded-2xl backdrop-blur-md shadow-xl leading-relaxed">
             &ldquo;{agentTranscriptions[0].text}&rdquo;
           </p>
         </div>
@@ -488,10 +594,10 @@ function MockVoiceStage({
           <button
             type="button"
             onClick={onToggleMute}
-            className={`p-2 rounded-lg transition-colors cursor-pointer flex items-center justify-center ${
+            className={`p-3 rounded-xl transition-colors cursor-pointer flex items-center justify-center ${
               isMuted
                 ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
-                : "bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100"
+                : "bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100"
             }`}
             title={isMuted ? "Unmute Mic" : "Mute Mic"}
           >
@@ -502,7 +608,7 @@ function MockVoiceStage({
             )}
           </button>
 
-          {/* Volume Indicator Bar matching lobby preparation exactly */}
+          {/* Volume Indicator Bar */}
           <div className="flex-1 space-y-1">
             <div className="flex justify-between text-xs font-medium text-gray-600">
               <span>Your Mic Input</span>
@@ -514,14 +620,14 @@ function MockVoiceStage({
                     : "Listening..."}
               </span>
             </div>
-            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
+            <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
               <div
                 className={`h-full transition-all duration-75 ${
                   isMuted
                     ? "w-0"
                     : realAudioLevel > 20
-                      ? "bg-emerald-500"
-                      : "bg-emerald-400"
+                      ? "bg-orange-500"
+                      : "bg-orange-400"
                 }`}
                 style={{
                   width: isMuted ? "0%" : `${realAudioLevel}%`,
@@ -535,7 +641,7 @@ function MockVoiceStage({
         <button
           type="button"
           onClick={onLeave}
-          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0 transition-colors shadow-sm"
+          className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0 transition-colors shadow-sm"
         >
           <PhoneOff className="w-4 h-4" />
           <span>Leave Interview</span>
@@ -562,23 +668,11 @@ function LiveKitVoiceStage({
   return (
     <div className="w-full max-w-3xl flex flex-col gap-6">
       {/* Main Stage View */}
-      <div className="relative w-full bg-[#191919] rounded-3xl border border-gray-800 shadow-2xl p-8 min-h-[420px] flex flex-col items-center justify-center overflow-hidden">
+      <div className="relative w-full bg-[#191919] rounded-3xl border border-gray-800 shadow-2xl p-8 pt-14 min-h-[420px] flex flex-col items-center justify-center overflow-hidden">
         {/* Agent Avatar & Orb */}
         <div className="relative flex flex-col items-center z-10">
-          <div className="relative mb-6">
-            {state === "speaking" && (
-              <div className="absolute -inset-3 rounded-full bg-emerald-500/20 animate-ping opacity-75" />
-            )}
-            <div className="w-28 h-28 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 p-1 shadow-2xl flex items-center justify-center">
-              <div className="w-full h-full bg-[#191919] rounded-full flex items-center justify-center border border-white/10">
-                <Sparkles
-                  className={`w-12 h-12 transition-colors ${
-                    state === "speaking" ? "text-emerald-400" : "text-gray-400"
-                  }`}
-                />
-              </div>
-            </div>
-          </div>
+          <InterviewerOrb state={state || "connecting"} />
+
           <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
             AI Interviewer{" "}
             <span className="text-xs font-semibold uppercase px-2.5 py-0.5 rounded-full bg-white/10 text-gray-300 border border-white/10">
@@ -586,18 +680,21 @@ function LiveKitVoiceStage({
             </span>
           </h2>
 
+          {/* Audio / Thinking Visualizer */}
+          <div className=" ">
+            <StageVisualizer
+              state={state || "connecting"}
+              audioTrack={audioTrack}
+            />
+          </div>
+
           {/* Dynamic Spoken Transcript from Realtime Worker */}
           {agentTranscriptions.length > 0 && (
-            <p className="text-sm text-gray-200 max-w-md text-center mt-6 bg-white/10 border border-white/15 p-4 rounded-2xl backdrop-blur-md shadow-xl leading-relaxed">
+            <p className="text-sm text-gray-200 max-w-lg text-center mt-6 bg-white/10 border border-white/15 p-4 rounded-2xl backdrop-blur-md leading-relaxed">
               &ldquo;
               {agentTranscriptions[agentTranscriptions.length - 1].text}&rdquo;
             </p>
           )}
-
-          {/* Audio Visualizer */}
-          <div className="h-8 mt-4">
-            <BarVisualizer state={state} barCount={7} trackRef={audioTrack} />
-          </div>
         </div>
       </div>
 
@@ -611,7 +708,7 @@ function LiveKitVoiceStage({
             className={`p-3 rounded-xl transition-colors cursor-pointer flex items-center justify-center ${
               isMuted
                 ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
-                : "bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100"
+                : "bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100"
             }`}
             title={isMuted ? "Unmute Mic" : "Mute Mic"}
           >
@@ -622,8 +719,8 @@ function LiveKitVoiceStage({
             )}
           </button>
 
-          {/* Volume Indicator Bar matching lobby preparation exactly */}
-          <div className="flex-1 space-y-1">
+          {/* Volume Indicator Bar */}
+          <div className="flex-1 space-y-2">
             <div className="flex justify-between text-xs font-medium text-gray-600">
               <span>Your Mic Input</span>
               <span className="font-semibold text-xs text-gray-900">
@@ -634,14 +731,14 @@ function LiveKitVoiceStage({
                     : "Listening..."}
               </span>
             </div>
-            <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
+            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
               <div
                 className={`h-full transition-all duration-75 ${
                   isMuted
                     ? "w-0"
                     : realAudioLevel > 20
-                      ? "bg-emerald-500"
-                      : "bg-emerald-400"
+                      ? "bg-orange-500"
+                      : "bg-orange-400"
                 }`}
                 style={{
                   width: isMuted ? "0%" : `${realAudioLevel}%`,

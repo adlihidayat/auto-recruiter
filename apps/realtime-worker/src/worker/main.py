@@ -8,6 +8,9 @@ import os
 import sys
 import logging
 import asyncio
+import warnings
+
+warnings.filterwarnings("ignore")
 
 # Ensure root directory and apps/agents are in sys.path
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
@@ -41,14 +44,18 @@ from src.worker.session.turn_handler import InterviewerLLM
 logger = logging.getLogger("worker")
 backend_client = BackendClient()
 
+# Suppress noisy third-party loggers for clean debugging
+for log_name in ["google_genai", "google_genai.models", "google", "langsmith", "langsmith.client", "livekit", "livekit.agents", "livekit.plugins", "urllib3", "asyncio", "jwt"]:
+    logging.getLogger(log_name).setLevel(logging.WARNING)
+
 def prewarm(proc: JobProcess):
     """
     Preloads necessary models before the worker accepts jobs.
     """
     proc.userdata["vad"] = silero.VAD.load(
-        activation_threshold=0.8,
+        activation_threshold=0.5,
         min_speech_duration=0.2,
-        min_silence_duration=1.0,
+        min_silence_duration=4.0,
     )
 
 async def entrypoint(ctx: JobContext):
@@ -90,8 +97,8 @@ async def entrypoint(ctx: JobContext):
     session_state = InterviewSessionState(candidate_id=candidate_id, goals=[stub_goal_1, stub_goal_2])
     
     async def shutdown_callback():
-        logger.info("Scheduling room disconnect in 5 seconds...")
-        await asyncio.sleep(5)
+        logger.info("Scheduling room disconnect in 10 seconds...")
+        await asyncio.sleep(10)
         logger.info("Disconnecting room now.")
         try:
             livekit_api = api.LiveKitAPI(settings.livekit_url, settings.livekit_api_key, settings.livekit_api_secret)
@@ -111,6 +118,11 @@ async def entrypoint(ctx: JobContext):
         stt=deepgram.STT(),
         tts=deepgram.TTS(),
         llm=interviewer_llm,
+        turn_handling={
+            "turn_detection": "vad",
+            "endpointing": {"min_delay": 3.0, "max_delay": 5.0},
+            "interruption": {"enabled": False}
+        }
     )
     
     agent = voice.Agent(instructions="You are an automated technical interviewer.")
@@ -121,7 +133,8 @@ async def entrypoint(ctx: JobContext):
     if session_state.current_goal:
         greeting = f"Welcome to the interview! {session_state.current_goal.suggested_opening}"
         session_state.add_history_item(role="interviewer", content=greeting)
-        await session.say(greeting, allow_interruptions=True)
+        await asyncio.sleep(1.5)
+        await session.say(greeting)
 
     # Keep entrypoint alive until room disconnects or candidate leaves
     disconnected_event = asyncio.Event()
@@ -132,6 +145,13 @@ async def entrypoint(ctx: JobContext):
         disconnected_event.set()
 
     await disconnected_event.wait()
+    try:
+        logger.info("Deleting room to clean up after candidate disconnect.")
+        livekit_api = api.LiveKitAPI(settings.livekit_url, settings.livekit_api_key, settings.livekit_api_secret)
+        await livekit_api.room.delete_room(api.DeleteRoomRequest(room=ctx.room.name))
+        await livekit_api.aclose()
+    except Exception as e:
+        logger.error(f"Failed to delete room on disconnect: {e}")
 
 async def request_fnc(req: JobRequest) -> None:
     """

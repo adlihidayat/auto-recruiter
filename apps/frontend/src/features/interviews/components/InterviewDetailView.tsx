@@ -6,7 +6,7 @@
  * Boundaries: Connects client UI to FastAPI backend endpoints via typed API client.
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   ExternalLink,
   CheckCircle2,
@@ -471,7 +471,7 @@ export default function InterviewDetailView({
               </div>
             ) : (
               <div className="overflow-y-auto max-h-96 divide-y divide-gray-100">
-                {sortedCandidates.map((candidate) => {
+                {sortedCandidates.map((candidate: BackendCandidateResponse) => {
                   const candName =
                     `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim() ||
                     candidate.email;
