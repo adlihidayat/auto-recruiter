@@ -19,6 +19,32 @@ interviewer_graph = interviewer_graph_module.graph
 
 logger = logging.getLogger("worker.turn_handler")
 
+def _is_continuation(prev_candidate_content: str, new_transcript: str) -> bool:
+    """
+    Returns True if `new_transcript` is a continuation of `prev_candidate_content`,
+    indicating that the earlier VAD trigger was premature (noisy).
+
+    Why: Deepgram sometimes fires a final transcript event mid-sentence when there is a
+    brief pause. The candidate then continues speaking, producing a longer transcript.
+    We detect this by checking that the previous (shorter) partial text is contained
+    within the new (longer) text. We normalise both strings to lower-case and strip
+    punctuation before comparing to handle minor STT transcription differences.
+    """
+    if not prev_candidate_content or not new_transcript:
+        return False
+    
+    # Only consider it a continuation if the new transcript is meaningfully longer.
+    # A ratio of 1.3x or more suggests the candidate kept talking.
+    if len(new_transcript) < len(prev_candidate_content) * 1.3:
+        return False
+
+    # Normalize: lowercase + strip common punctuation so minor STT differences don't block the match
+    def _normalize(text: str) -> str:
+        import re
+        return re.sub(r"[.,!?;:'\"-]", "", text.lower()).strip()
+
+    return _normalize(prev_candidate_content) in _normalize(new_transcript)
+
 class InterviewerLLMStream(llm.LLMStream):
     def __init__(self, message_to_candidate: str):
         super().__init__(None, None)
@@ -114,13 +140,36 @@ class GraphExecutionStream(llm.LLMStream):
                 asyncio.create_task(self.shutdown_callback())
             return "Thank you for your time, the interview is now concluded. Have a great day!"
             
-        # 1. Update session state with candidate transcript
-        # If the last item is a candidate turn, it means a previous agent execution 
-        # was cancelled mid-generation by new speech. We must overwrite the old partial 
-        # transcript with the new combined one instead of appending duplicates!
-        if self.session_state.goal_history and self.session_state.goal_history[-1].role == "candidate":
-            self.session_state.goal_history[-1].content = self.transcript
+        # 1. Update session state with candidate transcript.
+        # Three cases to handle cleanly:
+        #
+        # Case A: Last item is a candidate turn — the previous LLM call was cancelled before it
+        #   could respond. Simply overwrite the partial transcript with the newer, longer one.
+        #
+        # Case B: Last two items are [candidate(partial), interviewer(continuation prompt)] —
+        #   the VAD fired prematurely, the agent responded asking the candidate to continue,
+        #   and now we have the full continuation. This is the "noisy call" pattern the user
+        #   described. We detect it by checking if the old partial is a prefix of the new full
+        #   transcript. If so, REMOVE the noisy pair and replace with just the final full turn.
+        #
+        # Case C: Normal new turn — just append.
+        history = self.session_state.goal_history
+        if history and history[-1].role == "candidate":
+            # Case A: overwrite the cancelled partial
+            history[-1].content = self.transcript
+        elif (
+            len(history) >= 2
+            and history[-1].role == "interviewer"
+            and history[-2].role == "candidate"
+            and _is_continuation(history[-2].content, self.transcript)
+        ):
+            # Case B: noisy VAD trigger — remove the (partial candidate + continuation prompt) pair
+            history.pop()  # remove the interviewer continuation prompt
+            history.pop()  # remove the partial candidate turn
+            logger.info("[DEDUP] Removed noisy partial transcript pair. Replacing with final full turn.")
+            self.session_state.add_history_item(role="candidate", content=self.transcript)
         else:
+            # Case C: genuine new candidate turn
             self.session_state.add_history_item(role="candidate", content=self.transcript)
         
         # 2. Prepare LangGraph input
@@ -146,30 +195,59 @@ class GraphExecutionStream(llm.LLMStream):
             
             # 5. Handle Advance
             if action == "advance":
-                logger.info("\n========================================\n[DB] Batch storing to db cause advance! (Mocking save...)\n========================================")
-                # We hit the backend /finish endpoint
-                payload = FinishGoalPayload(transcripts=[])
-                for turn in self.session_state.goal_history:
-                    payload.transcripts.append(TranscriptTurn(
-                        goal_id=self.session_state.current_goal.goal_id,
-                        role=turn.role,
-                        content=turn.content,
-                        action=action if turn.role == "interviewer" else None,
-                        reasoning=decision.reasoning if turn.role == "interviewer" else None
-                    ))
+                goal_ref = self.session_state.current_goal.goal_id
+                candidate_id = self.session_state.candidate_id
+                logger.info(f"\n========================================\n[DB] Saving transcripts for completed goal: {goal_ref}\n========================================")
                 
-                # TEMPORARILY DISABLED TO PREVENT 422 ERRORS FROM STUB GOALS
-                # Fire and forget the backend call to avoid blocking speech
-                # asyncio.create_task(self.backend_client.finish_goal(self.session_state.candidate_id, payload))
+                # Build the final, deduplicated transcript list for this goal.
+                # Only the action/reasoning on the FINAL interviewer turn (the advance) is meaningful.
+                transcripts = [
+                    {
+                        "role": turn.role,
+                        "content": turn.content,
+                        # Only stamp action/reasoning on the final interviewer turn that triggered the advance
+                        "action": (action if (turn.role == "interviewer" and turn == history[-1]) else None),
+                        "reasoning": (decision.reasoning if (turn.role == "interviewer" and turn == history[-1]) else None),
+                        "trigger_matched": None
+                    }
+                    for turn in history
+                ]
+                
+                # Fire-and-forget with explicit error logging so failures are visible
+                async def _save_transcripts():
+                    try:
+                        await self.backend_client.save_goal_transcripts(
+                            candidate_id=candidate_id,
+                            goal_ref=goal_ref,
+                            transcripts=transcripts
+                        )
+                        logger.info(f"[DB] Transcripts saved for goal {goal_ref}.")
+                    except Exception as exc:
+                        logger.error(f"[DB] Failed to save transcripts for goal {goal_ref}: {exc}", exc_info=True)
+                
+                asyncio.create_task(_save_transcripts())
                 
                 # Advance local state
                 self.session_state.advance_goal()
-                logger.info(f"[FLOW] Advanced to next goal. Remaining goals: {len(self.session_state.goals)}")
+                remaining = len(self.session_state.goals) - self.session_state.current_goal_index
+                logger.info(f"[FLOW] Advanced to next goal. Remaining goals: {remaining}")
                 
                 if self.session_state.current_goal is None:
                     logger.info("\n========================================\n[FLOW] All goals completed. Scheduling interview conclusion.\n========================================")
+                    
+                    # Fire-and-forget finish_interview with explicit error logging
+                    async def _finish_interview():
+                        try:
+                            logger.info(f"[DB] Calling finish_interview for candidate {candidate_id}...")
+                            await self.backend_client.finish_interview(candidate_id)
+                            logger.info(f"[DB] finish_interview succeeded. Grading agent dispatched.")
+                        except Exception as exc:
+                            logger.error(f"[DB] finish_interview FAILED for candidate {candidate_id}: {exc}", exc_info=True)
+                    
+                    asyncio.create_task(_finish_interview())
+                    
                     if self.shutdown_callback:
-                        # Schedule room deletion. Might want to increase the 5s delay in main.py to allow TTS to finish.
+                        # Schedule room deletion after a short delay to allow TTS to finish
                         asyncio.create_task(self.shutdown_callback())
                         
             return message

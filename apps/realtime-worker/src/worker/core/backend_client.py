@@ -16,16 +16,28 @@ class BackendClient:
         self.base_url = settings.backend_url
         self.client = httpx.AsyncClient(base_url=self.base_url)
 
-    async def finish_goal(self, candidate_id: str, payload: FinishGoalPayload) -> None:
+    async def save_goal_transcripts(self, candidate_id: str, goal_ref: str, transcripts: list[dict]) -> None:
         """
-        Sends the transcripts of a completed goal to the backend.
+        Sends the transcripts of a completed goal to the backend incrementally.
         
         Args:
             candidate_id (str): The unique identifier of the candidate.
-            payload (FinishGoalPayload): The transcript data to submit.
+            goal_ref (str): The reference of the goal (e.g., g_01).
+            transcripts (list[dict]): The transcript data to submit.
+        """
+        endpoint = f"/api/candidates/{candidate_id}/goals/{goal_ref}/transcripts"
+        response = await self.client.post(endpoint, json=transcripts)
+        response.raise_for_status()
+
+    async def finish_interview(self, candidate_id: str) -> None:
+        """
+        Finalizes the session and triggers the grader agent in the background.
+        
+        Args:
+            candidate_id (str): The unique identifier of the candidate.
         """
         endpoint = f"/api/candidates/{candidate_id}/finish"
-        response = await self.client.post(endpoint, json=payload.model_dump())
+        response = await self.client.post(endpoint, json={"transcripts": []})
         response.raise_for_status()
 
     async def close(self):

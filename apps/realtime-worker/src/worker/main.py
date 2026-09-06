@@ -72,38 +72,76 @@ async def entrypoint(ctx: JobContext):
     interviewer_state = importlib.import_module("interviewer-agent.state")
     Goal = interviewer_state.Goal
     
-    stub_goal_1 = Goal(
-        goal_id="g_01",
-        goal="Evaluate the candidate's ability to independently handle complex POS scenarios, including processing returns, applying multiple discounts, and resolving common register errors while maintaining accuracy.",
-        topic="POS Transaction Management",
-        suggested_opening="Imagine a customer comes to your register wanting to return an item without a receipt, but the item is currently showing as 'out of stock' in our system despite being on the shelf. Walk me through how you would handle this transaction while ensuring our inventory and reporting remain accurate.",
-        passing_criteria=["Prioritizes verifying the item via SKU/serial number scan to ensure accurate identification", "Mentions checking for alternative proof of purchase like loyalty account or email lookup before proceeding", "Identifies the need to follow company policy for non-receipted returns, such as issuing store credit rather than cash", "Acknowledges the inventory mismatch and suggests flagging the item for a manual stock count or system sync check", "States that manager approval or specific user permissions are required for non-receipted or high-value returns"],
-        pushback_triggers=[],
-        wrong_answer_signals=["Suggests processing the return as a cash refund without any proof of purchase or manager oversight", "Ignores the inventory discrepancy entirely, failing to mention the need to reconcile the physical stock with the system", "Claims that POS errors like inventory mismatches should always be escalated to IT support immediately without attempting basic verification", "Suggests overriding system rules or bypassing the return workflow to 'make the customer happy' without documentation"],
-        interview_time_in_minute=1
-    )
+    import json
+    metadata = ctx.job.metadata
+    goals = []
     
-    stub_goal_2 = Goal(
-        goal_id="g_02",
-        goal="Evaluate the candidate's approach to prioritizing floor maintenance tasks (restocking, folding, signage) during high-traffic periods to ensure store standards are met without neglecting customer assistance.",
-        topic="Operational Efficiency and Merchandising",
-        suggested_opening="It is a busy Saturday afternoon, the store is crowded, and you notice the fitting rooms are messy, a display table needs folding, and there is a line forming at the register. How do you decide which task to prioritize while ensuring customers still receive help?",
-        passing_criteria=["Prioritizes customer-facing interactions and safety over non-urgent maintenance tasks", "Mentions delegating tasks to other team members if available", "Identifies the need to balance zone maintenance with active selling", "Suggests performing maintenance tasks in short bursts or micro-tasks rather than deep cleaning during peak hours"],
-        pushback_triggers=[],
-        wrong_answer_signals=["Suggests ignoring customers to finish folding or restocking tasks", "Claims that store appearance is more important than customer service during peak traffic", "States that all tasks must be completed perfectly before assisting the next customer"],
-        interview_time_in_minute=1
-    )
+    if metadata:
+        try:
+            goals_data = json.loads(metadata)
+            for g_data in goals_data:
+                # The backend passes the goal_ref in 'goal_ref'. We map it to 'goal_id' for the agent's Goal schema.
+                goals.append(
+                    Goal(
+                        goal_id=g_data.get("goal_ref", str(g_data.get("id"))),
+                        goal=g_data.get("goal", ""),
+                        topic=g_data.get("topic", ""),
+                        suggested_opening=g_data.get("suggested_opening", ""),
+                        passing_criteria=g_data.get("passing_criteria", []),
+                        pushback_triggers=g_data.get("pushback_triggers", []),
+                        wrong_answer_signals=g_data.get("wrong_answer_signals", []),
+                        interview_time_in_minute=1 # Default or parsed from weight? Leaving as 1 for now.
+                    )
+                )
+        except Exception as e:
+            logger.error(f"Failed to parse goals from metadata: {e}")
+            
+    if not goals:
+        # Fallback to a single generic goal if metadata is missing or fails to parse
+        logger.warning("No goals found in metadata, falling back to generic stub goal.")
+        goals = [
+            Goal(
+                goal_id="g_01",
+                goal="Assess the candidate.",
+                topic="General Assessment",
+                suggested_opening="Welcome to the interview. Could you please introduce yourself?",
+                passing_criteria=["Provides a clear introduction"],
+                pushback_triggers=[],
+                wrong_answer_signals=[],
+                interview_time_in_minute=1
+            )
+        ]
 
-    session_state = InterviewSessionState(candidate_id=candidate_id, goals=[stub_goal_1, stub_goal_2])
+    session_state = InterviewSessionState(candidate_id=candidate_id, goals=goals)
     
     async def shutdown_callback():
-        logger.info("Scheduling room disconnect in 10 seconds...")
-        await asyncio.sleep(10)
-        logger.info("Disconnecting room now.")
+        # Wait for the agent to finish speaking the closing message before nuking the room.
+        # `session` is resolved from the enclosing scope at call time — Python closures capture
+        # the variable name, not its value, so this is safe even though `session` is assigned below.
+        logger.info("Interview complete. Waiting for agent to finish speaking before closing room...")
+        
+        finished_speaking_event = asyncio.Event()
+        
+        def _on_agent_stopped_speaking(*args):
+            finished_speaking_event.set()
+        
+        # Register once — fires as soon as TTS finishes the closing sentence
+        session.on("agent_stopped_speaking", _on_agent_stopped_speaking)
+        
+        try:
+            # 15-second hard timeout as a safety net in case the event never fires
+            await asyncio.wait_for(finished_speaking_event.wait(), timeout=25.0)
+            logger.info("Agent finished speaking. Closing room now.")
+        except asyncio.TimeoutError:
+            logger.warning("Timed out waiting for agent to finish speaking. Closing room anyway.")
+        finally:
+            session.off("agent_stopped_speaking", _on_agent_stopped_speaking)
+        
         try:
             livekit_api = api.LiveKitAPI(settings.livekit_url, settings.livekit_api_key, settings.livekit_api_secret)
             await livekit_api.room.delete_room(api.DeleteRoomRequest(room=ctx.room.name))
             await livekit_api.aclose()
+            logger.info("Room deleted successfully.")
         except Exception as e:
             logger.error(f"Failed to delete room: {e}")
         
@@ -136,7 +174,8 @@ async def entrypoint(ctx: JobContext):
         await asyncio.sleep(1.5)
         await session.say(greeting)
 
-    # Keep entrypoint alive until room disconnects or candidate leaves
+    # Keep entrypoint alive until the room is closed (either by shutdown_callback or the candidate leaving).
+    # IMPORTANT: Only shutdown_callback should delete the room. This handler just unblocks the wait.
     disconnected_event = asyncio.Event()
 
     @ctx.room.on("disconnected")
@@ -145,13 +184,7 @@ async def entrypoint(ctx: JobContext):
         disconnected_event.set()
 
     await disconnected_event.wait()
-    try:
-        logger.info("Deleting room to clean up after candidate disconnect.")
-        livekit_api = api.LiveKitAPI(settings.livekit_url, settings.livekit_api_key, settings.livekit_api_secret)
-        await livekit_api.room.delete_room(api.DeleteRoomRequest(room=ctx.room.name))
-        await livekit_api.aclose()
-    except Exception as e:
-        logger.error(f"Failed to delete room on disconnect: {e}")
+    logger.info("Entrypoint returning — room session complete.")
 
 async def request_fnc(req: JobRequest) -> None:
     """

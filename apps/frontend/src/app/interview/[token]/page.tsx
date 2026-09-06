@@ -482,7 +482,8 @@ export default function CandidateInterviewPage({
               audio={true}
               video={false}
               onDisconnected={() => {
-                console.log("LiveKit room disconnected");
+                console.log("LiveKit room disconnected — transitioning to completed.");
+                setPhase("completed");
               }}
               className="w-full max-w-3xl flex flex-col gap-6"
             >
