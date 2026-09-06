@@ -77,7 +77,8 @@ export default function CandidateInterviewPage({
 
     const checkSession = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+        const backendUrl =
+          process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
         const res = await fetch(`${backendUrl}/api/session/${token}`);
         if (!res.ok) {
           throw new Error(
@@ -245,10 +246,25 @@ export default function CandidateInterviewPage({
   }, [initMicrophone]);
 
   const handleEnterRoom = async () => {
+    // Release pre-interview test audio stream and AudioContext so mic hardware is free for LiveKit
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close();
+      audioCtxRef.current = null;
+    }
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+
     if (token !== "mock-token") {
       setIsStartingRoom(true);
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+        const backendUrl =
+          process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
         const res = await fetch(`${backendUrl}/api/session/${token}/start`, {
           method: "POST",
         });
@@ -480,10 +496,12 @@ export default function CandidateInterviewPage({
               }
               token={token}
               connect={true}
-              audio={true}
+              audio={selectedInput ? { deviceId: selectedInput } : true}
               video={false}
               onDisconnected={() => {
-                console.log("LiveKit room disconnected — transitioning to completed.");
+                console.log(
+                  "LiveKit room disconnected — transitioning to completed.",
+                );
                 setPhase("completed");
               }}
               className="w-full max-w-3xl flex flex-col gap-6"
@@ -768,12 +786,19 @@ function MockVoiceStage({
 
 function LiveKitVoiceStage({
   onLeave,
-  realAudioLevel,
   isMuted,
   onToggleMute,
 }: LiveKitVoiceStageProps) {
   const { state, audioTrack, agentTranscriptions } = useVoiceAssistant();
-  const { localParticipant } = useLocalParticipant();
+  const { localParticipant, microphoneTrack } = useLocalParticipant();
+  const micVolume = useTrackVolume(microphoneTrack?.track as any);
+
+  // Apply a noise gate (0.05) and scale normally to 100%
+  const rawVol = micVolume || 0;
+  const activeLevel =
+    rawVol > 0.05
+      ? Math.min(100, Math.round(((rawVol - 0.05) / 0.95) * 100))
+      : 0;
 
   const handleToggleMute = () => {
     onToggleMute();
@@ -841,23 +866,21 @@ function LiveKitVoiceStage({
               <span className="font-semibold text-xs text-gray-900">
                 {isMuted
                   ? "Muted"
-                  : realAudioLevel > 15
+                  : activeLevel > 15
                     ? "Receiving Sound"
                     : "Listening..."}
               </span>
             </div>
             <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
               <div
-                className={`h-full transition-all duration-75 ${
+                className={`h-full transition-all duration-150 ${
                   isMuted
                     ? "w-0"
-                    : realAudioLevel > 20
+                    : activeLevel > 20
                       ? "bg-orange-500"
                       : "bg-orange-400"
                 }`}
-                style={{
-                  width: isMuted ? "0%" : `${realAudioLevel}%`,
-                }}
+                style={{ width: isMuted ? "0%" : `${activeLevel}%` }}
               />
             </div>
           </div>
