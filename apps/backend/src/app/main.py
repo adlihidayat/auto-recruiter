@@ -14,6 +14,7 @@ from app.core.db import async_database_engine, async_session_factory
 from app.api.auth import router as auth_router
 from app.api.interviews import router as interviews_router
 from app.api.candidates import router as candidates_router
+from app.api.session import router as session_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -68,6 +69,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(interviews_router, prefix="/api/interviews", tags=["Interviews"])
 app.include_router(candidates_router, prefix="/api/candidates", tags=["Candidates"])
+app.include_router(session_router, prefix="/api/session", tags=["Session"])
 
 @app.get("/health")
 async def check_health_status() -> dict[str, str]:

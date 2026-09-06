@@ -82,7 +82,7 @@ PlanMeta = grader_state_module.PlanMeta
 GoalInput = grader_state_module.GoalInput
 
 class GraderRequest(BaseModel):
-    job_context: JobContext
+    job: JobContext
     plan_meta: PlanMeta
     goals: List[GoalInput]
 
@@ -126,8 +126,18 @@ async def generate_question_suite(request: QuestionMakerRequest):
             gid = _extract_val(t, "goal_id")
             theories_map[gid] = t
 
-        # Extract generated questions
-        generated = result_state.get("consolidated_questions") or result_state.get("generated_questions", [])
+        # Extract questions from final_suite (deduplicated, latest revision per goal_id).
+        # Falling back to generated_questions would include all retry/revision history — do NOT do that.
+        final_suite = result_state.get("final_suite")
+        if final_suite:
+            # final_suite may be a QuestionSuite Pydantic model or a plain dict depending on LangGraph serialization
+            if isinstance(final_suite, dict):
+                generated = final_suite.get("questions", [])
+            else:
+                generated = getattr(final_suite, "questions", [])
+        else:
+            # Guard: assemble_node did not run (graph exited early); surface nothing rather than raw accumulator
+            generated = []
         
         questions_output = []
         for q in generated:
@@ -187,11 +197,13 @@ async def generate_question_suite(request: QuestionMakerRequest):
 async def evaluate_candidate(request: GraderRequest):
     """
     Invokes the Interview Grader Agent LangGraph workflow.
+    Returns a fully structured evaluation: final report, per-goal core analysis
+    with merged citations, communication trait breakdown, and injection findings.
     """
-    logger.info(f"Received grading request for job: '{request.job_context.job_name}'")
+    logger.info(f"Received grading request for job: '{request.job.job_name}'")
     
     input_state = {
-        "job_context": request.job_context.model_dump(),
+        "job": request.job.model_dump(),
         "plan_meta": request.plan_meta.model_dump(),
         "goals": [g.model_dump() for g in request.goals]
     }
@@ -199,13 +211,84 @@ async def evaluate_candidate(request: GraderRequest):
     try:
         result_state = await grader_graph.ainvoke(input_state)
         
-        # Return the final report, overall score, and recommendation
+        # --- final_report ---
+        final_report = result_state.get("final_report")
+        if hasattr(final_report, "model_dump"):
+            final_report_dict = final_report.model_dump()
+        elif isinstance(final_report, dict):
+            final_report_dict = final_report
+        else:
+            final_report_dict = {}
+
+        # --- injection_check ---
+        injection_check = result_state.get("injection_check")
+        if hasattr(injection_check, "model_dump"):
+            injection_dict = injection_check.model_dump()
+        elif isinstance(injection_check, dict):
+            injection_dict = injection_check
+        else:
+            injection_dict = {}
+
+        # --- communication_analysis ---
+        # The "communication" node returns {"communication": CommunicationOutput(...)}.
+        # LangGraph merges that into state["communication"] — a CommunicationOutput Pydantic model.
+        # CommunicationOutput.communication is a CommunicationOutputData that has .overall and .traits.
+        comm_state = result_state.get("communication")
+        if hasattr(comm_state, "model_dump"):
+            # CommunicationOutput.model_dump() -> {"communication": {"overall": ..., "traits": ...}}
+            comm_dict = comm_state.model_dump().get("communication", {})
+        elif isinstance(comm_state, dict):
+            # May already be unwrapped or raw dict
+            comm_dict = comm_state.get("communication", comm_state)
+        else:
+            comm_dict = {}
+
+        # --- core_analysis + citations merged per goal ---
+        # Build a fast lookup: goal_id -> list of Citation dicts from the citations node
+        citations_output = result_state.get("citations")
+        citations_by_goal: dict = {}
+        if hasattr(citations_output, "goal_citations"):
+            for gc in citations_output.goal_citations:
+                gid = gc.goal_id if hasattr(gc, "goal_id") else gc.get("goal_id", "")
+                raw_cits = gc.citations if hasattr(gc, "citations") else gc.get("citations", [])
+                citations_by_goal[gid] = [
+                    (c.model_dump() if hasattr(c, "model_dump") else c) for c in raw_cits
+                ]
+        elif isinstance(citations_output, dict):
+            for gc in citations_output.get("goal_citations", []):
+                gid = gc.get("goal_id", "")
+                citations_by_goal[gid] = gc.get("citations", [])
+
+        core_analysis = result_state.get("core_analysis")
+        if hasattr(core_analysis, "model_dump"):
+            raw_goals = core_analysis.model_dump().get("goals", [])
+        elif isinstance(core_analysis, dict):
+            raw_goals = core_analysis.get("goals", [])
+        else:
+            raw_goals = []
+
+        # Merge citations into each goal dict
+        goals_with_citations = []
+        for goal_eval in raw_goals:
+            if hasattr(goal_eval, "model_dump"):
+                goal_dict = goal_eval.model_dump()
+            elif isinstance(goal_eval, dict):
+                goal_dict = goal_eval
+            else:
+                continue
+            gid = goal_dict.get("goal_id", "")
+            goal_dict["citations"] = citations_by_goal.get(gid, [])
+            goals_with_citations.append(goal_dict)
+
         return {
-            "overall_score": result_state.get("overall_score"),
-            "recommendation": result_state.get("recommendation"),
-            "final_report": result_state.get("final_report"),
-            "injection_findings": result_state.get("injection_findings")
+            "overall_score": final_report_dict.get("composite_score"),
+            "recommendation": final_report_dict.get("recommendation"),
+            "final_report": final_report_dict,
+            "injection_findings": injection_dict.get("injection_findings", []),
+            "communication": comm_dict,
+            "goals": goals_with_citations,
         }
+
     except Exception as exc:
         logger.error(f"Error executing Grader Agent graph: {exc}", exc_info=True)
         raise HTTPException(

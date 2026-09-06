@@ -69,7 +69,7 @@ def run_aggregation(state: GraderState) -> dict[str, Any]:
     core_conf_avg = (core_conf_sum / goals_assessed) if goals_assessed > 0 else 1.0
 
     # 2. Process Communication Analysis
-    comm_analysis = state.get("communication_analysis")
+    comm_analysis = state.get("communication")
     comm_score = 0.0
     comm_conf_avg = 1.0
     comm_output = None

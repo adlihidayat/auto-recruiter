@@ -223,7 +223,8 @@ class GraderState(TypedDict):
     
     # Intermediate / Outputs
     core_analysis: Optional[CoreAnalysisOutput]
-    communication_analysis: Optional[CommunicationOutput]
+    # NOTE: key must be "communication" — matches the node name and return dict key the node emits
+    communication: Optional[CommunicationOutput]
     injection_check: Optional[InjectionCheckOutput]
     citations: Optional[CitationsOutput]
     

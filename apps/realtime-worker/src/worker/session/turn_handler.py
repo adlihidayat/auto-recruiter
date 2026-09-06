@@ -190,40 +190,46 @@ class GraphExecutionStream(llm.LLMStream):
             
             logger.info(f"\n========================================\n[AGENT] Decision reached:\nAction: {action.upper()}\nReasoning: {decision.reasoning}\nMessage: '{message}'\n========================================")
             
-            # 4. Update session state with interviewer's response
-            self.session_state.add_history_item(role="interviewer", content=message)
-            
-            # 5. Handle Advance
+            # 5. Handle Advance vs Pushback
             if action == "advance":
+                is_final_goal = (self.session_state.current_goal_index + 1 >= len(self.session_state.goals))
+                
+                if is_final_goal:
+                    # Final goal: append closing message to current goal's history before saving
+                    self.session_state.add_history_item(role="interviewer", content=message)
+                    history_to_save = list(history)
+                else:
+                    # Non-final goal: Goal's history to save is history BEFORE adding transition message
+                    history_to_save = list(history)
+
                 goal_ref = self.session_state.current_goal.goal_id
                 candidate_id = self.session_state.candidate_id
                 logger.info(f"\n========================================\n[DB] Saving transcripts for completed goal: {goal_ref}\n========================================")
                 
                 # Build the final, deduplicated transcript list for this goal.
-                # Only the action/reasoning on the FINAL interviewer turn (the advance) is meaningful.
                 transcripts = [
                     {
                         "role": turn.role,
                         "content": turn.content,
-                        # Only stamp action/reasoning on the final interviewer turn that triggered the advance
-                        "action": (action if (turn.role == "interviewer" and turn == history[-1]) else None),
-                        "reasoning": (decision.reasoning if (turn.role == "interviewer" and turn == history[-1]) else None),
+                        # Stamp action/reasoning on the final turn of this goal's saved history
+                        "action": (action if turn == history_to_save[-1] else None),
+                        "reasoning": (decision.reasoning if turn == history_to_save[-1] else None),
                         "trigger_matched": None
                     }
-                    for turn in history
+                    for turn in history_to_save
                 ]
                 
                 # Fire-and-forget with explicit error logging so failures are visible
-                async def _save_transcripts():
+                async def _save_transcripts(g_ref=goal_ref, t_list=transcripts):
                     try:
                         await self.backend_client.save_goal_transcripts(
                             candidate_id=candidate_id,
-                            goal_ref=goal_ref,
-                            transcripts=transcripts
+                            goal_ref=g_ref,
+                            transcripts=t_list
                         )
-                        logger.info(f"[DB] Transcripts saved for goal {goal_ref}.")
+                        logger.info(f"[DB] Transcripts saved for goal {g_ref}.")
                     except Exception as exc:
-                        logger.error(f"[DB] Failed to save transcripts for goal {goal_ref}: {exc}", exc_info=True)
+                        logger.error(f"[DB] Failed to save transcripts for goal {g_ref}: {exc}", exc_info=True)
                 
                 asyncio.create_task(_save_transcripts())
                 
@@ -232,7 +238,11 @@ class GraphExecutionStream(llm.LLMStream):
                 remaining = len(self.session_state.goals) - self.session_state.current_goal_index
                 logger.info(f"[FLOW] Advanced to next goal. Remaining goals: {remaining}")
                 
-                if self.session_state.current_goal is None:
+                if not is_final_goal:
+                    # Non-final goal: the transition message ("Moving on to our next topic...")
+                    # becomes the opening interviewer turn for the NEW goal!
+                    self.session_state.add_history_item(role="interviewer", content=message)
+                else:
                     logger.info("\n========================================\n[FLOW] All goals completed. Scheduling interview conclusion.\n========================================")
                     
                     # Fire-and-forget finish_interview with explicit error logging
@@ -249,7 +259,9 @@ class GraphExecutionStream(llm.LLMStream):
                     if self.shutdown_callback:
                         # Schedule room deletion after a short delay to allow TTS to finish
                         asyncio.create_task(self.shutdown_callback())
-                        
+            else:
+                # Pushback: add interviewer response to current goal's history
+                self.session_state.add_history_item(role="interviewer", content=message)
             return message
             
         except Exception as e:

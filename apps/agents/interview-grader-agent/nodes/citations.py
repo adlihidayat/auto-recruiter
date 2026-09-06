@@ -17,11 +17,17 @@ from apps.agents.shared.clients import gemini_flash_lite
 # Initialize structured output runnable for Citations Output
 structured_citations_client = gemini_flash_lite.with_structured_output(CitationsOutput)
 
+def _get_val(obj: Any, key: str, default: Any = None) -> Any:
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
 @traceable(name="run_citations")
 def run_citations(state: GraderState) -> Dict[str, Any]:
     """
-    Call 3 - Borderline Evidence Citation.
-    Runs in 1 single LLM call for all goals where Call 1's score landed in 4-6 or confidence is low/medium.
+    Extracts verbatim transcripts quotes supporting Call 1 score/confidence.
     """
     print("Running citations extraction...")
 
@@ -31,28 +37,24 @@ def run_citations(state: GraderState) -> Dict[str, Any]:
         return {"citations": CitationsOutput(goal_citations=[])}
 
     # Extract goal evaluations from core_analysis (supporting Pydantic vs dict)
-    eval_goals: List[Any] = (
-        core_analysis.goals
-        if hasattr(core_analysis, "goals")
-        else core_analysis.get("goals", [])
-    )
+    eval_goals: List[Any] = _get_val(core_analysis, "goals", [])
 
     # Map input goals by goal_id for fast lookup of interaction_history
     input_goals_map: Dict[str, Any] = {}
     for g in state.get("goals", []):
-        gid = g.goal_id if hasattr(g, "goal_id") else g.get("goal_id", "")
+        gid = _get_val(g, "goal_id", "")
         if gid:
             input_goals_map[gid] = g
 
     # Filter goals needing citations: score in 4-6 OR confidence in low/medium
     target_eval_goals: List[Any] = []
     for eg in eval_goals:
-        addressed = eg.addressed if hasattr(eg, "addressed") else eg.get("addressed", True)
+        addressed = _get_val(eg, "addressed", True)
         if not addressed:
             continue
 
-        score = eg.score if hasattr(eg, "score") else eg.get("score")
-        confidence = eg.confidence if hasattr(eg, "confidence") else eg.get("confidence")
+        score = _get_val(eg, "score")
+        confidence = _get_val(eg, "confidence")
 
         needs_citation = False
         if score is not None and 4 <= score <= 6:
@@ -69,26 +71,26 @@ def run_citations(state: GraderState) -> Dict[str, Any]:
 
     # Job Context
     job_obj = state.get("job")
-    job_name = job_obj.job_name if hasattr(job_obj, "job_name") else job_obj.get("job_name", "") if isinstance(job_obj, dict) else ""
-    job_desc = job_obj.job_description if hasattr(job_obj, "job_description") else job_obj.get("job_description", "") if isinstance(job_obj, dict) else ""
+    job_name = _get_val(job_obj, "job_name", "")
+    job_desc = _get_val(job_obj, "job_description", "")
     job_context = f"Role: {job_name}\nDescription: {job_desc}"
 
     # Format all target goals into a single consolidated prompt string
     target_goals_blocks: List[str] = []
     for eg in target_eval_goals:
-        gid = eg.goal_id if hasattr(eg, "goal_id") else eg.get("goal_id", "")
-        score = eg.score if hasattr(eg, "score") else eg.get("score")
-        confidence = eg.confidence if hasattr(eg, "confidence") else eg.get("confidence")
-        rationale = eg.rationale if hasattr(eg, "rationale") else eg.get("rationale", "")
+        gid = _get_val(eg, "goal_id", "")
+        score = _get_val(eg, "score")
+        confidence = _get_val(eg, "confidence")
+        rationale = _get_val(eg, "rationale", "")
 
-        evidence_obj = eg.evidence if hasattr(eg, "evidence") else eg.get("evidence", {})
-        claims = evidence_obj.claims if hasattr(evidence_obj, "claims") else evidence_obj.get("claims", []) if isinstance(evidence_obj, dict) else []
-        reasoning = evidence_obj.demonstrated_reasoning if hasattr(evidence_obj, "demonstrated_reasoning") else evidence_obj.get("demonstrated_reasoning", []) if isinstance(evidence_obj, dict) else []
+        evidence_obj = _get_val(eg, "evidence", {})
+        claims = _get_val(evidence_obj, "claims", [])
+        reasoning = _get_val(evidence_obj, "demonstrated_reasoning", [])
 
         input_goal = input_goals_map.get(gid)
-        topic = input_goal.topic if hasattr(input_goal, "topic") else input_goal.get("topic", "") if isinstance(input_goal, dict) else ""
-        goal_text = input_goal.goal if hasattr(input_goal, "goal") else input_goal.get("goal", "") if isinstance(input_goal, dict) else ""
-        history = input_goal.interaction_history if hasattr(input_goal, "interaction_history") else input_goal.get("interaction_history", []) if isinstance(input_goal, dict) else []
+        topic = _get_val(input_goal, "topic", "")
+        goal_text = _get_val(input_goal, "goal", "")
+        history = _get_val(input_goal, "interaction_history", [])
 
         block = f"--- Target Goal: {gid} ({topic}) ---\n"
         block += f"Goal Description: {goal_text}\n"
@@ -101,8 +103,8 @@ def run_citations(state: GraderState) -> Dict[str, Any]:
 
         block += "\nInteraction History for this Goal:\n"
         for t_idx, turn in enumerate(history, start=1):
-            role = turn.role if hasattr(turn, "role") else turn.get("role", "")
-            content = turn.content if hasattr(turn, "content") else turn.get("content", "")
+            role = _get_val(turn, "role", "")
+            content = _get_val(turn, "content", "")
             block += f"  [Turn {t_idx} - {role.upper()}]: {content}\n"
 
         target_goals_blocks.append(block)

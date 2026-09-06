@@ -76,9 +76,65 @@ async def get_candidate_transcripts(
     transcripts = result.scalars().all()
     return list(transcripts)
 
-from fastapi import BackgroundTasks
-from app.schemas.transcript import CandidateFinishRequest
+from app.models.goal import Goal
+from app.schemas.transcript import CandidateFinishRequest, GoalTranscriptCreate
 from app.services.grader_service import process_candidate_grading
+from fastapi import BackgroundTasks
+
+@router.post("/{candidate_id}/goals/{goal_ref}/transcripts", status_code=status.HTTP_201_CREATED)
+async def add_goal_transcripts(
+    candidate_id: UUID,
+    goal_ref: str,
+    transcripts: list[GoalTranscriptCreate],
+    session: SessionDep
+):
+    """
+    Called incrementally by the Realtime Worker to save transcript turns for a specific goal.
+    """
+    # Fetch candidate
+    result = await session.execute(
+        select(Candidate).where(Candidate.id == candidate_id)
+    )
+    candidate = result.scalar_one_or_none()
+    if not candidate:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Candidate not found"
+        )
+
+    # Fetch Goal
+    goal_res = await session.execute(
+        select(Goal).where(
+            Goal.interview_id == candidate.interview_id,
+            Goal.goal_ref == goal_ref
+        )
+    )
+    goal = goal_res.scalar_one_or_none()
+    if not goal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Goal not found for this interview"
+        )
+
+    # Save transcripts
+    for t_data in transcripts:
+        transcript = Transcript(
+            candidate_id=candidate.id,
+            goal_id=goal.id,
+            role=t_data.role,
+            content=t_data.content,
+            action=t_data.action,
+            reasoning=t_data.reasoning,
+            trigger_matched=t_data.trigger_matched,
+            flag_for_human_review=t_data.flag_for_human_review,
+        )
+        if t_data.created_at:
+            transcript.created_at = t_data.created_at
+            
+        session.add(transcript)
+
+    await session.commit()
+    return {"status": "created"}
 
 @router.post("/{candidate_id}/finish", status_code=status.HTTP_202_ACCEPTED)
 async def finish_candidate_interview(
@@ -104,7 +160,7 @@ async def finish_candidate_interview(
             detail="Candidate not found"
         )
         
-    # Save transcripts
+    # Save transcripts if any were sent at the end
     for t_data in request.transcripts:
         transcript = Transcript(
             candidate_id=candidate.id,

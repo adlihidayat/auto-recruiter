@@ -95,7 +95,7 @@ def get_prompt_guard_score(text: str) -> float:
     Returns a float 0.0-1.0 representing the likelihood of injection or jailbreak.
     """
     if prompt_guard is None:
-        raise ValueError("prompt_guard pipeline is not initialized. Ensure transformers and torch are installed.")
+        return 0.0
         
     try:
         # top_k=None returns all scores

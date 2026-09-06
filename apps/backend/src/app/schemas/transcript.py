@@ -26,5 +26,14 @@ class TranscriptCreate(BaseModel):
     flag_for_human_review: bool = False
     created_at: datetime | None = None
 
+class GoalTranscriptCreate(BaseModel):
+    role: str
+    content: str
+    action: str | None = None
+    reasoning: str | None = None
+    trigger_matched: str | None = None
+    flag_for_human_review: bool = False
+    created_at: datetime | None = None
+
 class CandidateFinishRequest(BaseModel):
-    transcripts: list[TranscriptCreate]
+    transcripts: list[TranscriptCreate] = []

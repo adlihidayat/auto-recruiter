@@ -51,7 +51,7 @@ async def process_candidate_grading(candidate_id: uuid.UUID) -> None:
         try:
             # Build Payload
             payload = {
-                "job_context": {
+                "job": {
                     "job_name": interview.job_name,
                     "job_description": interview.job_description,
                 },
@@ -91,14 +91,27 @@ async def process_candidate_grading(candidate_id: uuid.UUID) -> None:
             agent_response = await request_grading_from_agent(payload)
             
             logger.info("Grader Agent response received. Saving report.")
-            
-            # Save Report
+
+            # Extract the final_report sub-dict for scalar fields
+            final_report_data = agent_response.get("final_report", {})
+
+            # Build a full structured raw_report that merges all agent output:
+            # final_report scalars + per-goal core analysis (with merged citations) + communication + injection
+            full_raw_report = {
+                **final_report_data,
+                "overall_score": agent_response.get("overall_score"),
+                "goals": agent_response.get("goals", []),
+                "communication": agent_response.get("communication", {}),
+                "injection_findings": agent_response.get("injection_findings", []),
+            }
+
+            # Save Report — field names match what the agent actually returns in final_report
             report = CandidateReport(
                 candidate_id=candidate.id,
-                overall_confidence=agent_response.get("final_report", {}).get("confidence_level", "medium"),
-                reasoning=agent_response.get("final_report", {}).get("executive_summary", ""),
-                raw_report=agent_response.get("final_report", {}),
-                grader_version="v1.0.0"
+                overall_confidence=final_report_data.get("overall_confidence", "medium"),
+                reasoning=final_report_data.get("reasoning", ""),
+                raw_report=full_raw_report,
+                grader_version=final_report_data.get("grader_version", "v2.0"),
             )
             session.add(report)
             
