@@ -44,8 +44,12 @@ export default function CreateInterviewModal({
 
   const [isApiFinished, setIsApiFinished] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [createdInterviewId, setCreatedInterviewId] = useState<string | null>(null);
-  const [createdCandidates, setCreatedCandidates] = useState<BackendCandidateResponse[]>([]);
+  const [createdInterviewId, setCreatedInterviewId] = useState<string | null>(
+    null,
+  );
+  const [createdCandidates, setCreatedCandidates] = useState<
+    BackendCandidateResponse[]
+  >([]);
 
   useEffect(() => {
     if (modalStep !== "loading" || isPaused || isBackendDone) return;
@@ -130,19 +134,7 @@ export default function CreateInterviewModal({
     scheduled_at: "",
   });
 
-  const [candidates, setCandidates] = useState<CandidateInput[]>([
-    {
-      email: "alex.johnson@example.com",
-      first_name: "Alex",
-      last_name: "Johnson",
-    },
-    { email: "sarah.chen@example.com", first_name: "Sarah", last_name: "Chen" },
-    {
-      email: "michael.brown@example.com",
-      first_name: "Michael",
-      last_name: "Brown",
-    },
-  ]);
+  const [candidates, setCandidates] = useState<CandidateInput[]>([]);
 
   const [copiedCandidateId, setCopiedCandidateId] = useState<string | null>(
     null,
@@ -320,7 +312,8 @@ export default function CreateInterviewModal({
       setIsApiFinished(true);
     } catch (err: unknown) {
       console.error("Failed to create interview", err);
-      const errMsg = err instanceof Error ? err.message : "Failed to create interview";
+      const errMsg =
+        err instanceof Error ? err.message : "Failed to create interview";
       setError(errMsg);
       setApiError(errMsg);
       setIsApiFinished(true);
@@ -366,21 +359,30 @@ export default function CreateInterviewModal({
     handleResetModal();
   };
 
-  const displayCandidates = createdCandidates.length > 0 
-    ? createdCandidates.map((c) => ({
-        id: c.id,
-        first_name: c.first_name || "",
-        last_name: c.last_name || "",
-        email: c.email,
-        room_token: c.room_token || "unavailable",
-      }))
-    : candidates.map((c, i) => ({
-        id: `mock-${i}`,
-        first_name: c.first_name || (i === 0 ? "Alex" : i === 1 ? "Sarah" : "Michael"),
-        last_name: c.last_name || (i === 0 ? "Johnson" : i === 1 ? "Chen" : "Brown"),
-        email: c.email || (i === 0 ? "alex.johnson@example.com" : i === 1 ? "sarah.chen@example.com" : "michael.brown@example.com"),
-        room_token: `mock_room_token_${i + 1}`,
-      }));
+  const displayCandidates =
+    createdCandidates.length > 0
+      ? createdCandidates.map((c) => ({
+          id: c.id,
+          first_name: c.first_name || "",
+          last_name: c.last_name || "",
+          email: c.email,
+          room_token: c.room_token || "unavailable",
+        }))
+      : candidates.map((c, i) => ({
+          id: `mock-${i}`,
+          first_name:
+            c.first_name || (i === 0 ? "Alex" : i === 1 ? "Sarah" : "Michael"),
+          last_name:
+            c.last_name || (i === 0 ? "Johnson" : i === 1 ? "Chen" : "Brown"),
+          email:
+            c.email ||
+            (i === 0
+              ? "alex.johnson@example.com"
+              : i === 1
+                ? "sarah.chen@example.com"
+                : "michael.brown@example.com"),
+          room_token: `mock_room_token_${i + 1}`,
+        }));
 
   if (!isOpen) return null;
 
