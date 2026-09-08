@@ -130,7 +130,7 @@ async def entrypoint(ctx: JobContext):
         
         try:
             # 15-second hard timeout as a safety net in case the event never fires
-            await asyncio.wait_for(finished_speaking_event.wait(), timeout=25.0)
+            await asyncio.wait_for(finished_speaking_event.wait(), timeout=20.0)
             logger.info("Agent finished speaking. Closing room now.")
         except asyncio.TimeoutError:
             logger.warning("Timed out waiting for agent to finish speaking. Closing room anyway.")
