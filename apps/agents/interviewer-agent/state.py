@@ -62,8 +62,8 @@ class InterviewerDecision(BaseModel):
     message_to_candidate: str = Field(
         description="The exact spoken text to deliver to the candidate."
     )
-    reasoning: str = Field(
-        description="Internal justification for the decision, never shown to the candidate."
+    progression_override: bool = Field(
+        default=False, description="Flag indicating if the agent should forcefully override progression logic."
     )
     trigger_matched: Optional[str] = Field(
         default=None, description="Trigger ID matched from goal.pushback_triggers, if applicable."
@@ -76,6 +76,7 @@ class InterviewerState(TypedDict):
     """
     LangGraph execution state containing turn inputs, execution metrics, and decision outputs.
     """
+    job_name: str
     goal: Goal
     next_goal: Optional[NextGoal]
     goal_history: List[GoalHistoryItem]

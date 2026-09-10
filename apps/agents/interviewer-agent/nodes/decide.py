@@ -26,9 +26,10 @@ def decideNextConversationalTurn(current_state: InterviewerState) -> Dict[str, A
     """
     attempt_count = current_state.get("retry_count", 0)
     active_goal = current_state.get("goal")
+    job_name = current_state.get("job_name", "Unknown Job")
     
     # 1. Format system prompt with active goal context
-    formatted_system_prompt = f"{INTERVIEWER_SYSTEM_PROMPT}\n\n=== ACTIVE GOAL ===\n{active_goal.model_dump_json(indent=2)}\n"
+    formatted_system_prompt = f"{INTERVIEWER_SYSTEM_PROMPT}\n\n=== JOB NAME ===\n{job_name}\n\n=== ACTIVE GOAL ===\n{active_goal.model_dump_json(indent=2)}\n"
     
     next_goal = current_state.get("next_goal")
     if next_goal:

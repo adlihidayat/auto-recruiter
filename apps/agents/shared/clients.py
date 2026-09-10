@@ -50,14 +50,14 @@ class RotatingModelWrapper:
 
 # Gemini 3.1 Flash-Lite: Cheap, extremely fast, ideal for planning, routing, and high-frequency checks.
 gemini_flash_lite = RotatingModelWrapper(
-    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash-lite",
     temperature=0.0,
     max_retries=0
 )
 
 # Gemini 3.5 Flash: Balanced model for general text processing and validation.
 gemini_flash = RotatingModelWrapper(
-    "gemini-3.5-flash",
+    "gemini-3.8-flash",
     temperature=0.0,
 )
 

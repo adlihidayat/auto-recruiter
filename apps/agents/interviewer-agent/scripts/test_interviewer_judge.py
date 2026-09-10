@@ -625,7 +625,7 @@ def evaluate_interviewer_target(inputs: dict) -> dict:
     return {
         "action": agent_decision.action,
         "message_to_candidate": agent_decision.message_to_candidate,
-        "reasoning": agent_decision.reasoning,
+        "progression_override": getattr(agent_decision, "progression_override", False),
         "trigger_matched": agent_decision.trigger_matched,
         "flag_for_human_review": agent_decision.flag_for_human_review
     }
