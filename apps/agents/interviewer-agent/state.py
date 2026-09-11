@@ -65,9 +65,6 @@ class InterviewerDecision(BaseModel):
     progression_override: bool = Field(
         default=False, description="Flag indicating if the agent should forcefully override progression logic."
     )
-    trigger_matched: Optional[str] = Field(
-        default=None, description="Trigger ID matched from goal.pushback_triggers, if applicable."
-    )
     flag_for_human_review: bool = Field(
         default=False, description="Flag indicating potential prompt injection, distress, or abuse."
     )

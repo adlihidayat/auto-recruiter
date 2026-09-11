@@ -215,7 +215,8 @@ class GraphExecutionStream(llm.LLMStream):
                         # Stamp action/reasoning on the final turn of this goal's saved history
                         "action": (action if turn == history_to_save[-1] else None),
                         "reasoning": (reasoning_text if turn == history_to_save[-1] else None),
-                        "trigger_matched": getattr(decision, "trigger_matched", None)
+                        "trigger_matched": getattr(decision, "trigger_matched", None),
+                        "flag_for_human_review": getattr(decision, "flag_for_human_review", False)
                     }
                     for turn in history_to_save
                 ]

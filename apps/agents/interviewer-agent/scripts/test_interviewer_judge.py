@@ -626,7 +626,6 @@ def evaluate_interviewer_target(inputs: dict) -> dict:
         "action": agent_decision.action,
         "message_to_candidate": agent_decision.message_to_candidate,
         "progression_override": getattr(agent_decision, "progression_override", False),
-        "trigger_matched": agent_decision.trigger_matched,
         "flag_for_human_review": agent_decision.flag_for_human_review
     }
 
@@ -654,8 +653,7 @@ def evaluate_interviewer_llm_judge(run, example) -> dict:
         latest_candidate_transcript=inputs.get("latest_candidate_transcript", ""),
         action=outputs.get("action"),
         message_to_candidate=outputs.get("message_to_candidate"),
-        reasoning=outputs.get("reasoning"),
-        trigger_matched=outputs.get("trigger_matched"),
+        progression_override=outputs.get("progression_override", False),
         flag_for_human_review=outputs.get("flag_for_human_review", False)
     )
 

@@ -111,7 +111,6 @@ def executeManualTestCase() -> None:
                     print(f"Action:                  {turn_decision.action}")
                     print(f"Message to Candidate:    '{turn_decision.message_to_candidate}'")
                     print(f"Progression Override:    {turn_decision.progression_override}")
-                    print(f"Trigger Matched:         {turn_decision.trigger_matched}")
                     print(f"Flag for Human Review:   {turn_decision.flag_for_human_review}")
                     
         print("\n" + "=" * 60)

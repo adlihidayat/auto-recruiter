@@ -39,6 +39,7 @@ Passed by `apps/realtime-worker` on every turn:
 
 ```json
 {
+  "job_name": "Mid-level Fullstack React/Node Developer",
   "goal": {
     "goal_id": "g_02",
     "goal": "Evaluate whether candidate can diagnose and resolve real PostgreSQL performance problems, not just describe them.",
@@ -81,12 +82,11 @@ Passed by `apps/realtime-worker` on every turn:
 {
   "action": "advance | pushback",
   "message_to_candidate": "The exact next thing to say out loud, in character. If action=advance and next_goal is null, this should be a natural interview close-out rather than a topic transition.",
-  "reasoning": "Internal justification, never shown to the candidate.",
-  "trigger_matched": "trigger id from goal.pushback_triggers, or null",
-  "flag_for_human_review": false
+  "flag_for_human_review": false,
+  "progression_override": false
 }
 ```
 
-- `action` is a closed enum — no free-form actions. `clarify` is for when ASR transcript is garbled/incomplete and the agent needs to ask the candidate to repeat, distinct from a real pushback.
-- `flag_for_human_review` is a signal, not a decision — set `true` on things like suspected injection that made it past Layer 1, distress disclosures, or abusive input. The worker decides what to actually do with the flag (log, alert HR, end gracefully); this agent never acts on it unilaterally beyond flagging.
-- `goal_sufficiently_covered` is advisory input to the worker's own goal-advancement guardrail (min questions asked, etc.) — it is not, by itself, sufficient to trigger `advance_goal`.
+- `action` is a closed enum: `advance` to move forward (or close out) or `pushback` to challenge/clarify.
+- `flag_for_human_review` is a signal, not a decision — set `true` on things like suspected injection that made it past Layer 1, distress disclosures, or abusive input. The worker decides what to actually do with the flag; this agent never acts on it unilaterally.
+- `progression_override` indicates whether the agent was forced to advance out of a pushback loop after 3 consecutive failures (the 3-strike rule).

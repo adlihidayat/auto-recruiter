@@ -62,7 +62,6 @@ def debugInterviewerWorkflow() -> None:
                     print(f"Action: {turn_decision.action}")
                     print(f"Message: {turn_decision.message_to_candidate}")
                     print(f"Progression Override: {turn_decision.progression_override}")
-                    print(f"Trigger Matched: {turn_decision.trigger_matched}")
                     
         print("\n=== DEBUG WORKFLOW COMPLETE ===")
             
