@@ -56,6 +56,9 @@ class InterviewerDecision(BaseModel):
     """
     Structured output schema returned by the LLM for every conversational turn.
     """
+    scratchpad: str = Field(
+        ..., description="Step-by-step internal reasoning working through B1, D1, D2, D3, D4 before choosing action."
+    )
     action: Literal["advance", "pushback"] = Field(
         ..., description="The next action to take: 'advance' to move forward/close out, or 'pushback' to challenge or clarify."
     )

@@ -21,4 +21,6 @@ node_modules/
 # Binary Executables & Archives
 lk
 *.tar.gz
-
+# Logs & Output Directories
+*.log
+output/

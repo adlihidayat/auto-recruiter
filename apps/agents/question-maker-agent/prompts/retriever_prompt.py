@@ -90,8 +90,10 @@ have round 2 available), search again to fill them in.
   closing tag like </p> that wrap content; some, like <img> and <br>, are void elements
   that never take a closing tag" is the level of detail this document needs.
  
-Always finish by calling the FinalGroundingTheory tool — never respond with plain text as
-a final answer.
+# Tool Usage Rules & Schema Compliance
+- When calling `web_search`: Provide a single string for `query` (e.g., `query="your search phrase"`). Never pass a list or object to `query`.
+- When calling `FinalGroundingTheory`: Always finish by invoking `FinalGroundingTheory` — never respond with plain text as a final answer.
+- Inside `FinalGroundingTheory`: For every reference item in `references`, you MUST explicitly include all fields: `title`, `url`, `excerpt`, `matched_query`, `credibility_tier`, and `corroborated`. Do not drop `title` or `url`.
 """
  
 FORCED_GENERATION_SYSTEM_INSTRUCTION = """You are an expert research agent. The search budget for this task is exhausted (3 of 3 rounds completed). You have NO web_search tool available in this turn — do not attempt to call one, describe wanting to call one, or ask for more information.
@@ -132,6 +134,7 @@ what's actually relevant, and skip what doesn't apply.
   source would use, including real examples where the retrieved data supports them.
  
 Call the FinalGroundingTheory tool now with the complete document.
+Ensure every reference item inside `references` contains all required fields: `title`, `url`, `excerpt`, `matched_query`, `credibility_tier`, and `corroborated`.
 """
  
  

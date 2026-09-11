@@ -84,7 +84,22 @@ def tool_node(state: RetrieverState) -> Dict[str, Any]:
     # Execute tools
     for tool_call in last_message.tool_calls:
         if tool_call["name"] == "tavily_search_results_json":
-            result = tavily_tool.invoke(tool_call["args"])
+            args = tool_call.get("args", {})
+            # Fix LLM hallucination: handling 'query' as a list, or mapping 'queries' to 'query'
+            if "query" in args:
+                if isinstance(args["query"], list) and args["query"]:
+                    args["query"] = args["query"][0]
+                elif isinstance(args["query"], list):
+                    args["query"] = ""
+            elif "queries" in args:
+                queries = args["queries"]
+                if isinstance(queries, list) and queries:
+                    args["query"] = queries[0]
+                elif isinstance(queries, str):
+                    args["query"] = queries
+                else:
+                    args["query"] = ""
+            result = tavily_tool.invoke(args)
             tool_responses.append(ToolMessage(
                 tool_call_id=tool_call["id"],
                 name=tool_call["name"],
@@ -161,10 +176,24 @@ def extract_final_theory(state: RetrieverState) -> Dict[str, Any]:
         for tool_call in last_message.tool_calls:
             if tool_call["name"] == "FinalGroundingTheory":
                 args = tool_call["args"]
+                
+                # Defensively fill missing required fields from hallucinated LLM references
+                safe_refs = []
+                for r in args.get("references", []):
+                    if isinstance(r, dict):
+                        safe_refs.append({
+                            "url": r.get("url", "Unknown URL"),
+                            "title": r.get("title", "Unknown Title"),
+                            "excerpt": r.get("excerpt", ""),
+                            "matched_query": r.get("matched_query", "Unknown Query"),
+                            "credibility_tier": r.get("credibility_tier", "B"),
+                            "corroborated": r.get("corroborated", True)
+                        })
+                        
                 theory = GroundingTheory(
                     goal_id=state["goal"].goal_id,
                     theory=args.get("theory", ""),
-                    references=args.get("references", [])
+                    references=safe_refs
                 )
                 return {"grounding_theories": [theory]}
     return {}

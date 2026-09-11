@@ -80,13 +80,15 @@ Passed by `apps/realtime-worker` on every turn:
 
 ```json
 {
+  "scratchpad": "Step-by-step internal reasoning working through B1, D1, D2, D3, D4 before choosing action.",
   "action": "advance | pushback",
   "message_to_candidate": "The exact next thing to say out loud, in character. If action=advance and next_goal is null, this should be a natural interview close-out rather than a topic transition.",
-  "flag_for_human_review": false,
-  "progression_override": false
+  "progression_override": false,
+  "flag_for_human_review": false
 }
 ```
 
+- `scratchpad` carries the step-by-step Chain of Thought reasoning, captured for telemetry and debugging.
 - `action` is a closed enum: `advance` to move forward (or close out) or `pushback` to challenge/clarify.
 - `flag_for_human_review` is a signal, not a decision — set `true` on things like suspected injection that made it past Layer 1, distress disclosures, or abusive input. The worker decides what to actually do with the flag; this agent never acts on it unilaterally.
 - `progression_override` indicates whether the agent was forced to advance out of a pushback loop after 3 consecutive failures (the 3-strike rule).
