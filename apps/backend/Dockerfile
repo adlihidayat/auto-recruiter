@@ -24,8 +24,13 @@ RUN uv sync --frozen --no-dev --package backend
 # Set the working directory to the specific app
 WORKDIR /app/apps/backend
 
+# Ensure entrypoint script is executable
+RUN chmod +x ./entrypoint.sh
+
 # Expose the backend port
 EXPOSE 8000
 
-# Run the FastAPI server
+# Set entrypoint and CMD
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["uv", "run", "uvicorn", "src.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+

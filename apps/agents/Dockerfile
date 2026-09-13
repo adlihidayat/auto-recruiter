@@ -24,8 +24,13 @@ RUN uv sync --frozen --no-dev --package agents
 # Set the working directory to the specific app
 WORKDIR /app/apps/agents
 
+# Ensure entrypoint script is executable
+RUN chmod +x ./entrypoint.sh
+
 # Expose the agents port
 EXPOSE 8001
 
-# Run the FastAPI server
+# Set entrypoint and CMD
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["uv", "run", "uvicorn", "api.server:app", "--host", "0.0.0.0", "--port", "8001"]
+

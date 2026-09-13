@@ -30,5 +30,11 @@ RUN uv sync --frozen --no-dev --package realtime-worker
 # Set the working directory to the specific app
 WORKDIR /app/apps/realtime-worker
 
-# Run the worker process
+# Ensure entrypoint script is executable
+RUN chmod +x ./entrypoint.sh
+
+# Set entrypoint and CMD
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["uv", "run", "python", "-m", "src.worker.main", "start"]
+
+

@@ -71,6 +71,8 @@ services:
         condition: service_started
       mailpit:
         condition: service_started
+      agents:
+        condition: service_started
     restart: unless-stopped
 
   agents:
