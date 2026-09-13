@@ -10,6 +10,11 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d autorecruiter"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   mailpit:
@@ -37,6 +42,75 @@ services:
     container_name: adminer
     ports:
       - "8080:8080" # Web Database GUI
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://user:password@postgres:5432/autorecruiter
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_USER: ""
+      SMTP_PASSWORD: ""
+      SMTP_FROM: noreply@autorecruiter.local
+      SECRET_KEY: super-secret-local-key
+      LIVEKIT_URL: ws://livekit:7880
+      LIVEKIT_API_KEY: devkey
+      LIVEKIT_API_SECRET: secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+      livekit:
+        condition: service_started
+      mailpit:
+        condition: service_started
+    restart: unless-stopped
+
+  agents:
+    build:
+      context: .
+      dockerfile: apps/agents/Dockerfile
+    container_name: agents
+    ports:
+      - "8001:8001"
+    environment:
+      LANGSMITH_TRACING: "false"
+    restart: unless-stopped
+
+  realtime-worker:
+    build:
+      context: .
+      dockerfile: apps/realtime-worker/Dockerfile
+    container_name: realtime-worker
+    environment:
+      LIVEKIT_URL: ws://livekit:7880
+      LIVEKIT_API_KEY: devkey
+      LIVEKIT_API_SECRET: secret
+      BACKEND_URL: http://backend:8000
+    depends_on:
+      - backend
+      - livekit
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: apps/frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_LIVEKIT_URL: ws://localhost:7880
+      NEXT_PUBLIC_ENABLE_LIVEKIT_WS: "true"
+    depends_on:
+      - backend
     restart: unless-stopped
 
 volumes:
