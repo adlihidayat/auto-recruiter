@@ -10,12 +10,15 @@ import {
   Bot,
   AudioLines,
   Brain,
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import {
   getCandidateReportApi,
   getCandidateTranscriptsApi,
   getCandidatesForInterviewApi,
+  getInterviewGoalsApi,
+  BackendGoalResponse,
 } from "@/lib/api/client";
 import { CandidateReportSkeleton } from "@auto-recruiter/shared-ui";
 
@@ -32,6 +35,9 @@ export default function CandidateReportView({
   const [report, setReport] = useState<any>(null);
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const [candidateInfo, setCandidateInfo] = useState<any>(null);
+  const [interviewGoals, setInterviewGoals] = useState<BackendGoalResponse[]>(
+    [],
+  );
 
   const [expandedGoalId, setExpandedGoalId] = useState<string | null>("g_01");
   const [expandedTraitId, setExpandedTraitId] = useState<string | null>(
@@ -77,8 +83,46 @@ export default function CandidateReportView({
           candidatesPromise,
         ]);
 
+        const cInfo = (candidatesRes as any[])?.find(
+          (c: any) => c.id === candidateId,
+        );
+        if (cInfo) setCandidateInfo(cInfo);
+
+        const effInterviewId = interviewId || cInfo?.interview_id;
+        let fetchedGoals: BackendGoalResponse[] = [];
+        if (effInterviewId) {
+          try {
+            fetchedGoals = await getInterviewGoalsApi(
+              effInterviewId,
+              tokenCookie,
+            );
+            if (fetchedGoals && fetchedGoals.length > 0) {
+              setInterviewGoals(fetchedGoals);
+            }
+          } catch (e) {
+            console.warn("Failed to fetch interview goals", e);
+          }
+        }
+
         if (reportRes) {
           const raw = reportRes.raw_report || {};
+          const rawGoals = Array.isArray(raw.goals)
+            ? raw.goals
+            : Array.isArray(raw.goal_breakdown)
+              ? raw.goal_breakdown
+              : [];
+          const enrichedGoals = rawGoals.map((g: any) => {
+            if (g.topic) return g;
+            const ref = g.goal_id || g.goal_ref || g.id;
+            const matched = fetchedGoals.find(
+              (fg) => fg.goal_ref === ref || fg.id === ref,
+            );
+            return {
+              ...g,
+              topic: matched?.topic || matched?.goal || g.topic,
+            };
+          });
+
           setReport({
             ...raw,
             recommendation:
@@ -90,7 +134,7 @@ export default function CandidateReportView({
               raw.reasoning ||
               raw.status_reason ||
               raw.short_summary,
-            goals: raw.goals || [],
+            goals: enrichedGoals,
             communication: raw.communication || {},
           });
         }
@@ -98,11 +142,6 @@ export default function CandidateReportView({
         if (transcriptsRes && transcriptsRes.length > 0) {
           setTranscripts(transcriptsRes);
         }
-
-        const cInfo = (candidatesRes as any[])?.find(
-          (c: any) => c.id === candidateId,
-        );
-        if (cInfo) setCandidateInfo(cInfo);
       } catch (err) {
         console.warn("Failed to load candidate data", err);
       } finally {
@@ -111,6 +150,26 @@ export default function CandidateReportView({
     }
     loadData();
   }, [candidateId, interviewId]);
+
+  const getGoalTopic = (item: any): string => {
+    if (!item) return "";
+    if (item.topic) return item.topic;
+    if (item.goal_name) return item.goal_name;
+    if (item.title) return item.title;
+    if (item.name) return item.name;
+
+    const ref = item.goal_id || item.goal_ref || item.id;
+    if (ref && interviewGoals.length > 0) {
+      const match = interviewGoals.find(
+        (g) => g.goal_ref === ref || g.id === ref,
+      );
+      if (match?.topic) return match.topic;
+      if (match?.goal) return match.goal;
+    }
+
+    if (item.goal && typeof item.goal === "string") return item.goal;
+    return "";
+  };
 
   if (isLoading) {
     return <CandidateReportSkeleton />;
@@ -210,6 +269,7 @@ export default function CandidateReportView({
           role: "candidate",
           content:
             "I always run tests with the -race detector flag enabled in CI/CD. For shared state, I prefer sync.RWMutex over channels when guarding simple in-memory maps.",
+          flag_for_human_review: true,
         },
       ],
     },
@@ -333,20 +393,6 @@ export default function CandidateReportView({
         <p className="text-[14px] text-gray-600 leading-relaxed font-medium mb-8">
           {reasoning}
         </p>
-        {/* General Summary (Clean white card) */}
-        {/* <div className="bg-white border border-gray-200 rounded-xl p-6 mb-8">
-          <div className="flex items-start justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-900">
-              General Summary
-            </h2>
-            <div
-              className={`px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded-md ${recommendation.includes("Advance") ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-700"}`}
-            >
-              Status:{" "}
-              {recommendation.includes("Advance") ? "Advance" : "Hold / Reject"}
-            </div>
-          </div>
-        </div> */}
 
         {/* Core Analysis Breakdown */}
         <div className="mb-8">
@@ -380,7 +426,8 @@ export default function CandidateReportView({
                           />
                         </div>
                         <span className="text-[14px] font-semibold text-gray-900 capitalize">
-                          {goal.goal_id}
+                          Goal {idx + 1}
+                          {getGoalTopic(goal) ? ` : ${getGoalTopic(goal)}` : ""}
                         </span>
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded ${
@@ -586,8 +633,10 @@ export default function CandidateReportView({
                     {/* Goal Group Header / Label */}
                     <div className="flex items-center gap-2 mb-5">
                       <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">
-                        {goalItem.goal_id}:{" "}
-                        {goalItem.topic || "Goal Evaluation"}
+                        Goal {goalIdx + 1}
+                        {getGoalTopic(goalItem)
+                          ? ` : ${getGoalTopic(goalItem)}`
+                          : ""}
                       </span>
                       <div className="flex-1 h-px bg-gray-100" />
                     </div>
@@ -632,10 +681,30 @@ export default function CandidateReportView({
                             <div
                               className={`flex-1 ${!isLastInGoal ? "pb-6" : "pb-1"}`}
                             >
-                              <div className="flex items-baseline gap-2 mb-1">
+                              <div className="flex items-center gap-2 mb-1">
                                 <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">
                                   {speakerName}
                                 </span>
+                                {Boolean(interaction.flag_for_human_review) && (
+                                  <div
+                                    className="relative group flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-50 text-red-600 border border-red-200 text-[10px] font-semibold cursor-help transition-colors hover:bg-red-100"
+                                    title="This turn is suspicious and needs detail lookup"
+                                  >
+                                    <AlertTriangle className="w-3 h-3 text-red-600 shrink-0" />
+                                    <span>Flagged</span>
+
+                                    {/* Tooltip on Hover */}
+                                    <div className="absolute -left-12 bottom-full mb-2.5 hidden group-hover:flex flex-col items-center z-20 pointer-events-none w-max max-w-xs">
+                                      <div className="bg-gray-900 text-white text-[11px] max-w-40 text-center font-medium py-1.5 px-3 rounded-md shadow-lg border border-gray-800">
+                                        <span>
+                                          This turn is suspicious and needs
+                                          detail lookup
+                                        </span>
+                                      </div>
+                                      <div className="w-2 h-2 bg-gray-900 rotate-45 -mt-1" />
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                               <p className="text-xs font-medium text-gray-600 leading-relaxed">
                                 {interaction.content}
