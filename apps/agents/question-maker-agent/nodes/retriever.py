@@ -13,7 +13,7 @@ from langgraph.graph.message import add_messages
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage, BaseMessage
 from langchain_community.tools.tavily_search import TavilySearchResults
 
-from apps.agents.shared.clients import gemini_flash_lite
+from core_ai_lib.shared.clients import gemini_flash_lite
 from ..state import InterviewGoal, GroundingTheory, ReferenceSource
 from ..prompts.retriever_prompt import RETRIEVER_SYSTEM_INSTRUCTION, FORCED_GENERATION_SYSTEM_INSTRUCTION
 
@@ -186,7 +186,7 @@ def extract_final_theory(state: RetrieverState) -> Dict[str, Any]:
                             "title": r.get("title", "Unknown Title"),
                             "excerpt": r.get("excerpt", ""),
                             "matched_query": r.get("matched_query", "Unknown Query"),
-                            "credibility_tier": r.get("credibility_tier", "B"),
+                            "credibility_tier": str(r.get("credibility_tier", "B")).upper()[0] if str(r.get("credibility_tier", "B")).upper() and str(r.get("credibility_tier", "B")).upper()[0] in ["A", "B", "C"] else "B",
                             "corroborated": r.get("corroborated", True)
                         })
                         

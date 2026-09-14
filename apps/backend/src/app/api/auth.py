@@ -12,7 +12,7 @@ from sqlalchemy import select, or_
 from app.api.deps import SessionDep, CurrentUser
 from app.core.security import verify_password, create_access_token, get_password_hash
 from app.models.user import User
-from app.schemas.user import UserRegister, UserResponse, RegisterResponse, UsernameCheckResponse
+from core_ai_lib.schemas.user import UserRegister, UserResponse, RegisterResponse, UsernameCheckResponse
 
 router = APIRouter()
 

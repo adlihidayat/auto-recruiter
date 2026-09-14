@@ -12,7 +12,7 @@ from ..prompts.citations_prompt import (
     CITATIONS_SYSTEM_PROMPT,
     CITATIONS_USER_PROMPT,
 )
-from apps.agents.shared.clients import gemini_flash_lite
+from core_ai_lib.shared.clients import gemini_flash_lite
 
 # Initialize structured output runnable for Citations Output
 structured_citations_client = gemini_flash_lite.with_structured_output(CitationsOutput)

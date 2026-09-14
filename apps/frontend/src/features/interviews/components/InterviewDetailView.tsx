@@ -25,7 +25,7 @@ import {
   BackendGoalResponse,
   BackendCandidateResponse,
 } from "@/lib/api/client";
-import { InterviewDetailSkeleton } from "@/components/common/PageSkeletonWrapper";
+import { InterviewDetailSkeleton } from "@auto-recruiter/shared-ui";
 
 interface InterviewDetailViewProps {
   interviewId: string;

@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../..")))
 
 from langchain_core.messages import SystemMessage, HumanMessage
-from apps.agents.shared.clients import gemini_flash_lite
+from core_ai_lib.shared.clients import gemini_flash_lite
 
 state_module = importlib.import_module("question-maker-agent.state")
 prompts_module = importlib.import_module("question-maker-agent.prompts.validator_prompt")

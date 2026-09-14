@@ -1,4 +1,4 @@
-import { CandidateReportSkeleton } from "@/components/common/PageSkeletonWrapper";
+import { CandidateReportSkeleton } from "@auto-recruiter/shared-ui";
 
 /**
  * What: Next.js native loading boundary for Candidate Report route.

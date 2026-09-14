@@ -24,4 +24,8 @@ dependencies = [
     "tavily-python>=0.7.27",
     "uvicorn[standard]>=0.52.3",
     "livekit-api>=0.7.0",
+    "core-ai-lib"
 ]
+
+[tool.uv.sources]
+core-ai-lib = { workspace = true }

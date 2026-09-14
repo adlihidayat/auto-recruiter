@@ -17,7 +17,7 @@ import {
   getCandidateTranscriptsApi,
   getCandidatesForInterviewApi,
 } from "@/lib/api/client";
-import { CandidateReportSkeleton } from "@/components/common/PageSkeletonWrapper";
+import { CandidateReportSkeleton } from "@auto-recruiter/shared-ui";
 
 interface CandidateReportViewProps {
   interviewId?: string;

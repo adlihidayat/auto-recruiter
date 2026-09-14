@@ -134,7 +134,9 @@ export default function CreateInterviewModal({
     scheduled_at: "",
   });
 
-  const [candidates, setCandidates] = useState<CandidateInput[]>([]);
+  const [candidates, setCandidates] = useState<CandidateInput[]>([
+    { email: "", first_name: "", last_name: "" },
+  ]);
 
   const [copiedCandidateId, setCopiedCandidateId] = useState<string | null>(
     null,

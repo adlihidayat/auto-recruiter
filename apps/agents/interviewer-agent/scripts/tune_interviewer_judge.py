@@ -20,7 +20,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 from dotenv import load_dotenv
 load_dotenv(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.env")))
 
-from apps.agents.shared.clients import gemini_flash_lite
+from core_ai_lib.shared.clients import gemini_flash_lite
 from prompts.system import (
     INTERVIEWER_SYSTEM_PROMPT as AGENT_SYSTEM_PROMPT,
 )

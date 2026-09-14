@@ -18,7 +18,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../..")))
 
 # Import Gemini model and prompts
-from apps.agents.shared.clients import gemini_flash_lite
+from core_ai_lib.shared.clients import gemini_flash_lite
 from prompts.planner_eval_prompt import PLANNER_EVAL_SYSTEM_INSTRUCTION, PLANNER_EVAL_USER_TEMPLATE
 
 # --- Pydantic Output Schemas for the Judge ---

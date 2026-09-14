@@ -8,7 +8,7 @@ import re
 from pydantic import BaseModel
 from langsmith import traceable
 from ..state import GraderState, InjectionFinding
-from apps.agents.shared.clients import get_prompt_guard_score, gemini_flash_lite
+from core_ai_lib.shared.clients import get_prompt_guard_score, gemini_flash_lite
 from ..prompts.injection_prompt import INJECTION_PROMPT
 
 HIGH_THRESHOLD = 0.9

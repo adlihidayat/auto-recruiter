@@ -9,7 +9,7 @@ import json
 from langsmith import traceable
 from ..state import GraderState, FinalReport
 from ..prompts.aggregation_prompt import get_aggregation_prompt
-from apps.agents.shared.clients import gemini_flash_lite
+from core_ai_lib.shared.clients import gemini_flash_lite
 
 @traceable(name="run_aggregation")
 def run_aggregation(state: GraderState) -> dict[str, Any]:

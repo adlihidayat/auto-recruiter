@@ -15,7 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 from langsmith import Client, evaluate
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage, AIMessage
 
-from apps.agents.shared.clients import gemini_flash_lite, gemini_flash
+from core_ai_lib.shared.clients import gemini_flash_lite, gemini_flash
 retriever_prompt_module = importlib.import_module("question-maker-agent.prompts.retriever_prompt")
 RETRIEVER_SYSTEM_INSTRUCTION = retriever_prompt_module.RETRIEVER_SYSTEM_INSTRUCTION
 FORCED_GENERATION_SYSTEM_INSTRUCTION = retriever_prompt_module.FORCED_GENERATION_SYSTEM_INSTRUCTION

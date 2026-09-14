@@ -7,7 +7,7 @@ Boundaries: Generates raw question items only. Does not handle cross-question de
 from typing import Dict, Any
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from apps.agents.shared.clients import gemini_flash_lite
+from core_ai_lib.shared.clients import gemini_flash_lite
 from ..state import GeneratorState, QuestionItem, GeneratedQuestionContent
 from ..prompts.generator_prompt import GENERATOR_SYSTEM_INSTRUCTION
 

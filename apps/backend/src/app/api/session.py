@@ -16,7 +16,7 @@ from app.api.deps import SessionDep
 from app.models.candidate import Candidate
 from app.models.interview import Interview
 from app.models.goal import Goal
-from app.schemas.session import SessionStatusResponse
+from core_ai_lib.schemas.session import SessionStatusResponse
 from app.core.config import application_settings
 
 logger = logging.getLogger(__name__)

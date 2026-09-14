@@ -1,4 +1,4 @@
-import { InterviewDetailSkeleton } from "@/components/common/PageSkeletonWrapper";
+import { InterviewDetailSkeleton } from "@auto-recruiter/shared-ui";
 
 /**
  * What: Next.js native loading boundary for Interview Detail route.

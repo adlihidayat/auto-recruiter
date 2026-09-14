@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Literal
 from pydantic import BaseModel, Field
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from apps.agents.shared.clients import gemini_flash_lite
+from core_ai_lib.shared.clients import gemini_flash_lite
 from ..state import QuestionMakerState, InterviewGoal, PlannerMeta
 from ..prompts.planner_prompt import (
     PLANNER_SYSTEM_INSTRUCTION,

@@ -22,7 +22,7 @@ for p in [ROOT_DIR, AGENTS_DIR, QM_DIR]:
         sys.path.append(p)
 
 # Load environment credentials
-load_dotenv(os.path.join(AGENTS_DIR, ".env"))
+load_dotenv(os.path.join(ROOT_DIR, ".env"))
 
 import importlib
 qm_graph_module = importlib.import_module("question-maker-agent.graph")

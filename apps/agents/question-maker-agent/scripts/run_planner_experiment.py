@@ -21,7 +21,7 @@ from langsmith import Client, evaluate
 from langchain_core.messages import SystemMessage, HumanMessage
 
 # Import Gemini clients
-from apps.agents.shared.clients import gemini_flash_lite
+from core_ai_lib.shared.clients import gemini_flash_lite
 
 # Dynamically import planner modules to avoid dash syntax restrictions
 planner_module = importlib.import_module("question-maker-agent.nodes.planner")

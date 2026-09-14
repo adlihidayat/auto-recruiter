@@ -9,7 +9,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from ..state import InterviewerState, InterviewerDecision
 from ..prompts.system import INTERVIEWER_SYSTEM_PROMPT
-from apps.agents.shared.clients import gemini_flash_lite
+from core_ai_lib.shared.clients import gemini_flash_lite
 
 # Initialize structured output runnable using the shared rotating model client
 structured_llm_client = gemini_flash_lite.with_structured_output(InterviewerDecision)

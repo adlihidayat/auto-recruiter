@@ -13,8 +13,8 @@ from app.models.interview import Interview
 from app.models.candidate import Candidate
 from app.models.report import CandidateReport
 from app.models.transcript import Transcript
-from app.schemas.report import CandidateReportResponse
-from app.schemas.transcript import TranscriptResponse
+from core_ai_lib.schemas.report import CandidateReportResponse
+from core_ai_lib.schemas.transcript import TranscriptResponse
 
 router = APIRouter()
 
@@ -77,7 +77,7 @@ async def get_candidate_transcripts(
     return list(transcripts)
 
 from app.models.goal import Goal
-from app.schemas.transcript import CandidateFinishRequest, GoalTranscriptCreate
+from core_ai_lib.schemas.transcript import CandidateFinishRequest, GoalTranscriptCreate
 from app.services.grader_service import process_candidate_grading
 from fastapi import BackgroundTasks
 

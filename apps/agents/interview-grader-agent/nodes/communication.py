@@ -16,7 +16,7 @@ from ..state import (
     CommTraitEval,
     CommEvidence
 )
-from apps.agents.shared.clients import gemini_flash_lite
+from core_ai_lib.shared.clients import gemini_flash_lite
 
 COMMUNICATION_RUBRIC = {
     "active_listening": {

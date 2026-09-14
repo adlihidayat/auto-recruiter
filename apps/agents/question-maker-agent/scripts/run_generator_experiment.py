@@ -23,7 +23,7 @@ from langsmith import Client, evaluate
 from langchain_core.messages import SystemMessage, HumanMessage
 
 # Import Gemini client
-from apps.agents.shared.clients import gemini_flash_lite
+from core_ai_lib.shared.clients import gemini_flash_lite
 
 # Import generator node
 generator_module = importlib.import_module("question-maker-agent.nodes.generator")

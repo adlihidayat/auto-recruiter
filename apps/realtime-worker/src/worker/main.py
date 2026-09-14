@@ -32,8 +32,8 @@ from livekit.plugins import silero, deepgram
 
 from dotenv import load_dotenv
 
-# Load .env file from worker directory
-worker_env_path = os.path.join(os.path.dirname(__file__), "../../.env")
+# Load .env file from root directory
+worker_env_path = os.path.join(ROOT_DIR, ".env")
 load_dotenv(worker_env_path)
 
 from src.worker.core.config import settings

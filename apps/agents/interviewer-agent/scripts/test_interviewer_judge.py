@@ -21,7 +21,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 from dotenv import load_dotenv
 load_dotenv(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.env")))
 
-from apps.agents.shared.clients import gemini_flash_lite
+from core_ai_lib.shared.clients import gemini_flash_lite
 
 interviewer_graph_module = importlib.import_module("interviewer-agent.graph")
 interviewer_state_module = importlib.import_module("interviewer-agent.state")

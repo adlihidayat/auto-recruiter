@@ -8,5 +8,6 @@ requires-python = ">=3.12"
 members = [
     "apps/backend",
     "apps/realtime-worker",
-    "apps/agents"
+    "apps/agents",
+    "packages/core-ai-lib"
 ]

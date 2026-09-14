@@ -20,8 +20,8 @@ from app.models.transcript import Transcript
 from app.models.report import CandidateReport
 from app.models.job import Job
 from app.models.user_recent import UserRecentInterview
-from app.schemas.interview import InterviewCreate, InterviewResponse, InterviewCreationResponse, InterviewUpdate, GoalResponse, BatchDeleteInterviewsRequest
-from app.schemas.candidate import CandidateResponse
+from core_ai_lib.schemas.interview import InterviewCreate, InterviewResponse, InterviewCreationResponse, InterviewUpdate, GoalResponse, BatchDeleteInterviewsRequest
+from core_ai_lib.schemas.candidate import CandidateResponse
 from app.services.plan_service import process_interview_plan_generation
 
 router = APIRouter()
