@@ -1,16 +1,23 @@
+"""
+What: Developer scratch test for testing turn handler in isolation.
+Why: Initializes stub session state and invokes InterviewerLLM bridge without LiveKit media streaming.
+Boundaries: Local debugging utility script.
+"""
+
 import asyncio
 import os
 import sys
 
-# Setup paths
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+WORKER_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+ROOT_DIR = os.path.abspath(os.path.join(WORKER_DIR, "../.."))
 AGENTS_DIR = os.path.join(ROOT_DIR, "apps/agents")
-for p in [ROOT_DIR, AGENTS_DIR]:
+
+for p in [WORKER_DIR, ROOT_DIR, AGENTS_DIR]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
 from dotenv import load_dotenv
-load_dotenv(os.path.join(ROOT_DIR, "apps/agents/.env"))
+load_dotenv(os.path.join(AGENTS_DIR, ".env"))
 
 import importlib
 interviewer_state = importlib.import_module("interviewer-agent.state")
@@ -24,7 +31,6 @@ from livekit.agents import llm
 async def main():
     print("Testing Turn Handler...")
     
-    # Stub goal
     stub_goal = Goal(
         goal_id="g_01",
         goal="Evaluate candidate understanding of the system.",
@@ -40,7 +46,6 @@ async def main():
     backend_client = BackendClient()
     llm_bridge = InterviewerLLM(session_state=session_state, backend_client=backend_client)
     
-    # Mock chat ctx
     chat_ctx = llm.ChatContext()
     chat_ctx.messages().append(llm.ChatMessage.create(text="Hi! My name is John.", role="user"))
     
@@ -51,6 +56,7 @@ async def main():
         print("Chunk received:", chunk.choices[0].delta.content)
         
     print("Session state history length:", len(session_state.goal_history))
+    await backend_client.close()
     
 if __name__ == "__main__":
     asyncio.run(main())

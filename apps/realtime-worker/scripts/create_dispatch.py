@@ -1,10 +1,15 @@
+"""
+What: Helper script to manually create LiveKit agent dispatch rules.
+Why: Registers room dispatch rule to route rooms with the configured prefix to interviewer-agent.
+Boundaries: One-off administration utility script.
+"""
+
 import asyncio
 from livekit import api
 
 async def main():
     livekit_api = api.LiveKitAPI("ws://localhost:7880", "devkey", "secret")
     rule = api.RoomDispatchRule(dispatch_rule_room=api.DispatchRuleRoom(room_prefix=""))
-    # Create the agent dispatch rule that routes ANY room to "interviewer-agent"
     agent_dispatch = api.CreateAgentDispatchRequest(
         agent_name="interviewer-agent",
         room_dispatch=rule,
@@ -13,4 +18,5 @@ async def main():
     print("Dispatch rule created:", res)
     await livekit_api.aclose()
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

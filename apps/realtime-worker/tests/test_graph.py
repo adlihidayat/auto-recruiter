@@ -1,11 +1,21 @@
+"""
+What: Standalone graph execution test script for Interviewer Agent.
+Why: Verifies in-process invocation of the LangGraph interviewer-agent graph with mock state inputs.
+Boundaries: Testing utility; isolated from LiveKit voice runtime.
+"""
+
 import sys
 import os
 import asyncio
 import importlib
 
-sys.path.insert(0, os.path.abspath('apps/agents'))
-# also insert interviewer-agent
-sys.path.insert(0, os.path.abspath('apps/agents/interviewer-agent'))
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
+AGENTS_DIR = os.path.join(ROOT_DIR, "apps/agents")
+INTERVIEWER_AGENT_DIR = os.path.join(AGENTS_DIR, "interviewer-agent")
+
+for p in [ROOT_DIR, AGENTS_DIR, INTERVIEWER_AGENT_DIR]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 async def main():
     interviewer_graph_module = importlib.import_module("interviewer-agent.graph")
@@ -41,4 +51,5 @@ async def main():
         import traceback
         traceback.print_exc()
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -1,9 +1,16 @@
+"""
+What: Integration test script for LiveKit room client connection.
+Why: Validates room connection, participant event listening, and track subscription using LiveKit Python RTC SDK.
+Boundaries: Manual test script for developer execution; does not run inside worker entrypoint.
+"""
+
 import asyncio
 import os
 from livekit import rtc, api
 from dotenv import load_dotenv
 
-load_dotenv(".env")
+env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.env"))
+load_dotenv(env_path)
 
 async def main():
     token = api.AccessToken(
