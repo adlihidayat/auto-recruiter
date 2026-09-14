@@ -23,8 +23,7 @@ class Transcript(Base):
     
     # Internal Interviewer fields (populated only when role == 'interviewer')
     action: Mapped[str] = mapped_column(String(50), nullable=True)
-    reasoning: Mapped[str] = mapped_column(Text, nullable=True)
-    trigger_matched: Mapped[str] = mapped_column(String(255), nullable=True)
+    progression_override: Mapped[bool] = mapped_column(Boolean, default=False)
     flag_for_human_review: Mapped[bool] = mapped_column(Boolean, default=False)
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True)

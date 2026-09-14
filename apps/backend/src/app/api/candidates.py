@@ -124,8 +124,7 @@ async def add_goal_transcripts(
             role=t_data.role,
             content=t_data.content,
             action=t_data.action,
-            reasoning=t_data.reasoning,
-            trigger_matched=t_data.trigger_matched,
+            progression_override=t_data.progression_override,
             flag_for_human_review=t_data.flag_for_human_review,
         )
         if t_data.created_at:
@@ -168,8 +167,7 @@ async def finish_candidate_interview(
             role=t_data.role,
             content=t_data.content,
             action=t_data.action,
-            reasoning=t_data.reasoning,
-            trigger_matched=t_data.trigger_matched,
+            progression_override=t_data.progression_override,
             flag_for_human_review=t_data.flag_for_human_review,
         )
         # only override created_at if provided

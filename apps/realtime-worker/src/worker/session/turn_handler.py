@@ -188,7 +188,6 @@ class GraphExecutionStream(llm.LLMStream):
             action = decision.action
             message = decision.message_to_candidate
             
-            reasoning_text = getattr(decision, "reasoning", "")
             logger.info(f"\n========================================\n[AGENT] Decision reached:\nAction: {action.upper()}\nMessage: '{message}'\n========================================")
             
             # 5. Handle Advance vs Pushback
@@ -212,10 +211,9 @@ class GraphExecutionStream(llm.LLMStream):
                     {
                         "role": turn.role,
                         "content": turn.content,
-                        # Stamp action/reasoning on the final turn of this goal's saved history
+                        # Stamp action/progression_override on the final turn of this goal's saved history
                         "action": (action if turn == history_to_save[-1] else None),
-                        "reasoning": (reasoning_text if turn == history_to_save[-1] else None),
-                        "trigger_matched": getattr(decision, "trigger_matched", None),
+                        "progression_override": (getattr(decision, "progression_override", False) if turn == history_to_save[-1] else False),
                         "flag_for_human_review": getattr(decision, "flag_for_human_review", False)
                     }
                     for turn in history_to_save
