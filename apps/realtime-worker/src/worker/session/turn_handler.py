@@ -141,36 +141,86 @@ class GraphExecutionStream(llm.LLMStream):
             return "Thank you for your time, the interview is now concluded. Have a great day!"
             
         # 1. Update session state with candidate transcript.
-        # Three cases to handle cleanly:
-        #
-        # Case A: Last item is a candidate turn — the previous LLM call was cancelled before it
-        #   could respond. Simply overwrite the partial transcript with the newer, longer one.
-        #
-        # Case B: Last two items are [candidate(partial), interviewer(continuation prompt)] —
-        #   the VAD fired prematurely, the agent responded asking the candidate to continue,
-        #   and now we have the full continuation. This is the "noisy call" pattern the user
-        #   described. We detect it by checking if the old partial is a prefix of the new full
-        #   transcript. If so, REMOVE the noisy pair and replace with just the final full turn.
-        #
-        # Case C: Normal new turn — just append.
+        # Three cases to handle cleanly, plus pending advance handling:
         history = self.session_state.goal_history
-        if history and history[-1].role == "candidate":
-            # Case A: overwrite the cancelled partial
-            history[-1].content = self.transcript
-        elif (
+        is_continuation = False
+        
+        if (
             len(history) >= 2
             and history[-1].role == "interviewer"
             and history[-2].role == "candidate"
             and _is_continuation(history[-2].content, self.transcript)
         ):
-            # Case B: noisy VAD trigger — remove the (partial candidate + continuation prompt) pair
-            history.pop()  # remove the interviewer continuation prompt
-            history.pop()  # remove the partial candidate turn
-            logger.info("[DEDUP] Removed noisy partial transcript pair. Replacing with final full turn.")
-            self.session_state.add_history_item(role="candidate", content=self.transcript)
+            is_continuation = True
+
+        if getattr(self.session_state, "pending_advance_decision", None) is not None:
+            if is_continuation:
+                # Cancel the pending transition
+                logger.info("[DEDUP] Continuation detected. Canceling premature advance transition.")
+                self.session_state.pending_advance_decision = None
+                self.session_state.pending_advance_message = None
+                
+                history.pop() # remove transition prompt
+                history.pop() # remove partial candidate
+                self.session_state.add_history_item(role="candidate", content=self.transcript)
+            else:
+                # Commit the transition
+                logger.info("[FLOW] No continuation detected. Committing pending advance transition.")
+                decision = self.session_state.pending_advance_decision
+                message = self.session_state.pending_advance_message
+                self.session_state.pending_advance_decision = None
+                self.session_state.pending_advance_message = None
+                
+                transition_turn = history.pop() # remove transition prompt from OLD goal history
+                
+                history_to_save = list(history)
+                goal_ref = self.session_state.current_goal.goal_id
+                candidate_id = self.session_state.candidate_id
+                
+                transcripts = [
+                    {
+                        "role": turn.role,
+                        "content": turn.content,
+                        "action": ("advance" if turn == history_to_save[-1] else None),
+                        "progression_override": (getattr(decision, "progression_override", False) if turn == history_to_save[-1] else False),
+                        "flag_for_human_review": getattr(decision, "flag_for_human_review", False)
+                    }
+                    for turn in history_to_save
+                ]
+                
+                async def _save_transcripts(g_ref=goal_ref, t_list=transcripts):
+                    try:
+                        await self.backend_client.save_goal_transcripts(
+                            candidate_id=candidate_id,
+                            goal_ref=g_ref,
+                            transcripts=t_list
+                        )
+                        logger.info(f"[DB] Transcripts saved for goal {g_ref}.")
+                    except Exception as exc:
+                        logger.error(f"[DB] Failed to save transcripts for goal {g_ref}: {exc}", exc_info=True)
+                
+                asyncio.create_task(_save_transcripts())
+                
+                self.session_state.advance_goal()
+                remaining = len(self.session_state.goals) - self.session_state.current_goal_index
+                logger.info(f"[FLOW] Advanced to next goal. Remaining goals: {remaining}")
+                self.session_state.add_history_item(role="interviewer", content=message)
+                
+                # Now add the current transcript as the first candidate response in the new goal
+                self.session_state.add_history_item(role="candidate", content=self.transcript)
         else:
-            # Case C: genuine new candidate turn
-            self.session_state.add_history_item(role="candidate", content=self.transcript)
+            if history and history[-1].role == "candidate":
+                # Case A: overwrite the cancelled partial
+                history[-1].content = self.transcript
+            elif is_continuation:
+                # Case B: noisy VAD trigger — remove the (partial candidate + continuation prompt) pair
+                history.pop()  # remove the interviewer continuation prompt
+                history.pop()  # remove the partial candidate turn
+                logger.info("[DEDUP] Removed noisy partial transcript pair. Replacing with final full turn.")
+                self.session_state.add_history_item(role="candidate", content=self.transcript)
+            else:
+                # Case C: genuine new candidate turn
+                self.session_state.add_history_item(role="candidate", content=self.transcript)
         
         # 2. Prepare LangGraph input
         input_state = self.session_state.get_agent_input_state(self.transcript)
@@ -190,62 +240,78 @@ class GraphExecutionStream(llm.LLMStream):
             
             logger.info(f"\n========================================\n[AGENT] Decision reached:\nAction: {action.upper()}\nMessage: '{message}'\n========================================")
             
-            # 5. Handle Advance vs Pushback
-            if action == "advance":
-                is_final_goal = (self.session_state.current_goal_index + 1 >= len(self.session_state.goals))
+            # 5. Handle Advance vs Pushback vs End Interview
+            if action == "end_interview":
+                logger.warning(f"\n========================================\n[SECURITY] Agent requested interview termination!\nMessage: '{message}'\n========================================")
+                self.session_state.add_history_item(role="interviewer", content=message)
                 
-                if is_final_goal:
-                    # Final goal: append closing message to current goal's history before saving
-                    self.session_state.add_history_item(role="interviewer", content=message)
-                    history_to_save = list(history)
-                else:
-                    # Non-final goal: Goal's history to save is history BEFORE adding transition message
-                    history_to_save = list(history)
-
-                goal_ref = self.session_state.current_goal.goal_id
                 candidate_id = self.session_state.candidate_id
-                logger.info(f"\n========================================\n[DB] Saving transcripts for completed goal: {goal_ref}\n========================================")
+                goal_ref = self.session_state.current_goal.goal_id
                 
-                # Build the final, deduplicated transcript list for this goal.
                 transcripts = [
                     {
                         "role": turn.role,
                         "content": turn.content,
-                        # Stamp action/progression_override on the final turn of this goal's saved history
-                        "action": (action if turn == history_to_save[-1] else None),
-                        "progression_override": (getattr(decision, "progression_override", False) if turn == history_to_save[-1] else False),
-                        "flag_for_human_review": getattr(decision, "flag_for_human_review", False)
+                        "action": "injection_blocked" if turn == history[-1] else None,
+                        "progression_override": False,
+                        "flag_for_human_review": getattr(decision, "flag_for_human_review", True)
                     }
-                    for turn in history_to_save
+                    for turn in history
                 ]
                 
-                # Fire-and-forget with explicit error logging so failures are visible
-                async def _save_transcripts(g_ref=goal_ref, t_list=transcripts):
+                async def _save_injected_transcripts():
                     try:
-                        await self.backend_client.save_goal_transcripts(
-                            candidate_id=candidate_id,
-                            goal_ref=g_ref,
-                            transcripts=t_list
-                        )
-                        logger.info(f"[DB] Transcripts saved for goal {g_ref}.")
+                        await self.backend_client.save_goal_transcripts(candidate_id, goal_ref, transcripts)
+                        await self.backend_client.finish_interview(candidate_id)
                     except Exception as exc:
-                        logger.error(f"[DB] Failed to save transcripts for goal {g_ref}: {exc}", exc_info=True)
+                        logger.error(f"[DB] Failed to save injected transcripts: {exc}", exc_info=True)
+                        
+                asyncio.create_task(_save_injected_transcripts())
                 
-                asyncio.create_task(_save_transcripts())
+                if self.shutdown_callback:
+                    asyncio.create_task(self.shutdown_callback())
+                    
+                return message
                 
-                # Advance local state
-                self.session_state.advance_goal()
-                remaining = len(self.session_state.goals) - self.session_state.current_goal_index
-                logger.info(f"[FLOW] Advanced to next goal. Remaining goals: {remaining}")
+            elif action == "advance":
+                is_final_goal = (self.session_state.current_goal_index + 1 >= len(self.session_state.goals))
                 
-                if not is_final_goal:
-                    # Non-final goal: the transition message ("Moving on to our next topic...")
-                    # becomes the opening interviewer turn for the NEW goal!
+                if is_final_goal:
+                    # Final goal: execute immediately
                     self.session_state.add_history_item(role="interviewer", content=message)
-                else:
+                    history_to_save = list(history)
+                    
+                    goal_ref = self.session_state.current_goal.goal_id
+                    candidate_id = self.session_state.candidate_id
+                    logger.info(f"\n========================================\n[DB] Saving transcripts for completed final goal: {goal_ref}\n========================================")
+                    
+                    transcripts = [
+                        {
+                            "role": turn.role,
+                            "content": turn.content,
+                            "action": ("advance" if turn == history_to_save[-1] else None),
+                            "progression_override": (getattr(decision, "progression_override", False) if turn == history_to_save[-1] else False),
+                            "flag_for_human_review": getattr(decision, "flag_for_human_review", False)
+                        }
+                        for turn in history_to_save
+                    ]
+                    
+                    async def _save_transcripts(g_ref=goal_ref, t_list=transcripts):
+                        try:
+                            await self.backend_client.save_goal_transcripts(
+                                candidate_id=candidate_id,
+                                goal_ref=g_ref,
+                                transcripts=t_list
+                            )
+                            logger.info(f"[DB] Transcripts saved for goal {g_ref}.")
+                        except Exception as exc:
+                            logger.error(f"[DB] Failed to save transcripts for goal {g_ref}: {exc}", exc_info=True)
+                    
+                    asyncio.create_task(_save_transcripts())
+                    
+                    self.session_state.advance_goal()
                     logger.info("\n========================================\n[FLOW] All goals completed. Scheduling interview conclusion.\n========================================")
                     
-                    # Fire-and-forget finish_interview with explicit error logging
                     async def _finish_interview():
                         try:
                             logger.info(f"[DB] Calling finish_interview for candidate {candidate_id}...")
@@ -257,8 +323,15 @@ class GraphExecutionStream(llm.LLMStream):
                     asyncio.create_task(_finish_interview())
                     
                     if self.shutdown_callback:
-                        # Schedule room deletion after a short delay to allow TTS to finish
                         asyncio.create_task(self.shutdown_callback())
+                else:
+                    # Non-final goal: Delay the transition to allow potential deduplication
+                    logger.info("[FLOW] Non-final advance decision reached. Delaying goal transition to allow deduplication.")
+                    self.session_state.pending_advance_decision = decision
+                    self.session_state.pending_advance_message = message
+                    
+                    # Add transition message to current goal so we can detect continuation next turn
+                    self.session_state.add_history_item(role="interviewer", content=message)
             else:
                 # Pushback: add interviewer response to current goal's history
                 self.session_state.add_history_item(role="interviewer", content=message)
