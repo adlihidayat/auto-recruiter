@@ -11,9 +11,15 @@ class PushbackTrigger(BaseModel):
     """
     Defines a specific condition that requires the interviewer to push back on the candidate.
     """
-    trigger: str = Field(description="Description of the candidate response pattern that triggers pushback.")
-    severity: str = Field(description="Severity level of the triggered issue (e.g. 'critical', 'warning').")
-    pushback_type: str = Field(description="Category of pushback to apply (e.g. 'concrete', 'conceptual').")
+    trigger_condition: str = Field(description="Description of the candidate response pattern that triggers pushback.")
+    follow_up_prompt: str = Field(description="The follow-up prompt to ask the candidate.")
+
+class WrongAnswerSignal(BaseModel):
+    """
+    Defines a red flag response or misconception.
+    """
+    signal: str = Field(description="Description of the red flag response or misconception.")
+    severity: str = Field(description="Severity level of the triggered issue (e.g. 'critical', 'moderate').")
 
 class Goal(BaseModel):
     """
@@ -25,7 +31,7 @@ class Goal(BaseModel):
     suggested_opening: str = Field(description="Recommended opening line to introduce the goal.")
     passing_criteria: List[str] = Field(description="Criteria indicating satisfactory understanding.")
     pushback_triggers: List[PushbackTrigger] = Field(description="Triggers that mandate a pushback response.")
-    wrong_answer_signals: List[str] = Field(description="Red flag responses or misconceptions.")
+    wrong_answer_signals: List[WrongAnswerSignal] = Field(description="Red flag responses or misconceptions.")
     interview_time_in_minute: int = Field(description="Allocated duration in minutes for this goal.")
 
 class NextGoal(BaseModel):
