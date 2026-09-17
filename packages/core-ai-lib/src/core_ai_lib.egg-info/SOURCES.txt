@@ -1,0 +1,7 @@
+pyproject.toml
+src/core_ai_lib/__init__.py
+src/core_ai_lib.egg-info/PKG-INFO
+src/core_ai_lib.egg-info/SOURCES.txt
+src/core_ai_lib.egg-info/dependency_links.txt
+src/core_ai_lib.egg-info/requires.txt
+src/core_ai_lib.egg-info/top_level.txt

@@ -24,5 +24,3 @@ lk
 # Logs & Output Directories
 *.log
 output/
-
-packages/

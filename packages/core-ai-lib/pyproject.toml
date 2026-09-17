@@ -1,0 +1,9 @@
+[project]
+name = "core-ai-lib"
+version = "0.1.0"
+description = "Shared Python schemas, tools, and models for Auto Recruiter"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.15.0"
+]
