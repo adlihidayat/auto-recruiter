@@ -25,14 +25,14 @@ class PushbackTrigger(BaseModel):
     """
     Schema representing specific candidate statements that trigger structured follow-up.
     """
-    trigger: str = Field(description="Condition or statement by the candidate that triggers follow-up/pushback.")
-    severity: Literal["critical", "mild"] = Field(description="Severity rating of the trigger.")
-    pushback_type: str = Field(description="Type of pushback (e.g., 'concrete', 'conceptual').")
+    trigger_condition: str = Field(description="Condition or statement by the candidate that triggers follow-up/pushback.")
+    follow_up_prompt: str = Field(description="Verbatim question/prompt the interviewer can ask to push back.")
 
 class GeneratedQuestionContent(BaseModel):
     """
     The LLM-generated portion of a question item, excluding state-managed metadata.
     """
+    scratchpad: Optional[str] = Field(default=None, description="Reasoning scratchpad generated before final fields.")
     suggested_opening: str = Field(description="Recommended opening prompt to start the question thread.")
     passing_criteria: List[str] = Field(default_factory=list, description="List of criteria required to pass.")
     pushback_triggers: List[PushbackTrigger] = Field(default_factory=list, description="Candidate responses triggering pushback.")
@@ -43,6 +43,7 @@ class QuestionItem(BaseModel):
     A single, highly practical, scenario-based technical interview question item.
     """
     goal_id: str = Field(description="Unique identifier for the evaluation goal.")
+    scratchpad: Optional[str] = Field(default=None, description="Reasoning scratchpad generated before final fields.")
     goal: str = Field(description="Description of what this question is testing/evaluating.")
     topic: str = Field(description="Subject matter area of the question.")
     grounding_theory: Optional[str] = Field(default=None, description="The complete grounding theory text generated from web search.")

@@ -74,6 +74,7 @@ def generateQuestionItemFromGoal(state: GeneratorState) -> Dict[str, Any]:
     
     generatedQuestionItem = QuestionItem(
         goal_id=goal.goal_id,
+        scratchpad=generatedContent.scratchpad,
         topic=goal.topic,
         goal=goal.goal,
         interview_time_in_minute=goal.interview_time_in_minute,

@@ -58,9 +58,8 @@ class ReferenceSourceSchema(BaseModel):
     corroborated: bool
 
 class PushbackTriggerSchema(BaseModel):
-    trigger: str
-    severity: str
-    pushback_type: str
+    trigger_condition: str
+    follow_up_prompt: str
 
 class QuestionItemSchema(BaseModel):
     goal_id: str
@@ -165,9 +164,8 @@ async def generate_question_suite(request: QuestionMakerRequest):
             raw_triggers = _extract_val(q, "pushback_triggers", [])
             for pt in raw_triggers:
                 p_triggers.append(PushbackTriggerSchema(
-                    trigger=_extract_val(pt, "trigger", ""),
-                    severity=_extract_val(pt, "severity", "critical"),
-                    pushback_type=_extract_val(pt, "pushback_type", "concrete"),
+                    trigger_condition=_extract_val(pt, "trigger_condition", _extract_val(pt, "trigger", "")),
+                    follow_up_prompt=_extract_val(pt, "follow_up_prompt", ""),
                 ))
 
             item = QuestionItemSchema(

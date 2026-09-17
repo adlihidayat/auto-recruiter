@@ -40,6 +40,7 @@ def validateQuestionSuite(state: QuestionMakerState) -> Dict[str, Any]:
         # ---------------------------------------------------------
         # Layer 1: Deterministic Schema Checks
         # ---------------------------------------------------------
+        layer1_errors = []
         missing_fields = []
         if not question.suggested_opening:
             missing_fields.append("suggested_opening")
@@ -49,10 +50,20 @@ def validateQuestionSuite(state: QuestionMakerState) -> Dict[str, Any]:
             missing_fields.append("wrong_answer_signals")
             
         if missing_fields:
+            layer1_errors.append(f"Missing or empty fields: {', '.join(missing_fields)}")
+            
+        if question.scratchpad:
+            import re
+            trigger_count = len(re.findall(r'TRIGGER', question.scratchpad))
+            actual_count = len(question.pushback_triggers)
+            if trigger_count != actual_count:
+                layer1_errors.append(f"Pushback triggers mismatch: your scratchpad counted {trigger_count} TRIGGER verdicts, your array has {actual_count} — transcribe them.")
+                
+        if layer1_errors:
             critic_feedback["is_valid"] = False
             if goal_id not in critic_feedback["failed_goal_ids"]:
                 critic_feedback["failed_goal_ids"].append(goal_id)
-            critic_feedback["feedback_per_question"][goal_id] = f"Layer 1 Failure: Missing or empty fields: {', '.join(missing_fields)}"
+            critic_feedback["feedback_per_question"][goal_id] = f"Layer 1 Failure: {' | '.join(layer1_errors)}"
             continue  # Skip Layer 2 for this question since it's already fundamentally broken
             
         # ---------------------------------------------------------
