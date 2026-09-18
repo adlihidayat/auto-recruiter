@@ -63,7 +63,7 @@ export const CreateInterviewLoadingStep: React.FC<
 
         <div className=" bg-[#f4f4f581] pt-4 pb-6 rounded-xl">
           {/* Task Row */}
-          <div className="flex items-center justify-between border-b border-dashed border-gray-200 pb-5 mb-6 px-4">
+          <div className="flex items-center justify-between border-b border-dashed border-gray-200 pb-3 mb-6 px-4">
             <div className="flex items-center gap-1">
               <span className="text-xs font-semibold text-gray-600 tracking-wider">
                 Task :
@@ -120,7 +120,7 @@ export const CreateInterviewLoadingStep: React.FC<
               })}
             </div>
             {/* Progress bar line */}
-            <div className="absolute top-6 left-10 right-10 -z-0">
+            <div className="absolute top-6 left-12 right-12 z-0">
               <div className="w-full relative h-1 bg-gray-200 rounded-full">
                 <div
                   className="absolute top-0 left-0 h-0.5 bg-gradient-to-r from-blue-700 via-purple-700 to-orange-700 rounded-full transition-all duration-300 ease-linear"

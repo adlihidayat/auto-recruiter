@@ -474,14 +474,14 @@ export default function CandidateReportView({
                                   (match: any, i: number) => (
                                     <div
                                       key={i}
-                                      className="flex items-center gap-2"
+                                      className="flex items-start gap-2"
                                     >
                                       <Triangle
                                         fill="true"
                                         color=""
-                                        className="w-2 h-2 rotate-90"
+                                        className="w-2 h-2 translate-y-1.5 rotate-90"
                                       />
-                                      <p className="text-[12px] font-medium text-gray-600 italic">
+                                      <p className="text-[12px] w-160 font-medium text-gray-600 italic">
                                         &quot;{match.quote}&quot;
                                       </p>
                                     </div>
@@ -579,14 +579,14 @@ export default function CandidateReportView({
                                   {evidenceList.map((match: any, i: number) => (
                                     <div
                                       key={i}
-                                      className="flex items-center gap-2"
+                                      className="flex items-start gap-2"
                                     >
                                       <Triangle
                                         fill="true"
                                         color=""
-                                        className="w-2 h-2 rotate-90"
+                                        className="w-2 h-2 rotate-90 translate-y-1"
                                       />
-                                      <p className="text-[12px] font-medium text-gray-600 italic">
+                                      <p className="text-[12px] w-160 font-medium text-gray-600 italic">
                                         &quot;{match.quote}&quot;
                                       </p>
                                     </div>

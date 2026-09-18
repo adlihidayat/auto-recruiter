@@ -11,7 +11,9 @@ import {
   useVoiceAssistant,
   useLocalParticipant,
   useTrackVolume,
+  useDataChannel,
 } from "@livekit/components-react";
+import { useEffect, useState } from "react";
 import { InterviewerOrb } from "./InterviewerOrb";
 import { StageVisualizer } from "./StageVisualizer";
 
@@ -46,10 +48,51 @@ export function LiveKitVoiceStage({
     localParticipant?.setMicrophoneEnabled(isMuted);
   };
 
+  const [currentGoalIndex, setCurrentGoalIndex] = useState<number | null>(null);
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState<number>(0);
+
+  useDataChannel("goal_timer", (msg) => {
+    try {
+      const payload = JSON.parse(new TextDecoder().decode(msg.payload));
+      if (payload.type === "goal_advanced") {
+        setCurrentGoalIndex(payload.goal_index);
+        setTimeLeftSeconds(payload.interview_time_in_minute * 60);
+      }
+    } catch (e) {
+      console.error("Failed to parse goal_timer message", e);
+    }
+  });
+
+  useEffect(() => {
+    if (timeLeftSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setTimeLeftSeconds((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timeLeftSeconds]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
   return (
     <div className="w-full max-w-3xl flex flex-col gap-6">
       {/* Main Stage View */}
       <div className="relative w-full bg-[#191919] rounded-3xl border border-gray-800 shadow-2xl p-8 pt-14 min-h-[420px] flex flex-col items-center justify-center overflow-hidden">
+        
+        {/* Per-Topic Timer */}
+        {currentGoalIndex !== null && (
+          <div className={`absolute top-6 right-6 flex items-center gap-2 px-4 py-2 rounded-xl backdrop-blur-md border ${timeLeftSeconds < 120 ? 'bg-red-500/20 border-red-500/50 text-red-200' : 'bg-white/10 border-white/10 text-gray-200'} transition-colors duration-500 shadow-sm z-20`}>
+            <span className="text-xs font-semibold uppercase tracking-wider opacity-70">
+              Topic {currentGoalIndex + 1}
+            </span>
+            <span className="text-sm font-bold tabular-nums">
+              ⏱ {formatTime(timeLeftSeconds)}
+            </span>
+          </div>
+        )}
         {/* Agent Avatar & Orb */}
         <div className="relative flex flex-col items-center z-10">
           <InterviewerOrb state={state || "connecting"} />

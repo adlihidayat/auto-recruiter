@@ -191,13 +191,13 @@ export const CreateInterviewSuccessStep: React.FC<
               return (
                 <div
                   key={candidateId}
-                  className="bg-white border-b border-gray-200 px-3.5 py-2.5 flex items-center justify-between gap-3  hover:border-gray-300 transition-colors"
+                  className="bg-white border-b border-gray-200 px-3.5 py-2.5 flex items-center justify-between gap-3  hover:border-gray-300 transition-colors w-120"
                 >
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 text-black text-sm font-medium uppercase">
                       {candidateName.charAt(0)}
                     </div>
-                    <div className="flex items-center gap-2 truncate">
+                    <div className="flex w-32 items-center gap-2 truncate">
                       <span className="text-xs font-medium text-gray-900 truncate">
                         {candidateName}
                       </span>
@@ -205,7 +205,7 @@ export const CreateInterviewSuccessStep: React.FC<
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <div className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1 flex items-center gap-2 max-w-[160px] overflow-hidden">
+                    <div className="bg-gray-100 border border-gray-200 rounded-md px-2.5 py-1 flex items-center gap-2 max-w-[160px] overflow-hidden">
                       <LinkIcon className="w-3 h-3 text-gray-400 shrink-0" />
                       <input
                         type="text"
@@ -218,9 +218,9 @@ export const CreateInterviewSuccessStep: React.FC<
                     <button
                       type="button"
                       onClick={() => onCopyLink(candidateId, tokenValue)}
-                      className={`px-3 py-1 rounded-md text-sm font-medium flex items-center gap-1 transition-all cursor-pointer shrink-0 ${
+                      className={`px-3 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition-all cursor-pointer shrink-0 ${
                         isCopied
-                          ? "bg-[#191919] text-white shadow-xs"
+                          ? "bg-[#191919] text-white shadow-xs border border-transparent"
                           : "bg-white hover:bg-gray-100 text-gray-700 border border-gray-200"
                       }`}
                     >
