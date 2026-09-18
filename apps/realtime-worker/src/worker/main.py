@@ -89,8 +89,11 @@ async def entrypoint(ctx: JobContext):
                         suggested_opening=g_data.get("suggested_opening", ""),
                         passing_criteria=g_data.get("passing_criteria", []),
                         pushback_triggers=g_data.get("pushback_triggers", []),
-                        wrong_answer_signals=g_data.get("wrong_answer_signals", []),
-                        interview_time_in_minute=1 # Default or parsed from weight? Leaving as 1 for now.
+                        wrong_answer_signals=[
+                            {"signal": s, "severity": "moderate"} if isinstance(s, str) else s 
+                            for s in g_data.get("wrong_answer_signals", [])
+                        ],
+                        interview_time_in_minute=g_data.get("interview_time_in_minute", 1)
                     )
                 )
         except Exception as e:
@@ -115,27 +118,21 @@ async def entrypoint(ctx: JobContext):
     session_state = InterviewSessionState(candidate_id=candidate_id, goals=goals)
     
     async def shutdown_callback():
-        # Wait for the agent to finish speaking the closing message before nuking the room.
-        # `session` is resolved from the enclosing scope at call time — Python closures capture
-        # the variable name, not its value, so this is safe even though `session` is assigned below.
         logger.info("Interview complete. Waiting for agent to finish speaking before closing room...")
         
-        finished_speaking_event = asyncio.Event()
-        
-        def _on_agent_stopped_speaking(*args):
-            finished_speaking_event.set()
-        
-        # Register once — fires as soon as TTS finishes the closing sentence
-        session.on("agent_stopped_speaking", _on_agent_stopped_speaking)
-        
         try:
-            # 15-second hard timeout as a safety net in case the event never fires
-            await asyncio.wait_for(finished_speaking_event.wait(), timeout=20.0)
-            logger.info("Agent finished speaking. Closing room now.")
+            # 1. Give the agent a moment to transition into THINKING/SPEAKING state 
+            # (since this callback fires instantly when the LLM decision is reached, before TTS starts)
+            await asyncio.sleep(1.5)
+            
+            # 2. Wait until the agent returns to an idle state (meaning it finished speaking), with a generous 60s timeout
+            # to prevent cutting off long closing messages.
+            await asyncio.wait_for(session.wait_for_idle(), timeout=60.0)
+            logger.info("Agent reached idle state. Closing room now.")
         except asyncio.TimeoutError:
             logger.warning("Timed out waiting for agent to finish speaking. Closing room anyway.")
-        finally:
-            session.off("agent_stopped_speaking", _on_agent_stopped_speaking)
+        except Exception as e:
+            logger.error(f"Error while waiting for agent to idle: {e}")
         
         try:
             livekit_api = api.LiveKitAPI(settings.livekit_url, settings.livekit_api_key, settings.livekit_api_secret)
@@ -148,7 +145,8 @@ async def entrypoint(ctx: JobContext):
     interviewer_llm = InterviewerLLM(
         session_state=session_state, 
         backend_client=backend_client,
-        shutdown_callback=shutdown_callback
+        shutdown_callback=shutdown_callback,
+        room=ctx.room
     )
 
     session = voice.AgentSession(
@@ -169,6 +167,17 @@ async def entrypoint(ctx: JobContext):
     
     # Speak the first goal's opening
     if session_state.current_goal:
+        try:
+            import json
+            data = json.dumps({
+                "type": "goal_advanced", 
+                "goal_index": 0,
+                "interview_time_in_minute": session_state.current_goal.interview_time_in_minute
+            }).encode('utf-8')
+            await ctx.room.local_participant.publish_data(data, topic="goal_timer")
+        except Exception as e:
+            logger.error(f"Failed to publish initial goal_timer data: {e}")
+            
         greeting = f"Welcome to the interview! {session_state.current_goal.suggested_opening}"
         session_state.add_history_item(role="interviewer", content=greeting)
         await asyncio.sleep(1.5)

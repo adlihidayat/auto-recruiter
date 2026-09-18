@@ -69,11 +69,12 @@ class InterviewerLLMStream(llm.LLMStream):
         pass
 
 class InterviewerLLM(llm.LLM):
-    def __init__(self, session_state: InterviewSessionState, backend_client: BackendClient, shutdown_callback=None):
+    def __init__(self, session_state: InterviewSessionState, backend_client: BackendClient, shutdown_callback=None, room=None):
         super().__init__()
         self.session_state = session_state
         self.backend_client = backend_client
         self.shutdown_callback = shutdown_callback
+        self.room = room
 
     def chat(self, chat_ctx: llm.ChatContext, **kwargs) -> llm.LLMStream:
         """
@@ -115,12 +116,13 @@ class InterviewerLLM(llm.LLM):
             session_state=self.session_state,
             backend_client=self.backend_client,
             transcript=transcript,
-            shutdown_callback=self.shutdown_callback
+            shutdown_callback=self.shutdown_callback,
+            room=self.room
         )
         return stream
 
 class GraphExecutionStream(llm.LLMStream):
-    def __init__(self, llm_instance: llm.LLM, chat_ctx: llm.ChatContext, conn_options: Any, session_state: InterviewSessionState, backend_client: BackendClient, transcript: str, shutdown_callback=None):
+    def __init__(self, llm_instance: llm.LLM, chat_ctx: llm.ChatContext, conn_options: Any, session_state: InterviewSessionState, backend_client: BackendClient, transcript: str, shutdown_callback=None, room=None):
         super().__init__(
             llm=llm_instance,
             chat_ctx=chat_ctx,
@@ -131,6 +133,7 @@ class GraphExecutionStream(llm.LLMStream):
         self.backend_client = backend_client
         self.transcript = transcript
         self.shutdown_callback = shutdown_callback
+        self.room = room
 
     async def _execute_graph(self) -> str:
         # Check if interview is finished
@@ -204,6 +207,19 @@ class GraphExecutionStream(llm.LLMStream):
                 self.session_state.advance_goal()
                 remaining = len(self.session_state.goals) - self.session_state.current_goal_index
                 logger.info(f"[FLOW] Advanced to next goal. Remaining goals: {remaining}")
+                
+                if self.room and self.session_state.current_goal:
+                    try:
+                        import json
+                        data = json.dumps({
+                            "type": "goal_advanced",
+                            "goal_index": self.session_state.current_goal_index,
+                            "interview_time_in_minute": self.session_state.current_goal.interview_time_in_minute
+                        }).encode('utf-8')
+                        asyncio.create_task(self.room.local_participant.publish_data(data, topic="goal_timer"))
+                    except Exception as exc:
+                        logger.error(f"Failed to publish goal_timer data: {exc}")
+                        
                 self.session_state.add_history_item(role="interviewer", content=message)
                 
                 # Now add the current transcript as the first candidate response in the new goal
@@ -225,11 +241,34 @@ class GraphExecutionStream(llm.LLMStream):
         # 2. Prepare LangGraph input
         input_state = self.session_state.get_agent_input_state(self.transcript)
         
-        # 3. Invoke LangGraph
+        # 3. Time Limit Enforcement (Hard Failsafe) & LangGraph Invocation
+        limit_seconds = self.session_state.current_goal.interview_time_in_minute * 60
+        grace_period = 30
+        
         try:
-            logger.info("\n========================================\n[AGENT] Processing candidate's response through LangGraph...\n========================================")
-            result_state = await interviewer_graph.ainvoke(input_state)
-            decision = result_state.get("decision")
+            if self.session_state.time_elapsed_seconds_this_goal > (limit_seconds + grace_period):
+                logger.warning(f"[TIME] Goal time limit exceeded ({self.session_state.time_elapsed_seconds_this_goal}s > {limit_seconds}s). Bypassing agent to force transition.")
+                
+                next_opening = self.session_state.next_goal.suggested_opening if self.session_state.next_goal else "We will now conclude the interview."
+                intercept_message = f"In the interest of time, we need to wrap up this topic and move on. {next_opening}".strip()
+                
+                from pydantic import BaseModel
+                class MockDecision(BaseModel):
+                    action: str
+                    message_to_candidate: str
+                    progression_override: bool
+                    flag_for_human_review: bool
+                    
+                decision = MockDecision(
+                    action="advance",
+                    message_to_candidate=intercept_message,
+                    progression_override=True,
+                    flag_for_human_review=False
+                )
+            else:
+                logger.info("\n========================================\n[AGENT] Processing candidate's response through LangGraph...\n========================================")
+                result_state = await interviewer_graph.ainvoke(input_state)
+                decision = result_state.get("decision")
             
             if not decision:
                 logger.error("[AGENT] Error: No decision returned by LangGraph!")
