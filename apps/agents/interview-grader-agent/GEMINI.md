@@ -159,6 +159,7 @@ Because interactions arrive pre-segmented per goal, the old "segmentation" stage
   - `3.0 – 7.9` $\rightarrow$ `"Advance with follow-up"`
   - `< 3.0` $\rightarrow$ `"Hold"`
   - *Gating check*: any gating goal failing (`score < 6.0`) overrides recommendation to `"Hold"`.
+  - *Unaddressed goal check*: if any goal is unaddressed or score is null, the maximum recommendation allowed is `"Advance with follow-up"`.
 - Calls `gemini-1.5-flash-8b` to generate a single, plain-language `reasoning` paragraph explaining *why* the candidate received their specific recommendation based on transcript evidence, scores, and injection red flags.
 
 **Report Generation.** Emits the minimal `FinalReport` object containing top-level metrics, overall confidence, recommendation, reasoning paragraph, and audit metadata.

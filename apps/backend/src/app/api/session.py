@@ -97,6 +97,11 @@ async def start_interview_session(token: str, session: SessionDep):
             detail="Interview has already been completed."
         )
 
+    # Fetch the interview to get total_duration_minutes
+    interview_res = await session.execute(select(Interview).where(Interview.id == candidate.interview_id))
+    interview = interview_res.scalar_one_or_none()
+    total_duration = interview.total_duration_minutes if interview and interview.total_duration_minutes else 30
+
     # 1. Fetch Goal records for the interview
     goal_res = await session.execute(
         select(Goal)
@@ -104,6 +109,8 @@ async def start_interview_session(token: str, session: SessionDep):
         .order_by(Goal.goal_ref.asc())
     )
     goals = goal_res.scalars().all()
+    
+    total_weight = sum(g.weight for g in goals)
     
     # Serialize goals to pass into agent dispatch metadata
     goals_data = [
@@ -119,7 +126,8 @@ async def start_interview_session(token: str, session: SessionDep):
             "grounding_theory": g.grounding_theory,
             "suggested_opening": g.suggested_opening,
             "weight": g.weight,
-            "gating": g.gating
+            "gating": g.gating,
+            "interview_time_in_minute": int(g.weight * total_duration / total_weight) if total_weight > 0 else 1
         } for g in goals
     ]
     goals_json = json.dumps(goals_data)

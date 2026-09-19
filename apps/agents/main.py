@@ -228,18 +228,26 @@ async def evaluate_candidate(request: GraderRequest):
             injection_dict = {}
 
         # --- communication_analysis ---
-        # The "communication" node returns {"communication": CommunicationOutput(...)}.
-        # LangGraph merges that into state["communication"] — a CommunicationOutput Pydantic model.
-        # CommunicationOutput.communication is a CommunicationOutputData that has .overall and .traits.
+        # State key is "communication" (GraderState TypedDict).
+        # The node returns CommunicationOutput which wraps data under .communication —
+        # we unwrap one level so the API surface is {overall: ..., traits: ...}.
         comm_state = result_state.get("communication")
+        logger.info(f"DEBUG comm_state type: {type(comm_state)}, val: {comm_state}")
+        
         if hasattr(comm_state, "model_dump"):
-            # CommunicationOutput.model_dump() -> {"communication": {"overall": ..., "traits": ...}}
+            # Pydantic model: .model_dump() -> {"communication": {"overall": ..., "traits": ...}}
             comm_dict = comm_state.model_dump().get("communication", {})
         elif isinstance(comm_state, dict):
-            # May already be unwrapped or raw dict
+            # Raw dict: may already be {overall/traits} or still have the wrapper key
             comm_dict = comm_state.get("communication", comm_state)
         else:
             comm_dict = {}
+
+        # Default null trait scores to 0 — a trait that was never addressed has no
+        # positive evidence, so it contributes nothing (score = 0).
+        for trait_eval in (comm_dict.get("traits") or {}).values():
+            if isinstance(trait_eval, dict) and trait_eval.get("score") is None:
+                trait_eval["score"] = 0.0
 
         # --- core_analysis + citations merged per goal ---
         # Build a fast lookup: goal_id -> list of Citation dicts from the citations node
@@ -265,21 +273,24 @@ async def evaluate_candidate(request: GraderRequest):
         else:
             raw_goals = []
 
-        # Merge citations into each goal dict
+        # Merge citations into each goal dict and default null score to 0
         goals_with_citations = []
         for goal_eval in raw_goals:
             if hasattr(goal_eval, "model_dump"):
                 goal_dict = goal_eval.model_dump()
             elif isinstance(goal_eval, dict):
-                goal_dict = goal_eval
+                goal_dict = dict(goal_eval)  # shallow copy to avoid mutating state
             else:
                 continue
             gid = goal_dict.get("goal_id", "")
+            # A goal that wasn't properly evaluated scores 0, not null
+            if goal_dict.get("score") is None:
+                goal_dict["score"] = 0.0
             goal_dict["citations"] = citations_by_goal.get(gid, [])
             goals_with_citations.append(goal_dict)
 
         return {
-            "overall_score": final_report_dict.get("composite_score"),
+            "overall_score": final_report_dict.get("composite_score") or 0.0,
             "recommendation": final_report_dict.get("recommendation"),
             "final_report": final_report_dict,
             "injection_findings": injection_dict.get("injection_findings", []),

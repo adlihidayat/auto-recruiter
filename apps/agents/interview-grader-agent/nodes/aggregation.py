@@ -117,6 +117,15 @@ def run_aggregation(state: GraderState) -> dict[str, Any]:
     if gating_failed:
         recommendation = "Hold"
 
+    # Cap recommendation at "Advance with follow-up" if any core goal is unaddressed/null
+    total_expected_goals = max(len(input_goals), goals_total)
+    has_unaddressed_goals = (goals_assessed < total_expected_goals) or any(
+        not g.get("addressed") or g.get("score") is None for g in goal_breakdown
+    )
+    
+    if has_unaddressed_goals and recommendation == "Advance":
+        recommendation = "Advance with follow-up"
+
     # 5. Merge Red Flags
     red_flags = []
     injection_check = state.get("injection_check")
