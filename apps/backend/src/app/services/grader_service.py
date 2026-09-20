@@ -82,7 +82,6 @@ async def process_candidate_grading(candidate_id: uuid.UUID) -> None:
                     "pushback_triggers": g.pushback_triggers if g.pushback_triggers else [],
                     "grounding_theory": g.grounding_theory or "",
                     "weight": g.weight or 1.0,
-                    "gating": False,
                     "interaction_history": goal_interactions
                 })
 

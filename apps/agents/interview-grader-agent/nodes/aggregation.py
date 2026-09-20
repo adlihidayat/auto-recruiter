@@ -30,10 +30,6 @@ def run_aggregation(state: GraderState) -> dict[str, Any]:
     core_weight = 1.0 - comm_weight
 
     input_goals = state.get("goals", [])
-    gating_map = {}
-    for ig in input_goals:
-        ig_dict = ig.model_dump() if hasattr(ig, "model_dump") else ig
-        gating_map[ig_dict["goal_id"]] = ig_dict.get("gating", False)
 
     # 1. Process Core Analysis
     core_analysis = state.get("core_analysis")
@@ -41,7 +37,6 @@ def run_aggregation(state: GraderState) -> dict[str, Any]:
     goals_total = 0
     total_core_score = 0.0
     core_conf_sum = 0.0
-    gating_failed = False
     goal_breakdown = []
     
     conf_map = {"low": 0.3, "medium": 0.7, "high": 1.0}
@@ -59,11 +54,6 @@ def run_aggregation(state: GraderState) -> dict[str, Any]:
                 
                 c = g_dict.get("confidence", "high").lower()
                 core_conf_sum += conf_map.get(c, 1.0)
-                
-                # Check gating
-                if gating_map.get(g_dict["goal_id"], False):
-                    if g_dict["score"] < 6.0:
-                        gating_failed = True
 
     core_score = (total_core_score / goals_assessed) if goals_assessed > 0 else 0.0
     core_conf_avg = (core_conf_sum / goals_assessed) if goals_assessed > 0 else 1.0
@@ -106,62 +96,95 @@ def run_aggregation(state: GraderState) -> dict[str, Any]:
     else:
         overall_confidence = "High"
 
-    # 4. Recommendation Mapping
-    if composite_score >= 8.0:
-        recommendation = "Advance"
-    elif composite_score >= 3.0:
-        recommendation = "Advance with follow-up"
-    else:
-        recommendation = "Hold"
-        
-    if gating_failed:
-        recommendation = "Hold"
-
-    # Cap recommendation at "Advance with follow-up" if any core goal is unaddressed/null
-    total_expected_goals = max(len(input_goals), goals_total)
-    has_unaddressed_goals = (goals_assessed < total_expected_goals) or any(
-        not g.get("addressed") or g.get("score") is None for g in goal_breakdown
-    )
+    # 4. Categorize Security Findings & Manual Review Items
+    confirmed_security_findings = []
+    manual_review_items = []
     
-    if has_unaddressed_goals and recommendation == "Advance":
-        recommendation = "Advance with follow-up"
-
-    # 5. Merge Red Flags
-    red_flags = []
     injection_check = state.get("injection_check")
     if injection_check:
         findings = injection_check.injection_findings if hasattr(injection_check, 'injection_findings') else injection_check.get("injection_findings", [])
         for finding in findings:
             finding_dict = finding.model_dump() if hasattr(finding, 'model_dump') else finding
-            red_flags.append({
-                "description": f"Prompt Injection Detected ({finding_dict.get('layer_detected', 'unknown')}): {finding_dict.get('rationale', '')}",
-                "goal_id": finding_dict.get("goal_id"),
-                "severity": "critical"
-            })
+            conf = finding_dict.get("confidence", "high")
+            item = {
+                "description": finding_dict.get('rationale', ''),
+                "quote": finding_dict.get("quote", ""),
+                "confidence": conf
+            }
+            if conf in ["high", "medium"]:
+                confirmed_security_findings.append(item)
+            else:
+                manual_review_items.append(item)
 
-    # 6. Merge Citations
-    citations_output = state.get("citations")
-    if citations_output:
-        cit_dict = citations_output.to_citations_by_goal() if hasattr(citations_output, "to_citations_by_goal") else {}
-        for gb in goal_breakdown:
-            g_id = gb.get("goal_id")
-            if g_id in cit_dict:
-                gb["citations"] = cit_dict[g_id].get("citations", [])
+    has_confirmed_security_findings = len(confirmed_security_findings) > 0
 
-    # 7. LLM Reasoning Generation
+    # 5. Recommendation Mapping & Deterministic Scoring Rationale
+    total_expected_goals = max(len(input_goals), goals_total)
+    has_unaddressed_goals = (goals_assessed < total_expected_goals) or any(
+        not g.get("addressed") or g.get("score") is None for g in goal_breakdown
+    )
+
+    if composite_score >= 8.0:
+        if has_confirmed_security_findings:
+            recommendation = "Advance with follow-up"
+            recommendation_rationale = f"Advance with follow-up (composite score {composite_score} >= 8.0 threshold, but capped due to detected prompt injection)"
+        elif has_unaddressed_goals:
+            recommendation = "Advance with follow-up"
+            recommendation_rationale = f"Advance with follow-up (composite score {composite_score} >= 8.0 threshold, but capped due to unaddressed goals)"
+        else:
+            recommendation = "Advance"
+            recommendation_rationale = f"Advance (composite score {composite_score} >= 8.0 threshold)"
+    elif composite_score >= 3.0:
+        recommendation = "Advance with follow-up"
+        reasons = [f"composite score {composite_score} is between 3.0 and 7.9 threshold"]
+        if has_unaddressed_goals:
+            reasons.append("unaddressed goals present")
+        if has_confirmed_security_findings:
+            reasons.append("prompt injection detected")
+        recommendation_rationale = f"Advance with follow-up ({', '.join(reasons)})"
+    else:
+        recommendation = "Hold"
+        reasons = [f"composite score {composite_score} < 3.0 threshold"]
+        if has_confirmed_security_findings:
+            reasons.append("prompt injection detected")
+        recommendation_rationale = f"Hold ({', '.join(reasons)})"
+
+    # 6. LLM Reasoning Generation
     prompt = get_aggregation_prompt()
     
     core_sum = json.dumps([{"goal": g.get("goal_id"), "score": g.get("score"), "rationale": g.get("rationale")} for g in goal_breakdown], indent=2)
-    comm_sum = json.dumps(comm_output, indent=2) if comm_output else "None"
-    rf_sum = json.dumps(red_flags, indent=2)
+    if comm_output:
+        overall_data = comm_output.get("overall", {})
+        traits_data = comm_output.get("traits", {})
+        simplified_comm = {
+            "overall": {
+                "is_passed": overall_data.get("is_passed") if isinstance(overall_data, dict) else getattr(overall_data, "is_passed", None),
+                "rationale": overall_data.get("rationale") if isinstance(overall_data, dict) else getattr(overall_data, "rationale", None)
+            },
+            "traits": {
+                t_name: {
+                    "is_passed": t_val.get("is_passed") if isinstance(t_val, dict) else getattr(t_val, "is_passed", None),
+                    "rationale": t_val.get("rationale") if isinstance(t_val, dict) else getattr(t_val, "rationale", None)
+                }
+                for t_name, t_val in traits_data.items()
+            }
+        }
+        comm_sum = json.dumps(simplified_comm, indent=2)
+    else:
+        comm_sum = "None"
+        
+    confirmed_sum = json.dumps(confirmed_security_findings, indent=2) if confirmed_security_findings else "None"
+    manual_sum = json.dumps(manual_review_items, indent=2) if manual_review_items else "None"
     
     messages = prompt.format_messages(
         recommendation=recommendation,
+        recommendation_rationale=recommendation_rationale,
         composite_score=composite_score,
         overall_confidence=overall_confidence,
         core_summary=core_sum,
         communication_summary=comm_sum,
-        red_flags_summary=rf_sum
+        confirmed_security_findings=confirmed_sum,
+        manual_review_items=manual_sum
     )
     result = gemini_flash_lite.invoke(messages)
     

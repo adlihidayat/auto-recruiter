@@ -6,8 +6,8 @@ Boundaries: Does not implement node logic or define state schemas; delegates rou
 from langgraph.graph import StateGraph, START, END
 from typing import Dict, Any
 from .state import GraderState
-from .nodes import run_core_analysis, run_communication, run_injection_check, run_citations, run_aggregation
-from .edges import route_phase_1, route_after_phase_1_join
+from .nodes import run_core_analysis, run_communication, run_injection_check, run_aggregation
+from .edges import route_phase_1
 
 def dummy_join(state: GraderState) -> Dict[str, Any]:
     """Dummy node to serve as a convergence point for Phase 1 parallel execution."""
@@ -24,7 +24,6 @@ def create_grader_graph() -> StateGraph:
     workflow.add_node("communication", run_communication)
     workflow.add_node("injection_check", run_injection_check)
     workflow.add_node("phase_1_join", dummy_join)
-    workflow.add_node("citations", run_citations)
     workflow.add_node("aggregation", run_aggregation)
     
     # Phase 1 Parallel Dispatch
@@ -38,14 +37,8 @@ def create_grader_graph() -> StateGraph:
     workflow.add_edge("communication", "phase_1_join")
     workflow.add_edge("injection_check", "phase_1_join")
     
-    # Routing after Phase 1 Convergence
-    workflow.add_conditional_edges(
-        "phase_1_join",
-        route_after_phase_1_join
-    )
-    
-    # Citations always goes to Aggregation
-    workflow.add_edge("citations", "aggregation")
+    # Phase 1 Convergence goes straight to Aggregation
+    workflow.add_edge("phase_1_join", "aggregation")
     
     # Aggregation is the final step
     workflow.add_edge("aggregation", END)

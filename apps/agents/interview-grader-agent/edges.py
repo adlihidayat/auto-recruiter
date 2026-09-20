@@ -28,38 +28,3 @@ def route_phase_1(state: GraderState) -> List[str]:
             
     return nodes
 
-def route_after_phase_1_join(state: GraderState) -> str:
-    """
-    Determine next step after Phase 1 parallel execution completes.
-    Check if any goals need citations (score 4-6 or low/medium confidence) from core_analysis.
-    """
-    core_analysis = state.get("core_analysis")
-    if not core_analysis:
-        return "aggregation"
-        
-    needs_citations = False
-    
-    # Handle if core_analysis is a Pydantic model or dict
-    goals = core_analysis.goals if hasattr(core_analysis, 'goals') else core_analysis.get("goals", [])
-    
-    for goal in goals:
-        score = goal.score if hasattr(goal, 'score') else goal.get("score")
-        
-        confidence = "high"
-        if hasattr(goal, 'confidence'):
-            confidence = goal.confidence
-        elif isinstance(goal, dict):
-            confidence = goal.get("confidence", "high")
-        
-        if score is not None and 4 <= score <= 6:
-            needs_citations = True
-            break
-            
-        if confidence in ["low", "medium"]:
-            needs_citations = True
-            break
-            
-    if needs_citations:
-        return "citations"
-        
-    return "aggregation"

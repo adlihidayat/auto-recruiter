@@ -30,7 +30,6 @@ class Goal(Base):
     suggested_opening: Mapped[str] = mapped_column(Text, nullable=True)
     
     weight: Mapped[float] = mapped_column(Float, default=1.0)
-    gating: Mapped[bool] = mapped_column(Boolean, default=False)
     
     # Relationships
     interview = relationship("Interview")

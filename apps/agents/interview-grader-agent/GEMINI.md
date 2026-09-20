@@ -15,7 +15,6 @@ This agent is the third and final node in the pipeline: `question-maker-agent` (
 - **No protected-characteristic influence.** If the transcript contains disclosure of age, religion, disability, pregnancy, national origin, family status, or similar, this must have zero influence on any score, confidence value, rationale, or recommendation. Do not reference the disclosure anywhere in the output, including internal reasoning fields.
 - **No penalizing communication style unless the job requires it.** Grammar, phrasing, ESL-style construction, or verbosity must never lower a score unless written/verbal communication quality is itself part of the job's criteria. Sufficiency is defined by the goal's criteria, not by how polished the prose sounds.
 - **Never force a score onto an unaddressed goal.** If a goal was not meaningfully explored in the transcript, mark it `"Not Assessed"` with null score/confidence. This protects the candidate from being penalized for the interviewer's coverage gaps, not their own performance.
-- **Gating goals override the composite.** If the plan marks a goal as gating and the candidate fails it, the final recommendation is capped at "No Hire" regardless of how well everything else scored.
 - **Communication assessment is conditional, not universal.** Only run the dedicated communication/interpersonal evaluation when the plan's `communication_weight` is `medium` or `high`. Do not assess discourse style for roles where it isn't part of the hiring bar — this keeps the pipeline cheap for roles where it adds no signal.
 
 ## 3. Statelessness & Context Contract
@@ -24,7 +23,7 @@ This agent holds no memory across candidates or across calls. It must be given e
 
 - The full goal list from the plan, each with its `passing_criteria`, `pushback_triggers`, `wrong_answer_signals`, and grounding theory text.
 - Job name and job description.
-- Plan-level metadata: `communication_weight`, and per-goal `weight` / `gating` flags (see §6 — these must be added upstream if not already present in the question-maker output).
+- Plan-level metadata: `communication_weight`, and per-goal `weight` (see §6 — these must be added upstream if not already present in the question-maker output).
 - The full interaction history, **already segmented per goal_id by the backend** — this agent does not need to figure out which turns belong to which goal; that mapping already exists because the interviewer agent operates one goal at a time.
 
 **What this agent does _not_ receive, and must not expect:** the interviewer agent's internal `action`, `reasoning`, `trigger_matched`, or `flag_for_human_review` fields. The backend strips these before storage — only the clean, human-readable exchange (`role` + `content`, per goal) is persisted. This means the grader cannot see _why_ the interviewer chose to push back; it must independently judge whether pushback occurred and how the candidate responded, based purely on transcript content against that goal's own `pushback_triggers` list. This is intentional — it keeps grading decoupled from the interviewer's live judgment calls and re-derives everything from source evidence.
@@ -107,7 +106,6 @@ Passed to this agent once, after the interview is complete:
       ],
       "grounding_theory": "### Resilient Microservice Architecture with gRPC\n...",
       "weight": 1,
-      "gating": false,
       "interaction_history": [
         {
           "role": "interviewer",
@@ -131,7 +129,7 @@ Passed to this agent once, after the interview is complete:
 **Notes:**
 
 - `interaction_history` is already scoped to this `goal_id` — no cross-goal transcript stitching needed on this agent's side.
-- `weight`, `gating`, and `plan_meta.communication_weight` are **human-set configuration, not agent output.** No agent — including `question-maker-agent` — decides how much a goal counts, whether it's gating, or how much communication matters for this role. That is a judgment call for whoever creates the interview plan (the recruiter/hiring manager), made once at plan-creation time through whatever UI sits above these agents, and simply attached to the plan before it ever reaches the grader. Sensible defaults (`weight: 1`, `gating: false`, `communication_weight: "low"`) should apply only if the human hasn't set a value, purely so the pipeline doesn't break — never as a stand-in for the human's actual intent.
+- `weight` and `plan_meta.communication_weight` are **human-set configuration, not agent output.** No agent — including `question-maker-agent` — decides how much a goal counts, or how much communication matters for this role. That is a judgment call for whoever creates the interview plan (the recruiter/hiring manager), made once at plan-creation time through whatever UI sits above these agents, and simply attached to the plan before it ever reaches the grader. Sensible defaults (`weight: 1`, `communication_weight: "low"`) should apply only if the human hasn't set a value, purely so the pipeline doesn't break — never as a stand-in for the human's actual intent.
 - `grounding_theory` corresponds to the `theory` field already produced by `question-maker-agent`'s `grounding_theories` array — pass it through unchanged, keyed by `goal_id`.
 
 ## 7. Processing Pipeline
@@ -158,7 +156,6 @@ Because interactions arrive pre-segmented per goal, the old "segmentation" stage
   - `≥ 8.0` $\rightarrow$ `"Advance"`
   - `3.0 – 7.9` $\rightarrow$ `"Advance with follow-up"`
   - `< 3.0` $\rightarrow$ `"Hold"`
-  - *Gating check*: any gating goal failing (`score < 6.0`) overrides recommendation to `"Hold"`.
   - *Unaddressed goal check*: if any goal is unaddressed or score is null, the maximum recommendation allowed is `"Advance with follow-up"`.
 - Calls `gemini-1.5-flash-8b` to generate a single, plain-language `reasoning` paragraph explaining *why* the candidate received their specific recommendation based on transcript evidence, scores, and injection red flags.
 
@@ -314,6 +311,6 @@ Because interactions arrive pre-segmented per goal, the old "segmentation" stage
 To keep the three-agent system's responsibilities unambiguous:
 
 - **`question-maker-agent`** decides _what to ask_ and _what a good answer looks like_ (goals, criteria, pushback triggers, grounding theory). It has no opinion on how much any of it should count.
-- **The human plan creator** decides _how much each part counts_ (`weight`, `gating`, `communication_weight`) and any other tuning of hard-skill vs. soft-skill emphasis for this specific role. This is deliberately kept outside all three agents — it's a business judgment, not something to infer from a JD.
+- **The human plan creator** decides _how much each part counts_ (`weight`, `communication_weight`) and any other tuning of hard-skill vs. soft-skill emphasis for this specific role. This is deliberately kept outside all three agents — it's a business judgment, not something to infer from a JD.
 - **`interviewer-agent`** decides _what to say next_ during the live conversation, strictly within a single goal's boundaries.
 - **`interview-grader-agent`** (this document) decides _how well the candidate actually did_, against the criteria and weights it's handed — it never adjusts weighting or criteria itself, only evaluates against them.

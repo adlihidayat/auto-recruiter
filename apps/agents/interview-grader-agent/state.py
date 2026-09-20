@@ -43,7 +43,6 @@ class GoalInput(BaseModel):
     pushback_triggers: List[Union[PushbackTrigger, str, Dict[str, Any]]] = Field(default_factory=list)
     grounding_theory: str
     weight: float = 1.0
-    gating: bool = False
     interaction_history: List[Interaction]
 
 # --- LLM Output Schemas (Call 1) ---
@@ -172,32 +171,6 @@ class CommunicationOutputData(BaseModel):
 class CommunicationOutput(BaseModel):
     communication: CommunicationOutputData
 
-# --- Output Schemas (Call 3) ---
-
-class Citation(BaseModel):
-    goal_id: str
-    quote: str
-    turn_reference: Optional[str] = None
-
-class GoalCitations(BaseModel):
-    goal_id: str
-    citations: List[Citation] = Field(default_factory=list)
-
-class CitationsOutput(BaseModel):
-    goal_citations: List[GoalCitations] = Field(default_factory=list)
-
-    def to_citations_by_goal(self) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
-        """
-        Helper method converting to dictionary mapping format:
-        e.g. {"g_02": {"citations": [{"goal_id": "g_02", "quote": "...", "turn_reference": "..."}]}}
-        """
-        res: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
-        for gc in self.goal_citations:
-            res[gc.goal_id] = {
-                "citations": [c.model_dump() for c in gc.citations]
-            }
-        return res
-
 # --- Output Schemas (Aggregation) ---
 
 class FinalReport(BaseModel):
@@ -238,7 +211,6 @@ class GraderState(TypedDict):
     # NOTE: key must be "communication" — matches the node name and return dict key the node emits
     communication: Optional[CommunicationOutput]
     injection_check: Optional[InjectionCheckOutput]
-    citations: Optional[CitationsOutput]
     
     # Final
     final_report: Optional[FinalReport]

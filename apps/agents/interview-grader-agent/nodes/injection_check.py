@@ -8,13 +8,13 @@ import re
 from pydantic import BaseModel
 from langsmith import traceable
 from ..state import GraderState, InjectionFinding
-from core_ai_lib.shared.clients import get_prompt_guard_score, gemini_flash_lite
+from core_ai_lib.shared.clients import get_injection_score, gemini_flash_lite
 from ..prompts.injection_prompt import INJECTION_PROMPT
 
-HIGH_THRESHOLD = 0.9
-LOW_THRESHOLD = 0.1
+# Industry standard for deepset/deberta-v3-base-injection to minimize false positives
+HIGH_THRESHOLD = 0.98
+LOW_THRESHOLD = 0.50
 
- 
 INJECTION_PATTERNS_INSTRUCTION_OVERRIDE = [
     r"(?i)ignore\s+(all\s+|any\s+)?(the\s+)?(previous|prior|above|earlier)\s+instructions?",
     r"(?i)disregard\s+(all\s+|any\s+)?(the\s+)?(previous|prior|above|earlier)\s+(instructions?|rules?|prompts?)",
@@ -86,7 +86,7 @@ def run_injection_check(state: GraderState) -> Dict[str, Any]:
     """
     Injection check node running 3 layers of defense.
     Layer 1: Regex
-    Layer 2: Local PromptGuard
+    Layer 2: Local ONNX DeBERTa
     Layer 3: LLM Span Classifier (conditional)
     """
     findings: List[InjectionFinding] = []
@@ -118,8 +118,8 @@ def run_injection_check(state: GraderState) -> Dict[str, Any]:
                     l1_span = match.group(0)
                     break
                     
-            # Layer 2: PromptGuard Score
-            l2_score = get_prompt_guard_score(content)
+            # Layer 2: ONNX DeBERTa Score
+            l2_score = get_injection_score(content)
             
             # Routing Decision
             if l1_hit and l2_score >= HIGH_THRESHOLD:
@@ -131,7 +131,7 @@ def run_injection_check(state: GraderState) -> Dict[str, Any]:
                     layer_2_score=l2_score,
                     confidence="high",
                     quote=l1_span,
-                    rationale=f"Regex matched '{l1_span}' and PromptGuard scored {l2_score:.2f} (>= {HIGH_THRESHOLD})"
+                    rationale=f"Regex matched '{l1_span}' and DeBERTa scored {l2_score:.2f} (>= {HIGH_THRESHOLD})"
                 ))
             elif not l1_hit and l2_score < LOW_THRESHOLD:
                 # Confident Safe
@@ -186,7 +186,7 @@ def run_injection_check(state: GraderState) -> Dict[str, Any]:
                     layer_2_score=qt["l2_score"],
                     confidence="uncertain",
                     quote=qt["l1_span"] if qt["l1_hit"] else qt["content"][:100],
-                    rationale="Layer 3 LLM failed to process this queued turn."
+                    rationale="An automated check on this turn could not be completed."
                 ))
                 
     return {

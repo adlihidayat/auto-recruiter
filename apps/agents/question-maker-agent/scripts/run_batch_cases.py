@@ -26,69 +26,114 @@ compiled_question_maker_graph = graph_module.graph
 
 # --- Batch Test Cases Array ---
 BATCH_TEST_CASES: List[Dict[str, Any]] = [
-    {
-        "job_name": "Senior Smart Contract Security Engineer",
-        "job_description": "We're hiring a Senior Smart Contract Security Engineer to audit Solidity codebases for DeFi protocols before mainnet deployment. You'll perform manual security reviews and static analysis (Slither, Mythril, Echidna) to catch reentrancy, integer overflow, access-control, and oracle-manipulation vulnerabilities. You'll assess gas efficiency trade-offs, review upgradeable proxy patterns, and write clear audit reports with severity ratings and remediation guidance for engineering teams. You'll also advise on formal verification strategy for critical contract logic and stay current on novel exploit classes (flash-loan attacks, cross-contract reentrancy, MEV-related risks). Required: 4+ years Solidity/EVM experience, hands-on audit experience (internal or via firms like Trail of Bits/OpenZeppelin/Consensys Diligence), deep understanding of the EVM execution model. Nice to have: Rust/Move experience, formal verification tooling (Certora, Foundry invariant testing).",
-        "difficulty": "hard",
-        "num_goals": 4,
-        "total_duration_minutes": 60,
-        "domain_hint": "web3"
-    },
-    {
-        "job_name": "Mid-level Fullstack React/Node Developer",
-        "job_description": "<same description you already provided>",
-        "difficulty": "mid",
-        "num_goals": 4,
-        "total_duration_minutes": 60,
-        "domain_hint": "software"
-    },
-    {
-        "job_name": "Delivery Driver, Last-Mile Logistics",
-        "job_description": "We're hiring delivery drivers to handle last-mile package delivery across residential and commercial routes. You'll load and verify packages against manifests, plan efficient routes using our driver app, handle proof-of-delivery scanning, and manage time-sensitive delivery windows. You'll need to safely handle packages of varying weight (including heavier items requiring proper lifting technique or handcart use), communicate professionally with customers at the door, and make judgment calls when a delivery can't be completed as planned (no answer, blocked access, damaged package). Required: valid driver's license with clean record, ability to lift up to 50 lbs, comfort with a smartphone-based routing app. Nice to have: prior delivery/courier experience, familiarity with the local metro area.",
-        "difficulty": "entry",
-        "num_goals": 3,
-        "total_duration_minutes": 30,
-        "domain_hint": "logistics"
-    },
-    {
-        "job_name": "Registered Nurse, Medical-Surgical Unit",
-        "job_description": "We're hiring an RN for our med-surg unit, managing a caseload of 5-6 patients per shift with varying acuity. You'll administer medications, monitor for clinical deterioration, coordinate with physicians and specialists, and communicate with patients and families under emotionally difficult circumstances. You'll need to prioritize competing demands during high-census shifts, escalate appropriately when a patient's condition changes, and maintain accurate documentation under time pressure. Required: active RN license, 1+ years acute care experience, BLS/ACLS certification. Nice to have: charge nurse experience, experience precepting new grads.",
-        "difficulty": "mid",
-        "num_goals": 4,
-        "total_duration_minutes": 45,
-        "domain_hint": "healthcare"
-        }, {
-        "job_name": "Mid-Market Account Executive, SaaS",
-        "job_description": "We're hiring a Mid-Market AE to own the full sales cycle for our B2B SaaS platform, from qualified lead to closed-won. You'll run discovery calls to uncover business pain, tailor demos to stakeholder priorities, navigate multi-threaded deals with procurement/legal/IT, and negotiate pricing and contract terms. You'll manage a pipeline in Salesforce, forecast accurately, and handle objections around budget, timing, and competitive alternatives. Required: 2+ years closing SaaS deals in the $20k-$100k ACV range, comfort running a consultative (not pitch-first) sales process. Nice to have: MEDDIC or similar methodology training, experience selling into mid-market IT or ops buyers.",
-        "difficulty": "mid",
-        "num_goals": 4,
-        "total_duration_minutes": 45,
-        "domain_hint": "sales"
-    },
-    {
-        "job_name": "Mid-Market Account Executive, SaaS",
-        "job_description": "We're hiring a Mid-Market AE to own the full sales cycle for our B2B SaaS platform, from qualified lead to closed-won. You'll run discovery calls to uncover business pain, tailor demos to stakeholder priorities, navigate multi-threaded deals with procurement/legal/IT, and negotiate pricing and contract terms. You'll manage a pipeline in Salesforce, forecast accurately, and handle objections around budget, timing, and competitive alternatives. Required: 2+ years closing SaaS deals in the $20k-$100k ACV range, comfort running a consultative (not pitch-first) sales process. Nice to have: MEDDIC or similar methodology training, experience selling into mid-market IT or ops buyers.",
-        "difficulty": "mid",
-        "num_goals": 4,
-        "total_duration_minutes": 45,
-        "domain_hint": "sales"
-    },
-    {
-        "job_name": "Retail Store Associate",
-        "job_description": "We're hiring a Retail Store Associate for our storefront, handling checkout, stocking, and customer service. You'll operate the POS system, process returns and exchanges according to policy, help customers find products, and keep the sales floor organized and merchandised. You'll need to stay calm and professional with frustrated or difficult customers, know when to involve a manager, and accurately handle cash and card transactions. Required: comfort with basic POS/register systems, ability to stand for a full shift, reliable availability including weekends. Nice to have: prior retail or customer service experience.",
-        "difficulty": "entry",
-        "num_goals": 3,
-        "total_duration_minutes": 30,
-        "domain_hint": "retail"
-    },
-    {
-        "job_name": "Senior Site Reliability Engineer",
-        "job_description": "We're hiring a Senior SRE to own reliability for a distributed, multi-region service handling high-throughput traffic. You'll design and maintain on-call/incident response processes, lead postmortems for major outages, build observability (metrics, tracing, alerting) to catch cascading failures early, and drive capacity planning across services with complex upstream/downstream dependencies. You'll need to diagnose production incidents under pressure, communicate status clearly to stakeholders during an active incident, and turn postmortem findings into concrete reliability investments. Required: 5+ years operating production distributed systems, deep understanding of failure modes (retries/backoff, thundering herd, cascading failure, partial outages), on-call incident command experience. Nice to have: chaos engineering experience, experience with service mesh/traffic shaping tools.",
-        "difficulty": "hard",
-        "num_goals": 4,
-        "total_duration_minutes": 60,
-        "domain_hint": "infrastructure"
-    }
+
+  {
+    "job_name": "Senior Site Reliability Engineer, Kubernetes Platform",
+    "job_description": "We are hiring a Senior SRE to own the reliability of our multi-region Kubernetes platform, which serves 300+ microservices and roughly 40k requests per second at peak. You will define and track SLIs/SLOs and error budgets, lead incident response as incident commander, and run blameless postmortems that lead to real fixes. You will design autoscaling (HPA, VPA, cluster autoscaler), resource requests and limits, and pod disruption budgets, and you will debug production issues such as CrashLoopBackOff, OOMKilled pods, DNS latency, and noisy neighbors. You will build alerting that pages on symptoms instead of causes, cut alert fatigue, and maintain runbooks. You will also review capacity plans, manage rollout strategies (canary, blue-green), and coach product teams on production readiness. Required: 5+ years in SRE or infrastructure roles, 3+ years running Kubernetes in production, strong Linux and networking fundamentals (TCP, DNS, load balancing), experience with Prometheus/Grafana and an on-call rotation. Nice to have: Terraform, service mesh (Istio/Linkerd), chaos engineering experience, CKA certification.",
+    "difficulty": "senior",
+    "num_goals": 3,
+    "total_duration_minutes": 45,
+    "domain_hint": "devops"
+  },
+  {
+    "job_name": "Data Engineer, Analytics Platform",
+    "job_description": "We are looking for a mid-level Data Engineer to build and maintain the pipelines behind our analytics warehouse, which serves finance, product, and marketing teams. You will design batch and streaming pipelines (Spark, Kafka, Airflow), model data in a dimensional warehouse (star schemas, slowly changing dimensions), and make sure pipelines are idempotent, testable, and observable. You will handle late-arriving data, schema evolution, backfills, and data quality checks (freshness, uniqueness, null rates), and you will tune slow queries and expensive jobs (partitioning, clustering, skew handling). You will document data contracts with upstream teams and investigate discrepancies when a dashboard number looks wrong. Required: 3+ years of data engineering experience, strong SQL, Python or Scala, hands-on experience with Spark or a similar distributed engine, solid understanding of dimensional modeling and ETL/ELT trade-offs. Nice to have: dbt, Snowflake or BigQuery, experience with CDC tools, exposure to data governance and PII handling.",
+    "difficulty": "mid",
+    "num_goals": 3,
+    "total_duration_minutes": 40,
+    "domain_hint": "data"
+  },
+  {
+    "job_name": "Senior Accountant, Revenue Recognition",
+    "job_description": "We are hiring a Senior Accountant to own revenue accounting for our subscription and services business under ASC 606 / IFRS 15. You will apply the five-step revenue model to new contracts, identify performance obligations, allocate transaction price using standalone selling prices, and determine whether revenue is recognized over time or at a point in time. You will review contract modifications, multi-element arrangements, variable consideration, and free trial or discount terms, and you will prepare deferred revenue and contract asset schedules. You will perform month-end close activities, account reconciliations, and journal entries, support quarterly reviews and annual audits, and explain accounting positions to auditors and non-finance stakeholders. You will also help design controls that reduce misstatement risk. Required: bachelor's degree in accounting, CPA or CA (or actively pursuing), 4+ years of accounting experience with 2+ years in revenue recognition or SaaS, strong Excel skills. Nice to have: experience with NetSuite or Zuora, Big 4 audit background, familiarity with SOX controls.",
+    "difficulty": "senior",
+    "num_goals": 3,
+    "total_duration_minutes": 45,
+    "domain_hint": "finance"
+  },
+  {
+    "job_name": "Journeyman Electrician, Commercial Construction",
+    "job_description": "We are hiring a licensed Journeyman Electrician for commercial construction projects, including offices, retail fit-outs, and light industrial buildings. You will install and terminate conduit, wire, panels, and lighting circuits from blueprints and one-line diagrams, size conductors and breakers, and follow the National Electrical Code. You will perform lockout/tagout before any energized work, test circuits with a multimeter and insulation tester, and troubleshoot faults such as tripped GFCIs, voltage drop, and shorted or open circuits. You will maintain a safe job site, use PPE correctly, communicate with the general contractor and inspectors, and lead one or two apprentices during a shift. Required: valid journeyman electrician license, 3+ years of commercial experience, working knowledge of NEC and OSHA safety rules, ability to read blueprints, ability to lift 50 lbs and work at heights. Nice to have: experience with fire alarm or low-voltage systems, OSHA 30 card, prior apprentice supervision.",
+    "difficulty": "junior",
+    "num_goals": 3,
+    "total_duration_minutes": 35,
+    "domain_hint": "trades"
+  },
+  {
+    "job_name": "Customer Success Manager, Enterprise SaaS",
+    "job_description": "We are hiring a Customer Success Manager to manage a portfolio of 20-25 enterprise accounts (annual contract value $50k-$300k) and own onboarding, adoption, renewal, and expansion. You will run kickoff and quarterly business reviews with executive sponsors, build success plans tied to the customer's measurable goals, and track health scores and usage data to spot churn risk early. You will handle escalations when a customer is unhappy or a critical bug affects them, coordinate with support, product, and engineering, and set honest expectations without over-promising. You will lead renewal negotiations, identify upsell opportunities, and give product feedback backed by customer evidence. Required: 3+ years in customer success, account management, or a similar customer-facing role, experience managing enterprise or B2B accounts, strong written and verbal communication, comfort with CRM tools and usage dashboards. Nice to have: SaaS or technical product background, experience with renewal forecasting, Gainsight or similar CS platforms.",
+    "difficulty": "mid",
+    "num_goals": 3,
+    "total_duration_minutes": 40,
+    "domain_hint": "customer_success"
+  }
+
+
+
+
+    # {
+    #     "job_name": "Senior Smart Contract Security Engineer",
+    #     "job_description": "We're hiring a Senior Smart Contract Security Engineer to audit Solidity codebases for DeFi protocols before mainnet deployment. You'll perform manual security reviews and static analysis (Slither, Mythril, Echidna) to catch reentrancy, integer overflow, access-control, and oracle-manipulation vulnerabilities. You'll assess gas efficiency trade-offs, review upgradeable proxy patterns, and write clear audit reports with severity ratings and remediation guidance for engineering teams. You'll also advise on formal verification strategy for critical contract logic and stay current on novel exploit classes (flash-loan attacks, cross-contract reentrancy, MEV-related risks). Required: 4+ years Solidity/EVM experience, hands-on audit experience (internal or via firms like Trail of Bits/OpenZeppelin/Consensys Diligence), deep understanding of the EVM execution model. Nice to have: Rust/Move experience, formal verification tooling (Certora, Foundry invariant testing).",
+    #     "difficulty": "hard",
+    #     "num_goals": 4,
+    #     "total_duration_minutes": 60,
+    #     "domain_hint": "web3"
+    # },
+    # {
+    #     "job_name": "Mid-level Fullstack React/Node Developer",
+    #     "job_description": "<same description you already provided>",
+    #     "difficulty": "mid",
+    #     "num_goals": 4,
+    #     "total_duration_minutes": 60,
+    #     "domain_hint": "software"
+    # },
+    # {
+    #     "job_name": "Delivery Driver, Last-Mile Logistics",
+    #     "job_description": "We're hiring delivery drivers to handle last-mile package delivery across residential and commercial routes. You'll load and verify packages against manifests, plan efficient routes using our driver app, handle proof-of-delivery scanning, and manage time-sensitive delivery windows. You'll need to safely handle packages of varying weight (including heavier items requiring proper lifting technique or handcart use), communicate professionally with customers at the door, and make judgment calls when a delivery can't be completed as planned (no answer, blocked access, damaged package). Required: valid driver's license with clean record, ability to lift up to 50 lbs, comfort with a smartphone-based routing app. Nice to have: prior delivery/courier experience, familiarity with the local metro area.",
+    #     "difficulty": "entry",
+    #     "num_goals": 3,
+    #     "total_duration_minutes": 30,
+    #     "domain_hint": "logistics"
+    # },
+    # {
+    #     "job_name": "Registered Nurse, Medical-Surgical Unit",
+    #     "job_description": "We're hiring an RN for our med-surg unit, managing a caseload of 5-6 patients per shift with varying acuity. You'll administer medications, monitor for clinical deterioration, coordinate with physicians and specialists, and communicate with patients and families under emotionally difficult circumstances. You'll need to prioritize competing demands during high-census shifts, escalate appropriately when a patient's condition changes, and maintain accurate documentation under time pressure. Required: active RN license, 1+ years acute care experience, BLS/ACLS certification. Nice to have: charge nurse experience, experience precepting new grads.",
+    #     "difficulty": "mid",
+    #     "num_goals": 4,
+    #     "total_duration_minutes": 45,
+    #     "domain_hint": "healthcare"
+    #     }, {
+    #     "job_name": "Mid-Market Account Executive, SaaS",
+    #     "job_description": "We're hiring a Mid-Market AE to own the full sales cycle for our B2B SaaS platform, from qualified lead to closed-won. You'll run discovery calls to uncover business pain, tailor demos to stakeholder priorities, navigate multi-threaded deals with procurement/legal/IT, and negotiate pricing and contract terms. You'll manage a pipeline in Salesforce, forecast accurately, and handle objections around budget, timing, and competitive alternatives. Required: 2+ years closing SaaS deals in the $20k-$100k ACV range, comfort running a consultative (not pitch-first) sales process. Nice to have: MEDDIC or similar methodology training, experience selling into mid-market IT or ops buyers.",
+    #     "difficulty": "mid",
+    #     "num_goals": 4,
+    #     "total_duration_minutes": 45,
+    #     "domain_hint": "sales"
+    # },
+    # {
+    #     "job_name": "Mid-Market Account Executive, SaaS",
+    #     "job_description": "We're hiring a Mid-Market AE to own the full sales cycle for our B2B SaaS platform, from qualified lead to closed-won. You'll run discovery calls to uncover business pain, tailor demos to stakeholder priorities, navigate multi-threaded deals with procurement/legal/IT, and negotiate pricing and contract terms. You'll manage a pipeline in Salesforce, forecast accurately, and handle objections around budget, timing, and competitive alternatives. Required: 2+ years closing SaaS deals in the $20k-$100k ACV range, comfort running a consultative (not pitch-first) sales process. Nice to have: MEDDIC or similar methodology training, experience selling into mid-market IT or ops buyers.",
+    #     "difficulty": "mid",
+    #     "num_goals": 4,
+    #     "total_duration_minutes": 45,
+    #     "domain_hint": "sales"
+    # },
+    # {
+    #     "job_name": "Retail Store Associate",
+    #     "job_description": "We're hiring a Retail Store Associate for our storefront, handling checkout, stocking, and customer service. You'll operate the POS system, process returns and exchanges according to policy, help customers find products, and keep the sales floor organized and merchandised. You'll need to stay calm and professional with frustrated or difficult customers, know when to involve a manager, and accurately handle cash and card transactions. Required: comfort with basic POS/register systems, ability to stand for a full shift, reliable availability including weekends. Nice to have: prior retail or customer service experience.",
+    #     "difficulty": "entry",
+    #     "num_goals": 3,
+    #     "total_duration_minutes": 30,
+    #     "domain_hint": "retail"
+    # },
+    # {
+    #     "job_name": "Senior Site Reliability Engineer",
+    #     "job_description": "We're hiring a Senior SRE to own reliability for a distributed, multi-region service handling high-throughput traffic. You'll design and maintain on-call/incident response processes, lead postmortems for major outages, build observability (metrics, tracing, alerting) to catch cascading failures early, and drive capacity planning across services with complex upstream/downstream dependencies. You'll need to diagnose production incidents under pressure, communicate status clearly to stakeholders during an active incident, and turn postmortem findings into concrete reliability investments. Required: 5+ years operating production distributed systems, deep understanding of failure modes (retries/backoff, thundering herd, cascading failure, partial outages), on-call incident command experience. Nice to have: chaos engineering experience, experience with service mesh/traffic shaping tools.",
+    #     "difficulty": "hard",
+    #     "num_goals": 4,
+    #     "total_duration_minutes": 60,
+    #     "domain_hint": "infrastructure"
+    # }
     # --- 1-5: Diverse Roles (Standard & Hard Cases) ---
     # {
     #     "test_case_name": "Case 1: Mid-level Fullstack React/Node Developer (Software)",

@@ -126,7 +126,6 @@ async def start_interview_session(token: str, session: SessionDep):
             "grounding_theory": g.grounding_theory,
             "suggested_opening": g.suggested_opening,
             "weight": g.weight,
-            "gating": g.gating,
             "interview_time_in_minute": int(g.weight * total_duration / total_weight) if total_weight > 0 else 1
         } for g in goals
     ]

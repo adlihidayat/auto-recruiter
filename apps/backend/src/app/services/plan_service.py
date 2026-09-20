@@ -77,8 +77,7 @@ async def process_interview_plan_generation(interview_id: uuid.UUID) -> None:
                     wrong_answer_signals=q_data.get("wrong_answer_signals", []),
                     grounding_theory=q_data.get("grounding_theory"),
                     references=q_data.get("references", []),
-                    weight=1.0,
-                    gating=False
+                    weight=q_data.get("weight", 1.0)
                 )
                 session.add(goal_entity)
                 

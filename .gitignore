@@ -24,3 +24,7 @@ lk
 # Logs & Output Directories
 *.log
 output/
+
+# ONNX Model Weight Binaries
+*.onnx
+**/onnx_injection_model/
