@@ -43,9 +43,13 @@ def route_after_phase_1_join(state: GraderState) -> str:
     goals = core_analysis.goals if hasattr(core_analysis, 'goals') else core_analysis.get("goals", [])
     
     for goal in goals:
-        # Pydantic vs dict accessor
         score = goal.score if hasattr(goal, 'score') else goal.get("score")
-        confidence = goal.confidence if hasattr(goal, 'confidence') else goal.get("confidence")
+        
+        confidence = "high"
+        if hasattr(goal, 'confidence'):
+            confidence = goal.confidence
+        elif isinstance(goal, dict):
+            confidence = goal.get("confidence", "high")
         
         if score is not None and 4 <= score <= 6:
             needs_citations = True

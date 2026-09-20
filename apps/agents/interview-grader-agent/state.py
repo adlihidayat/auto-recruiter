@@ -48,46 +48,57 @@ class GoalInput(BaseModel):
 
 # --- LLM Output Schemas (Call 1) ---
 
-class CriterionResult(BaseModel):
-    criterion_id: str
+class ElementResult(BaseModel):
+    element_id: str
+    reasoning: str
     status: str
     turn_id: Optional[str] = None
     quote: Optional[str] = None
+    asr_note: Optional[str] = None
+
+class CriterionResult(BaseModel):
+    criterion_id: str
+    elements: List[ElementResult]
 
 class SignalResult(BaseModel):
     signal_id: str
+    reasoning: str
     triggered: bool
+    borderline: bool = False
     turn_id: Optional[str] = None
     quote: Optional[str] = None
 
+class FlaggedError(BaseModel):
+    turn_id: str
+    quote: str
+    contradicts: str
+    why: str
+
+class InjectionAttempt(BaseModel):
+    turn_id: str
+    quote: str
+
 class GoalExtraction(BaseModel):
-    goal_id: str
+    goal_id: Optional[str] = None
     criteria_results: List[CriterionResult]
     signal_results: List[SignalResult]
+    flagged_errors: List[FlaggedError]
+    injection_attempts: List[InjectionAttempt]
     rationale: str
 
 class CoreAnalysisExtraction(BaseModel):
     goals: List[GoalExtraction]
 
-# --- Node Output Schemas (Call 1) ---
 
-class CriterionMatchDetail(BaseModel):
-    criterion_id: str
-    status: str
-    turn_id: Optional[str] = None
-    quote: Optional[str] = None
-    verified: bool = True
-
-class CriteriaMatch(BaseModel):
-    passing_met: List[CriterionMatchDetail]
-    failed_triggered: List[CriterionMatchDetail]
 
 class GoalEval(BaseModel):
     goal_id: str
     addressed: bool
     score: Optional[float] = None
-    confidence: Optional[str] = None
-    criteria_match: Optional[CriteriaMatch] = None
+    criteria_results: Optional[List[CriterionResult]] = None
+    signal_results: Optional[List[SignalResult]] = None
+    flagged_errors: Optional[List[FlaggedError]] = None
+    injection_attempts: Optional[List[InjectionAttempt]] = None
     rationale: Optional[str] = None
 
 class ProblemSolvingEval(BaseModel):
@@ -106,6 +117,7 @@ class RedFlag(BaseModel):
     severity: str
 
 class CoreAnalysisOutput(BaseModel):
+    overall_score: Optional[float] = None
     goals: List[GoalEval]
 
 # --- Output Schemas (Call 2) ---
