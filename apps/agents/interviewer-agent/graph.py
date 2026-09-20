@@ -23,7 +23,7 @@ graph_builder.add_edge(START, "checkPromptInjection")
 
 def routeInjectionOrContinue(state: InterviewerState):
     decision = state.get("decision")
-    if decision is not None and decision.action == "end_interview":
+    if decision is not None and decision.action in ["end_interview", "wait"]:
         return "__end__"
     return "decideNextConversationalTurn"
 

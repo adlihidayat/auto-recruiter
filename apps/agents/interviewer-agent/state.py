@@ -65,8 +65,8 @@ class InterviewerDecision(BaseModel):
     scratchpad: str = Field(
         ..., description="Step-by-step internal reasoning working through B1, D1, D2, D3, D4 before choosing action."
     )
-    action: Literal["advance", "pushback", "end_interview"] = Field(
-        ..., description="The next action to take: 'advance' to move forward/close out, 'pushback' to challenge or clarify, or 'end_interview' to terminate for safety/injection."
+    action: Literal["advance", "pushback", "end_interview", "wait"] = Field(
+        ..., description="The next action to take: 'advance' to move forward/close out, 'pushback' to challenge or clarify, 'end_interview' to terminate for safety/injection, or 'wait' to wait for more context."
     )
     message_to_candidate: str = Field(
         description="The exact spoken text to deliver to the candidate."

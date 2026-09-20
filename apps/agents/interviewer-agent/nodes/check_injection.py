@@ -45,6 +45,17 @@ async def checkPromptInjection(state: InterviewerState) -> dict:
         if defense_result.risk_level == "high":
             logger.warning(f"[SECURITY] Injection Detected by Agent! Risk Level: HIGH")
             
+            if len(transcript.split()) < 15:
+                # It's a short transcript, likely a partial or unfinished thought. Wait for more context.
+                decision = InterviewerDecision(
+                    scratchpad="SECURITY_INTERCEPT: Potential injection detected, but transcript is too short to be conclusive. Waiting for continuation.",
+                    action="wait",
+                    message_to_candidate="",
+                    progression_override=False,
+                    flag_for_human_review=False
+                )
+                return {"decision": decision}
+            
             # Create a hardcoded decision to end the interview
             decision = InterviewerDecision(
                 scratchpad="SECURITY_INTERCEPT: Prompt injection or malicious intent detected in candidate transcript. Bypassing standard evaluation and immediately terminating the interview to prevent exploitation.",
