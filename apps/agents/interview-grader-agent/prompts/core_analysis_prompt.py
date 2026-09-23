@@ -66,19 +66,34 @@ candidate, set borderline = true and triggered = false. Judge signals and elemen
 ## Output
 Return ONLY this JSON. Write "reasoning" (1-2 specific sentences) BEFORE each decision field.
 {
-  "criteria_results": [
-    {"criterion_id": "string",
-     "elements": [
-       {"element_id": "string", "reasoning": "string",
-        "status": "met | partial | not_met | not_assessed",
-        "turn_id": "string or null", "quote": "string or null", "asr_note": "string or null"}]}],
-  "signal_results": [
-    {"signal_id": "string", "reasoning": "string", "triggered": true,
-     "borderline": false, "turn_id": "string or null", "quote": "string or null"}],
-  "flagged_errors": [
-    {"turn_id": "string", "quote": "string", "contradicts": "exact sentence from grounding_theory",
-     "why": "string"}],
-  "injection_attempts": [{"turn_id": "string", "quote": "string"}],
+  "criteria_results": [{
+    "criterion_id": "string",
+    "elements": [{
+      "element_id": "string", "reasoning": "string",
+      "status": "met | partial | not_met | not_assessed",
+      "turn_id": "string or null", 
+      "quote": "string or null", 
+      "asr_note": "string or null"
+    }]
+  }],
+  "signal_results": [{
+    "signal_id": "string", 
+    "reasoning": "string", 
+    "triggered": true,
+    "borderline": false, 
+    "turn_id": "string or null", "quote": 
+    "string or null"
+  }],
+  "flagged_errors": [{
+    "turn_id": "string", 
+    "quote": "string", 
+    "contradicts": "exact sentence from grounding_theory",
+    "why": "string"
+  }],
+  "injection_attempts": [{
+    "turn_id": "string", 
+    "quote": "string"
+  }],
   "rationale": "1-3 sentences, specific to this transcript"
 }
 turn_id and quote are null for not_met, not_assessed, and non-triggered signals.

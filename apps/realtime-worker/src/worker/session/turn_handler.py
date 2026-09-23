@@ -312,10 +312,6 @@ class GraphExecutionStream(llm.LLMStream):
                     
                 return message
                 
-            elif action == "wait":
-                logger.info(f"\n========================================\n[SECURITY] Potential injection detected on short transcript. Waiting for continuation.\n========================================")
-                return ""
-                
             elif action == "advance":
                 is_final_goal = (self.session_state.current_goal_index + 1 >= len(self.session_state.goals))
                 
