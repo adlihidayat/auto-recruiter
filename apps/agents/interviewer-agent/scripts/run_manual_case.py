@@ -642,7 +642,7 @@ TEST_CASE_11 = {
     "last_error": None
 }
 
-MANUAL_TEST_CASES = [TEST_CASE_2]
+MANUAL_TEST_CASES = [TEST_CASE_2, TEST_CASE_3, TEST_CASE_4, TEST_CASE_5, TEST_CASE_6, TEST_CASE_7, TEST_CASE_8,  TEST_CASE_9, TEST_CASE_10, TEST_CASE_11,]
 
 # ==============================================================================
 

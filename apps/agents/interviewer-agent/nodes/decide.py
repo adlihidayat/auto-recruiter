@@ -49,14 +49,17 @@ def decideNextConversationalTurn(current_state: InterviewerState) -> Dict[str, A
         if role_val == "interviewer":
             conversation_messages.append(AIMessage(content=content_val))
         else:
-            conversation_messages.append(HumanMessage(content=content_val))
+            conversation_messages.append(HumanMessage(content=f"<candidate_response>\n{content_val}\n</candidate_response>"))
             
     # 3. Format candidate input and execution metrics
     turn_context_summary = (
         f"Turn Count: {current_state.get('turn_count_this_goal')}\n"
         f"Time Elapsed This Goal: {current_state.get('time_elapsed_seconds_this_goal')}s\n"
         f"Global Time Elapsed: {current_state.get('global_time_elapsed_seconds')}s\n"
-        f"LATEST CANDIDATE TRANSCRIPT: {current_state.get('latest_candidate_transcript')}"
+        f"LATEST CANDIDATE TRANSCRIPT:\n"
+        f"<candidate_response>\n"
+        f"{current_state.get('latest_candidate_transcript')}\n"
+        f"</candidate_response>"
     )
     
     previous_attempt_error = current_state.get("last_error")
