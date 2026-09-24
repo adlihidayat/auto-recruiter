@@ -64,3 +64,12 @@ Once the containers are healthy, open your browser and navigate to:
 
 ## 📄 License
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🛠️ Local Development (Notes for me)
+Quick command shortcuts using `make` (or run manually):
+
+- **Frontend:** `make frontend` (`cd apps/frontend && npm run dev`)
+- **Database:** `make db` (`docker compose -f docker-compose.dev.yml up -d`)
+- **Backend (Core API):** `make backend-main` (`cd apps/backend && uv run --env-file ../../.env uvicorn app.main:app --app-dir src --port 8000 --reload`)
+- **Backend (Agents Service):** `make backend-alt` (`cd apps/agents && uv run --env-file ../../.env uvicorn main:app --port 8001 --reload`)
+
