@@ -31,6 +31,51 @@ interface InterviewDetailViewProps {
   interviewId: string;
 }
 
+/**
+ * Helper to extract recommendation badge metadata from DB candidate record.
+ * Prioritizes candidate.recommendation directly from DB.
+ */
+function getCandidateRecommendationInfo(candidate: BackendCandidateResponse): {
+  label: string;
+  badgeClass: string;
+  rank: number;
+} {
+  const rec = candidate.recommendation;
+
+  if (rec) {
+    const lower = rec.trim().toLowerCase();
+    if (
+      lower.includes("advance with") ||
+      lower.includes("follow up") ||
+      lower.includes("follow-up")
+    ) {
+      return {
+        label: rec,
+        badgeClass: "bg-amber-50 text-amber-700 border border-amber-200",
+        rank: 2,
+      };
+    }
+    if (lower.includes("advance") || lower.includes("pass")) {
+      return {
+        label: rec,
+        badgeClass: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+        rank: 1,
+      };
+    }
+    return {
+      label: rec,
+      badgeClass: "bg-red-50 text-red-700 border border-red-200",
+      rank: 3,
+    };
+  }
+
+  return {
+    label: "Hold",
+    badgeClass: "bg-red-50 text-red-700 border border-red-200",
+    rank: 3,
+  };
+}
+
 export default function InterviewDetailView({
   interviewId,
 }: InterviewDetailViewProps) {
@@ -193,25 +238,7 @@ export default function InterviewDetailView({
             st === "rejected";
 
           if (isCandFinished) {
-            const rawRec = (c.recommendation || "").toLowerCase();
-            const score = c.composite_score;
-
-            const isAdvanceWithFollowUp =
-              rawRec.includes("advance with") ||
-              (score !== null &&
-                score !== undefined &&
-                score >= 50 &&
-                score < 80);
-
-            if (isAdvanceWithFollowUp) return 2; // Finished Advance with follow up
-
-            const isAdvance =
-              rawRec.includes("advance") ||
-              (score !== null && score !== undefined && score >= 80);
-
-            if (isAdvance) return 1; // Finished Advance
-
-            return 3; // Finished Hold
+            return getCandidateRecommendationInfo(c).rank;
           }
 
           // Not joined / others last
@@ -520,37 +547,14 @@ export default function InterviewDetailView({
                   // Determine recommendation badge beside email if finished
                   let recBadge = null;
                   if (isFinished) {
-                    const rawRec = candidate.recommendation || "";
-                    const score = candidate.composite_score;
-
-                    if (
-                      rawRec.toLowerCase().includes("advance with") ||
-                      (score !== null &&
-                        score !== undefined &&
-                        score >= 50 &&
-                        score < 80)
-                    ) {
-                      recBadge = (
-                        <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-amber-50 text-amber-700 border border-amber-200">
-                          Advance with follow up
-                        </span>
-                      );
-                    } else if (
-                      rawRec.toLowerCase().includes("advance") ||
-                      (score !== null && score !== undefined && score >= 80)
-                    ) {
-                      recBadge = (
-                        <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          Advance
-                        </span>
-                      );
-                    } else {
-                      recBadge = (
-                        <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-red-50 text-red-700 border border-red-200">
-                          Hold
-                        </span>
-                      );
-                    }
+                    const recInfo = getCandidateRecommendationInfo(candidate);
+                    recBadge = (
+                      <span
+                        className={`px-2 py-0.5 text-[11px] font-semibold rounded-md ${recInfo.badgeClass}`}
+                      >
+                        {recInfo.label}
+                      </span>
+                    );
                   }
 
                   return (
