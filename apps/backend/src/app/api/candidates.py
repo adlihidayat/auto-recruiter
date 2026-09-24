@@ -18,20 +18,18 @@ from core_ai_lib.schemas.transcript import TranscriptResponse
 
 router = APIRouter()
 
-async def _verify_candidate_ownership(candidate_id: UUID, session: SessionDep, user_id: UUID) -> Candidate:
-    """Helper to ensure candidate exists and belongs to an interview created by user_id."""
+async def _verify_candidate_exists(candidate_id: UUID, session: SessionDep) -> Candidate:
+    """Helper to ensure candidate exists."""
     result = await session.execute(
-        select(Candidate, Interview)
-        .join(Interview, Candidate.interview_id == Interview.id)
-        .where(Candidate.id == candidate_id, Interview.creator_id == user_id)
+        select(Candidate).where(Candidate.id == candidate_id)
     )
-    row = result.first()
-    if not row:
+    candidate = result.scalar_one_or_none()
+    if not candidate:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Candidate not found"
         )
-    return row[0]
+    return candidate
 
 @router.get("/{candidate_id}/report", response_model=CandidateReportResponse)
 async def get_candidate_report(
@@ -42,7 +40,7 @@ async def get_candidate_report(
     """
     Fetch the detailed grading report for a candidate.
     """
-    await _verify_candidate_ownership(candidate_id, session, current_user.id)
+    await _verify_candidate_exists(candidate_id, session)
     
     result = await session.execute(
         select(CandidateReport).where(CandidateReport.candidate_id == candidate_id)
@@ -66,7 +64,7 @@ async def get_candidate_transcripts(
     """
     Fetch the conversation transcript turns for a candidate.
     """
-    await _verify_candidate_ownership(candidate_id, session, current_user.id)
+    await _verify_candidate_exists(candidate_id, session)
     
     result = await session.execute(
         select(Transcript)

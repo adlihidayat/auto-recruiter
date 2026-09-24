@@ -18,3 +18,5 @@ Requires-Dist: torch>=2.0.0
 Requires-Dist: langchain-community>=0.0.28
 Requires-Dist: tavily-python>=0.3.3
 Requires-Dist: core-ai-lib
+Requires-Dist: optimum>=2.3.0
+Requires-Dist: onnxruntime>=1.29.0

@@ -5,27 +5,18 @@ services:
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: autorecruiter
+      POSTGRES_DB: auto_recruiter_db
     ports:
       - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - auto_recruiter_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d autorecruiter"]
+      test: ["CMD-SHELL", "pg_isready -U user -d auto_recruiter_db"]
       interval: 5s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
-  mailpit:
-    image: axllent/mailpit
-    container_name: mailpit
-    ports:
-      - "8025:8025" # Web UI
-      - "1025:1025" # SMTP port
-    environment:
-      MP_MAX_MESSAGES: 5000
-    restart: unless-stopped
 
   livekit:
     image: livekit/livekit-server:latest
@@ -53,24 +44,21 @@ services:
     container_name: backend
     ports:
       - "8000:8000"
+    env_file: .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://user:password@postgres:5432/autorecruiter
-      SMTP_HOST: mailpit
-      SMTP_PORT: 1025
-      SMTP_USER: ""
-      SMTP_PASSWORD: ""
-      SMTP_FROM: noreply@autorecruiter.local
+      DATABASE_URL: postgresql+asyncpg://user:password@postgres:5432/auto_recruiter_db
+
       SECRET_KEY: super-secret-local-key
       LIVEKIT_URL: ws://livekit:7880
       LIVEKIT_API_KEY: devkey
       LIVEKIT_API_SECRET: secret
+      AGENTS_SERVICE_URL: http://agents:8001
     depends_on:
       postgres:
         condition: service_healthy
       livekit:
         condition: service_started
-      mailpit:
-        condition: service_started
+
       agents:
         condition: service_started
     restart: unless-stopped
@@ -82,8 +70,9 @@ services:
     container_name: agents
     ports:
       - "8001:8001"
+    env_file: .env
     environment:
-      LANGSMITH_TRACING: "false"
+      ONNX_INJECTION_MODEL_DIR: /app/assets/onnx_model
     restart: unless-stopped
 
   realtime-worker:
@@ -91,6 +80,7 @@ services:
       context: .
       dockerfile: apps/realtime-worker/Dockerfile
     container_name: realtime-worker
+    env_file: .env
     environment:
       LIVEKIT_URL: ws://livekit:7880
       LIVEKIT_API_KEY: devkey
@@ -103,17 +93,19 @@ services:
 
   frontend:
     build:
-      context: apps/frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/frontend/Dockerfile
     container_name: frontend
     ports:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_LIVEKIT_URL: ws://localhost:7880
       NEXT_PUBLIC_ENABLE_LIVEKIT_WS: "true"
+      NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
+      NEXT_SERVER_BACKEND_URL: http://backend:8000
     depends_on:
       - backend
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  auto_recruiter_db_data:

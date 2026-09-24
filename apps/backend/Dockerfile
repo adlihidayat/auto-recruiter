@@ -11,11 +11,13 @@ COPY pyproject.toml uv.lock ./
 COPY apps/backend/pyproject.toml ./apps/backend/
 COPY apps/agents/pyproject.toml ./apps/agents/
 COPY apps/realtime-worker/pyproject.toml ./apps/realtime-worker/
+COPY packages/core-ai-lib/pyproject.toml ./packages/core-ai-lib/
 
 # 2. Install dependencies (this layer caches globally unless dependencies change)
 RUN uv sync --frozen --no-install-project --no-dev
 
 # 3. Copy the actual source code for this specific app
+COPY packages/core-ai-lib ./packages/core-ai-lib
 COPY apps/backend ./apps/backend
 
 # 4. Final sync to install the project itself (very fast, just links the source)
@@ -32,5 +34,5 @@ EXPOSE 8000
 
 # Set entrypoint and CMD
 ENTRYPOINT ["./entrypoint.sh"]
-CMD ["uv", "run", "uvicorn", "src.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "app.main:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
 

@@ -13,3 +13,5 @@ torch>=2.0.0
 langchain-community>=0.0.28
 tavily-python>=0.3.3
 core-ai-lib
+optimum>=2.3.0
+onnxruntime>=1.29.0

@@ -16,11 +16,13 @@ COPY pyproject.toml uv.lock ./
 COPY apps/backend/pyproject.toml ./apps/backend/
 COPY apps/agents/pyproject.toml ./apps/agents/
 COPY apps/realtime-worker/pyproject.toml ./apps/realtime-worker/
+COPY packages/core-ai-lib/pyproject.toml ./packages/core-ai-lib/
 
 # 2. Install dependencies (this layer caches globally unless dependencies change)
 RUN uv sync --frozen --no-install-project --no-dev
 
 # 3. Copy the actual source code (worker requires agents in-process)
+COPY packages/core-ai-lib ./packages/core-ai-lib
 COPY apps/agents ./apps/agents
 COPY apps/realtime-worker ./apps/realtime-worker
 

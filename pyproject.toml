@@ -2,7 +2,7 @@
 name = "auto-recruiter"
 version = "0.1.0"
 description = "Auto Recruiter Monorepo"
-requires-python = ">=3.12"
+requires-python = "==3.12.*"
 
 [tool.uv.workspace]
 members = [
@@ -11,3 +11,11 @@ members = [
     "apps/agents",
     "packages/core-ai-lib"
 ]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
